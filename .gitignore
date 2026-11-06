@@ -1,0 +1,17 @@
+# Build / Xcode
+.derivedData/
+.build/
+.swiftpm/
+*.xcuserstate
+xcuserdata/
+.DS_Store
+
+# Built app bundles (rebuilt locally)
+Lyria.app/
+*.app/
+
+# Process / iteration screenshots sitting directly under .design/
+# (keep .design/ui-mocks/ and .design/docs/ tracked)
+.design/*.png
+.design/*.jpg
+.design/*.jpeg

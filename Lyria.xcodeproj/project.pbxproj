@@ -1,0 +1,256 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		DFB2494C225C4B93B7571413 /* WindowChromeConfigurer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 698A7071D4D241C798E12669 /* WindowChromeConfigurer.swift */; };
+		47400B9709324F9B8B1B1C2B /* LyriaApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BE1E5DAEF8B4284804BB7E1 /* LyriaApp.swift */; };
+		C046F0215E15483E98C17D30 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C877B0A580E645F6B4E0D2F0 /* ContentView.swift */; };
+		94427E1BE5874C56AD3C4425 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7169993B0B13474890E1FE55 /* Theme.swift */; };
+		93E278906CC0456491349C62 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D8C0413CC2849248C9A3855 /* Models.swift */; };
+		D4BA01F5AD7A441D9437FE54 /* VisualEffectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C93A0D31839449AC88E98E68 /* VisualEffectView.swift */; };
+		3FCCFAE05AEC4DD096BD0DC4 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75F41FD029144B698CEC20E5 /* SidebarView.swift */; };
+		D432588F094D4D038672857D /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 597CCA83E4DF462AB4AE0CCD /* LibraryView.swift */; };
+		37DC3CD03F0B4DEB8E17DF0E /* TransportBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5698C8C8CD948D283AE6A2A /* TransportBar.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		698A7071D4D241C798E12669 /* WindowChromeConfigurer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowChromeConfigurer.swift; sourceTree = "<group>"; };
+		6BE1E5DAEF8B4284804BB7E1 /* LyriaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LyriaApp.swift; sourceTree = "<group>"; };
+		C877B0A580E645F6B4E0D2F0 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		7169993B0B13474890E1FE55 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		0D8C0413CC2849248C9A3855 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		C93A0D31839449AC88E98E68 /* VisualEffectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualEffectView.swift; sourceTree = "<group>"; };
+		75F41FD029144B698CEC20E5 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
+		597CCA83E4DF462AB4AE0CCD /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
+		E5698C8C8CD948D283AE6A2A /* TransportBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransportBar.swift; sourceTree = "<group>"; };
+		845ABF3E3697414FBA284EFD /* Lyria.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Lyria.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		DE6EADDD960345D3A062EE06 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		442C826CDE1845D1BF7D240D = {
+			isa = PBXGroup;
+			children = (
+				219785E656E54689A04B50B7 /* Lyria */,
+				DB915B8B6C864E24B39792E4 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		DB915B8B6C864E24B39792E4 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				845ABF3E3697414FBA284EFD /* Lyria.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		219785E656E54689A04B50B7 /* Lyria */ = {
+			isa = PBXGroup;
+			children = (
+				6BE1E5DAEF8B4284804BB7E1 /* LyriaApp.swift */,
+				C877B0A580E645F6B4E0D2F0 /* ContentView.swift */,
+				7169993B0B13474890E1FE55 /* Theme.swift */,
+				0D8C0413CC2849248C9A3855 /* Models.swift */,
+				1D1673F8135B461384BB9050 /* Views */,
+			);
+			path = Sources/Lyria;
+			sourceTree = "<group>";
+		};
+		1D1673F8135B461384BB9050 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				C93A0D31839449AC88E98E68 /* VisualEffectView.swift */,
+				698A7071D4D241C798E12669 /* WindowChromeConfigurer.swift */,
+				75F41FD029144B698CEC20E5 /* SidebarView.swift */,
+				597CCA83E4DF462AB4AE0CCD /* LibraryView.swift */,
+				E5698C8C8CD948D283AE6A2A /* TransportBar.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		39FB234EEC8F4CA8AE35292E /* Lyria */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3DC74A76A6C24E5A8C21294A /* Build configuration list for PBXNativeTarget "Lyria" */;
+			buildPhases = (
+				25A483BFD688463DAF3606EC /* Sources */,
+				DE6EADDD960345D3A062EE06 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Lyria;
+			productName = Lyria;
+			productReference = 845ABF3E3697414FBA284EFD /* Lyria.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		ADA4340BCE274303A7BCDA79 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+			};
+			buildConfigurationList = D03423464228430FB0481421 /* Build configuration list for PBXProject "Lyria" */;
+			compatibilityVersion = "Xcode 15.0";
+			developmentRegion = "zh-Hans";
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+				"zh-Hans",
+			);
+			mainGroup = 442C826CDE1845D1BF7D240D;
+			productRefGroup = DB915B8B6C864E24B39792E4 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				39FB234EEC8F4CA8AE35292E /* Lyria */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		25A483BFD688463DAF3606EC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				47400B9709324F9B8B1B1C2B /* LyriaApp.swift in Sources */,
+				C046F0215E15483E98C17D30 /* ContentView.swift in Sources */,
+				94427E1BE5874C56AD3C4425 /* Theme.swift in Sources */,
+				93E278906CC0456491349C62 /* Models.swift in Sources */,
+				D4BA01F5AD7A441D9437FE54 /* VisualEffectView.swift in Sources */,
+				DFB2494C225C4B93B7571413 /* WindowChromeConfigurer.swift in Sources */,
+				3FCCFAE05AEC4DD096BD0DC4 /* SidebarView.swift in Sources */,
+				D432588F094D4D038672857D /* LibraryView.swift in Sources */,
+				37DC3CD03F0B4DEB8E17DF0E /* TransportBar.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		30D0584735374D4B8B7FFCAB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GCC_DYNAMIC_NO_PIC = NO;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		74A327F62945406D952CC690 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		D36892DBF24042828514D1D8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Lyria;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = local.lyria.sample;
+				PRODUCT_NAME = Lyria;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		43C4C1162F2D4389A9CB418C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Lyria;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = local.lyria.sample;
+				PRODUCT_NAME = Lyria;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		D03423464228430FB0481421 /* Build configuration list for PBXProject "Lyria" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				30D0584735374D4B8B7FFCAB /* Debug */,
+				74A327F62945406D952CC690 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		3DC74A76A6C24E5A8C21294A /* Build configuration list for PBXNativeTarget "Lyria" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D36892DBF24042828514D1D8 /* Debug */,
+				43C4C1162F2D4389A9CB418C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = ADA4340BCE274303A7BCDA79 /* Project object */;
+}
