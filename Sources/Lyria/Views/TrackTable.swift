@@ -1,6 +1,7 @@
 import SwiftUI
 
 enum TrackMenu {
+    @MainActor
     @ViewBuilder
     static func items(track: Track, playlistID: String?, store: FakeLibraryStore) -> some View {
         Button("播放") { store.play(track.id) }
