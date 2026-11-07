@@ -6,6 +6,7 @@ struct ArtistsView: View {
     private let columns = [GridItem(.adaptive(minimum: 150, maximum: 220), spacing: 16)]
 
     var body: some View {
+        ScrollView {
         LazyVGrid(columns: columns, spacing: 16) {
             ForEach(store.artists) { artist in
                 let count = store.tracks(forArtist: artist.name).count
@@ -34,6 +35,7 @@ struct ArtistsView: View {
                 .buttonStyle(.plain)
             }
         }
+        }
     }
 }
 
@@ -45,6 +47,7 @@ struct ArtistDetailView: View {
         if let artist = store.artist(artistID) {
             let songs = store.tracks(forArtist: artist.name)
             let albums = store.albums(forArtist: artist.name)
+            ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 DetailHero(
                     seed: artist.id,
@@ -87,8 +90,9 @@ struct ArtistDetailView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 12)
                 } else {
-                    TrackTable(tracks: songs)
+                    TrackTable(tracks: songs, scrolls: false)
                 }
+            }
             }
         } else {
             EmptyState(systemImage: "person", title: "找不到这位艺人") { EmptyView() }

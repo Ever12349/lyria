@@ -55,72 +55,78 @@ struct ContentView: View {
 
     private var detailColumn: some View {
         VStack(spacing: 0) {
-            HStack {
-                Spacer(minLength: 0)
-                SearchField(text: $store.searchText)
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 24)
-            .padding(.top, 36)
-            .padding(.bottom, 8)
-
-            PageHeader(
-                title: headerTitle,
-                subtitle: headerSubtitle,
-                showsBack: showsBack,
-                onBack: { store.goBack() }
-            )
-            .padding(.horizontal, 20)
-            .padding(.bottom, 8)
-
+            pageHead
             ZStack(alignment: .topTrailing) {
-                contentPanel
+                page
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.horizontal, 4)
                 if store.queueVisible {
                     QueuePanel()
                         .frame(width: 280)
-                        .padding(.trailing, 8)
-                        .padding(.vertical, 6)
+                        .padding(.trailing, 16)
+                        .padding(.top, 8)
+                        .padding(.bottom, 8)
                         .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 8)
             .animation(.easeOut(duration: 0.18), value: store.queueVisible)
-
             TransportBar()
         }
+        .padding(.top, 12)
+        .padding(.trailing, 16)
+        .padding(.bottom, 12)
         .overlay(alignment: .bottom) {
             if let toast = store.toast {
                 ToastPill(text: toast)
-                    .padding(.bottom, 118)
+                    .padding(.bottom, 106)
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
         }
         .animation(.easeOut(duration: 0.18), value: store.toast)
     }
 
-    private var contentPanel: some View {
+    private var pageHead: some View {
         GeometryReader { geo in
-            ScrollView {
-                page
-                    .padding(centersContent ? 0 : 12)
-                    .frame(
-                        maxWidth: .infinity,
-                        minHeight: max(geo.size.height - (centersContent ? 0 : 24), 0),
-                        alignment: centersContent ? .center : .topLeading
-                    )
+            let searchWidth = min(360, geo.size.width * 0.46)
+            HStack(alignment: .center, spacing: 16) {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 2) {
+                        if showsBack {
+                            Button { store.goBack() } label: {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(LyriaTheme.text2)
+                                    .frame(width: 22, height: 22)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("返回")
+                        }
+                        Text(headerTitle)
+                            .font(.system(size: 22, weight: .semibold))
+                            .tracking(-0.4)
+                            .foregroundStyle(LyriaTheme.foreground)
+                            .lineLimit(1)
+                    }
+                    Text(headerMeta)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(LyriaTheme.text3)
+                        .lineLimit(1)
+                        .padding(.leading, showsBack ? 20 : 0)
+                        .frame(maxWidth: .infinity, minHeight: 16, alignment: .leading)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                SearchField(text: queryBinding)
+                    .frame(width: searchWidth)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: LyriaTheme.radiusMD, style: .continuous)
-                .fill(LyriaTheme.panel.opacity(0.65))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: LyriaTheme.radiusMD, style: .continuous)
-                .strokeBorder(LyriaTheme.border, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: LyriaTheme.radiusMD, style: .continuous))
+        .frame(height: 52)
+        .padding(.horizontal, 4)
+        .padding(.bottom, 10)
+    }
+
+    private var queryBinding: Binding<String> {
+        Binding(get: { store.searchText }, set: { store.updateQuery($0) })
     }
 
     @ViewBuilder
@@ -130,7 +136,7 @@ struct ContentView: View {
         } else {
             switch store.route {
             case .library:
-                if store.tracks.isEmpty {
+                if store.libraryEmpty || store.visibleTracks.isEmpty {
                     LibraryEmptyView()
                 } else {
                     LibraryView()
@@ -153,12 +159,6 @@ struct ContentView: View {
         }
     }
 
-    private var centersContent: Bool {
-        if store.isSearching { return !store.hasSearchHits }
-        if case .library = store.route { return store.tracks.isEmpty }
-        return false
-    }
-
     private var showsBack: Bool {
         store.isSearching || store.route.showsBack
     }
@@ -174,20 +174,14 @@ struct ContentView: View {
         }
     }
 
-    private var headerSubtitle: String? {
-        if store.isSearching { return "「\(store.trimmedQuery)」" }
-        switch store.route {
-        case .library where !store.tracks.isEmpty:
-            return "\(store.tracks.count) 首"
-        case .artists:
-            return "\(store.artists.count) 位"
-        case .albums:
-            return "\(store.albums.count) 张"
-        case .playlists:
-            return "\(store.playlists.count) 个"
-        default:
-            return nil
+    private var headerMeta: String {
+        if store.isSearching {
+            return store.hasSearchHits ? "\(store.searchTracks.count) 首" : "无结果"
         }
+        if case .library = store.route, !store.libraryEmpty, !store.visibleTracks.isEmpty {
+            return "\(store.visibleTracks.count) 首"
+        }
+        return " "
     }
 }
 

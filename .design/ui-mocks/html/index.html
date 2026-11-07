@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lyria · 设计原型</title>
+  <link rel="stylesheet" href="theme.css?v=layout">
+  <link rel="stylesheet" href="prototype.css?v=align">
+</head>
+<body class="proto">
+  <div class="proto-bar" id="protoBar">
+    <span class="proto-label">Lyria 设计原型</span>
+    <span class="proto-note">假数据 · 不播放音频</span>
+    <span class="spacer"></span>
+    <button type="button" data-action="toggle-empty" id="emptyBtn">空曲库</button>
+    <button type="button" data-action="scene-menubar" id="menuBtn">菜单栏</button>
+    <button type="button" data-action="scene-chrome" id="chromeBtn">窗口约定</button>
+  </div>
+
+  <div class="fit" id="fit">
+  <div class="window" id="window">
+    <aside class="sidebar">
+      <div class="lights"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+      <button type="button" class="brand" data-nav="library">Lyria</button>
+      <div class="nav">
+        <button type="button" class="nav-item active" data-nav="library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1v-10.5z"/></svg>曲库</button>
+        <button type="button" class="nav-item" data-nav="artists"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>艺人</button>
+        <button type="button" class="nav-item" data-nav="albums"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/></svg>专辑</button>
+        <button type="button" class="nav-item" data-nav="playlists"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>播放列表</button>
+      </div>
+      <div class="nav-bottom">
+        <button type="button" class="nav-item" data-nav="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9c.3.6.9 1 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>设置</button>
+      </div>
+    </aside>
+    <div class="detail">
+      <div class="page-head">
+        <div class="page-title">
+          <div class="nav-line">
+            <button type="button" class="nav-back is-hidden" id="navBack" data-action="nav-back" aria-label="返回"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+            <h1 id="pageTitle">曲库</h1>
+          </div>
+          <span id="pageMeta"></span>
+        </div>
+        <div class="search">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
+          <input id="q" type="text" placeholder="搜索音乐、艺人、专辑" autocomplete="off" spellcheck="false" aria-label="搜索音乐、艺人、专辑">
+          <button type="button" class="clear is-hidden" id="clearQ" data-action="clear-search" aria-label="清除搜索">×</button>
+        </div>
+      </div>
+      <div class="content">
+        <div class="panel" id="panel"></div>
+      </div>
+      <div id="transport"></div>
+    </div>
+    <div class="queue-panel is-hidden" id="queue"></div>
+    <div class="toast" id="toast" role="status"></div>
+  </div>
+
+  <div class="menubar-stage is-hidden" id="menubarStage">
+    <div class="fake-menu"><span class="menu-brand"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> Lyria</span><span>9:41</span></div>
+    <div class="popover">
+      <div style="padding:14px 14px 10px;display:flex;gap:10px;align-items:center;border-bottom:1px solid var(--border)">
+        <div class="cover"></div>
+        <div style="flex:1">
+          <div class="t js-np-title" style="font-size:13px;font-weight:600">星际旅行</div>
+          <div class="a js-np-artist" style="font-size:11px;color:var(--text2)">Dreamscape</div>
+        </div>
+      </div>
+      <div style="padding:12px 14px">
+        <div class="prog" style="margin-bottom:10px">
+          <span class="js-pos">1:48</span>
+          <div class="bar" data-slider="progress"><div class="fill js-fill"></div><div class="knob js-knob"></div></div>
+          <span class="js-dur">4:32</span>
+        </div>
+        <div class="btns center">
+          <button type="button" class="glyph" data-action="prev" title="上一首"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" x2="5" y1="19" y2="5"/></svg></button>
+          <button type="button" class="play" id="menuPlay" data-action="toggle" title="播放或暂停"><svg class="ico nudge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg></button>
+          <button type="button" class="glyph" data-action="next" title="下一首"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg></button>
+        </div>
+      </div>
+      <div style="padding:0 14px 14px">
+        <div class="upnext-label">接下来</div>
+        <div id="upnext"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="annot is-hidden" id="annotStage">
+    <h1>Lyria · Window Chrome（原生标题栏约定）</h1>
+    <ol>
+      <li><code>NSWindow.styleMask</code> 含 <code>.titled</code> + <code>.fullSizeContentView</code></li>
+      <li><code>titlebarAppearsTransparent = true</code>、<code>titleVisibility = .hidden</code> — 无自定义黑色顶栏条</li>
+      <li>红绿灯由系统绘制，视觉上落在<strong>左侧栏顶部内部</strong>（侧栏玻璃通顶）</li>
+      <li>拖动 / 双击放大还原走系统 <code>NSThemeFrame</code>；穿透区收窄为系统标题栏拖动带（<code>hitTest → nil</code>），<strong>勿</strong>整顶约 52pt 一律穿透；不自定义 <code>performZoom</code></li>
+      <li>侧栏相对窗口四边留出约 12px，圆角约 18px；底栏（Transport）只在详情列下方，不延伸到侧栏下。设置下不放拖宽示意点</li>
+      <li>详情列顶部是导航标题，与搜索、列表、底栏左右对齐。能返回时，后退图标在标题左侧并与文字对齐</li>
+      <li>侧栏可拖宽 <strong>168–320</strong>（默认 ~228）</li>
+      <li>Deep Space：左右同色 <code>#0a0b1a</code> 系，禁用吸壁纸 vibrancy</li>
+      <li>Accent 渐变 <code>#9b87f5 → #7c3aed</code>；圆角 16–24</li>
+    </ol>
+  </div>
+  </div>
+
+  <div id="rowMenu"></div>
+  <script src="prototype.js?v=align"></script>
+</body>
+</html>

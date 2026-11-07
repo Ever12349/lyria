@@ -7,9 +7,12 @@ final class FakeLibraryStore: ObservableObject {
     @Published var artists: [Artist]
     @Published var albums: [Album]
     @Published var playlists: [Playlist]
+    @Published var hiddenTrackIDs: Set<String> = []
+    @Published var libraryEmpty = false
 
     @Published var stack: [AppRoute] = [.library]
     @Published var searchText = ""
+    private var returnStack: [AppRoute]?
     @Published var selectedTrackId: String?
 
     @Published var nowPlayingId: String?
@@ -30,9 +33,10 @@ final class FakeLibraryStore: ObservableObject {
         artists = seed.artists
         albums = seed.albums
         playlists = seed.playlists
-        queue = seed.tracks.map(\.id)
-        nowPlayingId = seed.tracks.first?.id
-        selectedTrackId = seed.tracks.first?.id
+        let showcase = ["t1", "t2", "t3", "t4", "t5"]
+        queue = showcase
+        nowPlayingId = "t1"
+        selectedTrackId = "t1"
     }
 
     var route: AppRoute { stack.last ?? .library }
@@ -45,18 +49,30 @@ final class FakeLibraryStore: ObservableObject {
 
     var isSearching: Bool { !trimmedQuery.isEmpty }
 
-    var hasSearchHits: Bool {
-        let query = trimmedQuery
-        guard !query.isEmpty else { return false }
-        func matches(_ text: String) -> Bool { text.localizedCaseInsensitiveContains(query) }
-        if tracks.contains(where: { matches($0.title) || matches($0.artist) || matches($0.album) }) { return true }
-        if artists.contains(where: { matches($0.name) }) { return true }
-        if albums.contains(where: { matches($0.name) || matches($0.artistName) }) { return true }
-        if playlists.contains(where: { matches($0.name) }) { return true }
-        return false
+    var visibleTracks: [Track] {
+        tracks.filter { !hiddenTrackIDs.contains($0.id) }
     }
 
-    var nowPlaying: Track? { track(nowPlayingId) }
+    var searchTracks: [Track] {
+        let query = trimmedQuery
+        guard !query.isEmpty else { return [] }
+        return visibleTracks.filter { track in
+            track.title.localizedCaseInsensitiveContains(query)
+                || track.english.localizedCaseInsensitiveContains(query)
+                || track.artist.localizedCaseInsensitiveContains(query)
+                || track.album.localizedCaseInsensitiveContains(query)
+        }
+    }
+
+    var hasSearchHits: Bool { !searchTracks.isEmpty }
+
+    /// Nil while the empty-library screen is showing, so the transport reads 「—」.
+    var shownTrack: Track? {
+        if libraryEmpty, !isSearching, route == .library { return nil }
+        return track(nowPlayingId)
+    }
+
+    var nowPlaying: Track? { shownTrack }
 
     func track(_ id: String?) -> Track? {
         guard let id else { return nil }
@@ -70,11 +86,11 @@ final class FakeLibraryStore: ObservableObject {
     func playlist(_ id: String) -> Playlist? { playlists.first { $0.id == id } }
 
     func tracks(forArtist name: String) -> [Track] {
-        tracks.filter { $0.artist == name }
+        visibleTracks.filter { $0.artist == name }
     }
 
     func tracks(forAlbum name: String) -> [Track] {
-        tracks.filter { $0.album == name }
+        visibleTracks.filter { $0.album == name }
     }
 
     func albums(forArtist name: String) -> [Album] {
@@ -91,14 +107,28 @@ final class FakeLibraryStore: ObservableObject {
 
     // MARK: Navigation
 
+    func updateQuery(_ raw: String) {
+        let wasEmpty = trimmedQuery.isEmpty
+        let nowEmpty = raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        if !nowEmpty && wasEmpty {
+            returnStack = stack
+        }
+        searchText = raw
+        if nowEmpty, let saved = returnStack {
+            stack = saved
+            returnStack = nil
+        }
+    }
+
     func select(_ item: NavItem) {
+        returnStack = nil
         searchText = ""
         stack = [item.route]
     }
 
     func goBack() {
         if isSearching {
-            searchText = ""
+            updateQuery("")
             return
         }
         guard stack.count > 1 else { return }
@@ -106,18 +136,40 @@ final class FakeLibraryStore: ObservableObject {
     }
 
     func openArtist(_ id: String) {
+        returnStack = nil
         searchText = ""
         stack = [.artists, .artist(id)]
     }
 
     func openAlbum(_ id: String) {
+        returnStack = nil
         searchText = ""
         stack = [.albums, .album(id)]
     }
 
     func openPlaylist(_ id: String) {
+        returnStack = nil
         searchText = ""
         stack = [.playlists, .playlist(id)]
+    }
+
+    func previewEmptyLibrary() {
+        returnStack = nil
+        searchText = ""
+        libraryEmpty = true
+        stack = [.library]
+    }
+
+    func restoreLibrary() {
+        libraryEmpty = false
+        showToast("已添加 ~/Music")
+    }
+
+    func removeFromLibrary(_ id: String) {
+        guard let title = track(id)?.title else { return }
+        hiddenTrackIDs.insert(id)
+        if selectedTrackId == id { selectedTrackId = nil }
+        showToast("已从曲库移除「\(title)」")
     }
 
     func openArtist(named name: String) {
@@ -322,49 +374,96 @@ enum FakeCatalog {
     }
 
     static func make() -> Seed {
-        let tracks = [
-            Track(id: "trk_01J9X2K4M7NQP8RSTUVWXY", title: "星际旅行", artist: "Dreamscape", album: "银河边缘", durationMs: 272_000),
-            Track(id: "trk_01J9X2K4M7NQP8RSTUVWYA", title: "午夜信号", artist: "Aurora Line", album: "夜航电台", durationMs: 228_000),
-            Track(id: "trk_01J9X2K4M7NQP8RSTUVWYB", title: "漂浮的城市", artist: "Neon Harbor", album: "云端漫步", durationMs: 302_000),
-            Track(id: "trk_01J9X2K4M7NQP8RSTUVWYC", title: "光的碎片", artist: "Lumen", album: "星尘集", durationMs: 251_000),
-            Track(id: "trk_01J9X2K4M7NQP8RSTUVWYD", title: "深空静默", artist: "Void Choir", album: "深空静默", durationMs: 380_000),
+        var tracks: [Track] = [
+            Track(id: "t1", title: "星际旅行", english: "Interstellar Voyage", artist: "Dreamscape", artistId: "dreamscape", album: "银河边缘", albumId: "edge", durationMs: 272_000),
+            Track(id: "t2", title: "午夜信号", english: "Midnight Signal", artist: "Aurora Line", artistId: "aurora", album: "夜航电台", albumId: "radio", durationMs: 228_000),
+            Track(id: "t3", title: "漂浮的城市", english: "Floating Cities", artist: "Neon Harbor", artistId: "neon", album: "云端漫步", albumId: "cloud", durationMs: 302_000),
+            Track(id: "t4", title: "光的碎片", english: "Fragments of Light", artist: "Lumen", artistId: "lumen", album: "星尘集", albumId: "dust", durationMs: 251_000),
+            Track(id: "t5", title: "深空静默", english: "Silent Deep Space", artist: "Void Choir", artistId: "void", album: "深空静默", albumId: "silence", durationMs: 380_000),
         ]
-        let ids = tracks.map(\.id)
 
-        let artistNames = ["Dreamscape", "Aurora Line", "Neon Harbor", "Lumen", "Void Choir", "The Paper Kites", "M83", "Bon Iver"]
-        let artists = artistNames.enumerated().map { index, name in
-            Artist(id: String(format: "art_01J9X2K4M7NQP8RSTVA%03d", index + 1), name: name)
+        let artistRows: [(String, String)] = [
+            ("dreamscape", "Dreamscape"), ("aurora", "Aurora Line"), ("neon", "Neon Harbor"),
+            ("lumen", "Lumen"), ("void", "Void Choir"), ("paper", "The Paper Kites"),
+            ("m83", "M83"), ("boniver", "Bon Iver"), ("beyond", "Beyond"), ("pushu", "朴树"),
+            ("nova", "Nova Relay"), ("tide", "Tide Theory"), ("glass", "Glass Ocean"),
+            ("north", "Northroom"), ("lantern", "Lantern Kids"), ("staticg", "Static Garden"),
+        ]
+        let artists = artistRows.map { Artist(id: $0.0, name: $0.1) }
+
+        let albumRows: [(String, String, String, String, Int)] = [
+            ("edge", "银河边缘", "Dreamscape", "dreamscape", 2024),
+            ("radio", "夜航电台", "Aurora Line", "aurora", 2024),
+            ("cloud", "云端漫步", "Neon Harbor", "neon", 2023),
+            ("dust", "星尘集", "Lumen", "lumen", 2024),
+            ("silence", "深空静默", "Void Choir", "void", 2022),
+            ("forest", "挪威的森林", "Beyond", "beyond", 1993),
+            ("ordinary", "Ordinary Road", "朴树", "pushu", 1994),
+            ("voyager", "Night Voyager", "M83", "m83", 2011),
+            ("orbit", "轨道余温", "Dreamscape", "dreamscape", 2023),
+            ("letters", "极光来信", "Aurora Line", "aurora", 2022),
+            ("harbor", "港湾夜色", "Neon Harbor", "neon", 2021),
+            ("prism", "棱镜", "Lumen", "lumen", 2020),
+            ("echo", "回声大厅", "Void Choir", "void", 2023),
+            ("kites", "纸鸢", "The Paper Kites", "paper", 2018),
+            ("hurry", "Hurry Up", "M83", "m83", 2005),
+            ("emma", "For Emma", "Bon Iver", "boniver", 2007),
+        ]
+        let albums = albumRows.map {
+            Album(id: $0.0, name: $0.1, artistName: $0.2, year: $0.4)
+        }
+        let albumArtist: [String: (name: String, id: String)] = Dictionary(uniqueKeysWithValues: albumRows.map {
+            ($0.0, (name: $0.2, id: $0.3))
+        })
+
+        let songbook: [String: [(String, String)]] = [
+            "edge": [("返航", "Return Path"), ("失重", "Weightless"), ("舷窗", "Porthole"), ("暗物质", "Dark Matter")],
+            "radio": [("呼号", "Call Sign"), ("夜班", "Night Shift"), ("短波", "Shortwave"), ("无人应答", "No Answer")],
+            "cloud": [("云层", "Cloud Layer"), ("霓虹雨", "Neon Rain"), ("高架", "Overpass"), ("回港", "Back to Harbor")],
+            "dust": [("折射", "Refraction"), ("尘埃", "Dust"), ("白噪", "White Noise"), ("余光", "Afterglow")],
+            "silence": [("无声", "No Sound"), ("低语", "Undertone"), ("空舱", "Empty Cabin"), ("远星", "Far Star")],
+            "forest": [("海阔天空", "Boundless"), ("光辉岁月", "Glorious Years"), ("情人", "Lover"), ("真的爱你", "Truly Love You")],
+            "ordinary": [("平凡之路", "Ordinary Road"), ("白桦林", "White Birch"), ("那些花儿", "Those Flowers"), ("生如夏花", "Life Like Summer")],
+            "voyager": [("Midnight City", "Midnight City"), ("Outro", "Outro"), ("Wait", "Wait"), ("Intro", "Intro")],
+            "orbit": [("余温", "Afterheat"), ("滑行", "Glide"), ("近地点", "Perigee"), ("关机", "Power Down")],
+            "letters": [("未寄出", "Unsent"), ("极光", "Aurora"), ("回信", "Reply"), ("邮票", "Postage")],
+            "harbor": [("潮灯", "Tide Light"), ("缆绳", "Mooring"), ("雾笛", "Foghorn"), ("靠岸", "Docking")],
+            "prism": [("光谱", "Spectrum"), ("切面", "Facet"), ("色散", "Dispersion"), ("焦点", "Focus")],
+            "echo": [("回声", "Echo"), ("穹顶", "Dome"), ("合唱", "Chorus"), ("尾音", "Cadence")],
+            "kites": [("纸鸢", "Paper Kite"), ("风", "Wind"), ("线", "String"), ("草地", "Grass")],
+            "hurry": [("Teenagers", "Teenagers"), ("Kim & Jessie", "Kim & Jessie"), ("Wait", "Wait"), ("Graveyard Girl", "Graveyard Girl")],
+            "emma": [("Flume", "Flume"), ("Skinny Love", "Skinny Love"), ("The Wolves", "The Wolves"), ("Re: Stacks", "Re: Stacks")],
+        ]
+
+        for album in albums {
+            let pairs = songbook[album.id] ?? []
+            guard let who = albumArtist[album.id] else { continue }
+            for (index, pair) in pairs.enumerated() {
+                let length = tracks.count
+                let seconds = 154 + ((length * 29 + index * 11) % 246)
+                tracks.append(Track(
+                    id: "t\(length + 1)",
+                    title: pair.0,
+                    english: pair.1,
+                    artist: who.name,
+                    artistId: who.id,
+                    album: album.name,
+                    albumId: album.id,
+                    durationMs: seconds * 1000
+                ))
+            }
         }
 
-        let albumRows: [(String, String)] = [
-            ("银河边缘", "Dreamscape"),
-            ("夜航电台", "Aurora Line"),
-            ("云端漫步", "Neon Harbor"),
-            ("星尘集", "Lumen"),
-            ("深空静默", "Void Choir"),
-            ("挪威的森林", "Beyond"),
-            ("Ordinary Road", "朴树"),
-            ("Night Voyager", "M83"),
-        ]
-        let albums = albumRows.enumerated().map { index, row in
-            Album(
-                id: String(format: "alb_01J9X2K4M7NQP8RSTVB%03d", index + 1),
-                name: row.0,
-                artistName: row.1,
-                year: 2024
-            )
-        }
-
+        let showcase = ["t1", "t2", "t3", "t4", "t5"]
         let playlists = [
-            Playlist(id: "pls_01J9X2K4M7NQP8RSTVC001", name: "深夜航行", trackIDs: ids),
-            Playlist(id: "pls_01J9X2K4M7NQP8RSTVC002", name: "专注深空", trackIDs: Array(ids.prefix(3))),
-            Playlist(id: "pls_01J9X2K4M7NQP8RSTVC003", name: "收藏夹", trackIDs: ids),
-            Playlist(id: "pls_01J9X2K4M7NQP8RSTVC004", name: "周末漫游", trackIDs: Array(ids.dropFirst(2).prefix(2))),
-            Playlist(id: "pls_01J9X2K4M7NQP8RSTVC005", name: "星尘精选", trackIDs: Array(ids.suffix(2))),
-            Playlist(id: "pls_01J9X2K4M7NQP8RSTVC006", name: "通勤波段", trackIDs: [ids[0], ids[2], ids[4]]),
-            Playlist(id: "pls_01J9X2K4M7NQP8RSTVC007", name: "雨夜电台", trackIDs: [ids[1]]),
+            Playlist(id: "pls_night", name: "深夜航行", trackIDs: showcase),
+            Playlist(id: "pls_focus", name: "专注深空", trackIDs: ["t5", "t2", "t4"]),
+            Playlist(id: "pls_fav", name: "收藏夹", trackIDs: tracks.map(\.id)),
+            Playlist(id: "pls_weekend", name: "周末漫游", trackIDs: ["t3", "t1"]),
+            Playlist(id: "pls_dust", name: "星尘精选", trackIDs: ["t4", "t1"]),
+            Playlist(id: "pls_commute", name: "通勤波段", trackIDs: ["t2", "t3"]),
+            Playlist(id: "pls_rain", name: "雨夜电台", trackIDs: ["t5", "t2"]),
         ]
-
         return Seed(tracks: tracks, artists: artists, albums: albums, playlists: playlists)
     }
 

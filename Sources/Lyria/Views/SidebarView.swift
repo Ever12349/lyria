@@ -5,12 +5,16 @@ struct SidebarView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Lyria")
-                .font(.system(size: 28, weight: .medium, design: .serif))
-                .foregroundStyle(LyriaTheme.foreground)
-                .padding(.horizontal, 16)
-                .padding(.top, 36)
-                .padding(.bottom, 18)
+            Button { store.select(.library) } label: {
+                Text("Lyria")
+                    .font(.system(size: 28, weight: .medium, design: .serif))
+                    .foregroundStyle(LyriaTheme.foreground)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 8)
+            .padding(.top, 22)
+            .padding(.bottom, 22)
 
             VStack(spacing: 6) {
                 ForEach(NavItem.primaryItems) { item in
@@ -23,25 +27,18 @@ struct SidebarView: View {
 
             navRow(.settings)
                 .padding(.horizontal, 10)
-                .padding(.bottom, 10)
-
-            Capsule()
-                .fill(LyriaTheme.text3.opacity(0.45))
-                .frame(width: 4, height: 28)
-                .frame(maxWidth: .infinity)
-                .padding(.bottom, 14)
-                .accessibilityHidden(true)
+                .padding(.bottom, 16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background {
-            RoundedRectangle(cornerRadius: LyriaTheme.radiusLG, style: .continuous)
+            RoundedRectangle(cornerRadius: LyriaTheme.sidebarRadius, style: .continuous)
                 .fill(LyriaTheme.panel.opacity(0.92))
         }
         .overlay {
-            RoundedRectangle(cornerRadius: LyriaTheme.radiusLG, style: .continuous)
+            RoundedRectangle(cornerRadius: LyriaTheme.sidebarRadius, style: .continuous)
                 .strokeBorder(LyriaTheme.border, lineWidth: 1)
         }
-        .clipShape(RoundedRectangle(cornerRadius: LyriaTheme.radiusLG, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: LyriaTheme.sidebarRadius, style: .continuous))
     }
 
     private func navRow(_ item: NavItem) -> some View {

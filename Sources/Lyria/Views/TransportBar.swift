@@ -4,7 +4,7 @@ struct TransportBar: View {
     @EnvironmentObject private var store: FakeLibraryStore
     @State private var volumeBeforeMute = 0.6
 
-    private var track: Track? { store.nowPlaying }
+    private var track: Track? { store.shownTrack }
     private var durationMs: Int { track?.durationMs ?? 0 }
     private var progress: Double {
         guard durationMs > 0 else { return 0 }
@@ -12,45 +12,41 @@ struct TransportBar: View {
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            nowPlayingColumn
-                .frame(maxWidth: .infinity, alignment: .leading)
-            controlsColumn
-                .frame(maxWidth: .infinity)
-            volumeColumn
-                .frame(maxWidth: .infinity, alignment: .trailing)
+        GeometryReader { geo in
+            let inner = max(geo.size.width - 24, 1)
+            HStack(alignment: .center, spacing: 12) {
+                nowPlayingColumn
+                    .frame(width: inner / 3.4, alignment: .leading)
+                controlsColumn
+                    .frame(width: inner * 1.4 / 3.4)
+                volumeColumn
+                    .frame(width: inner / 3.4, alignment: .trailing)
+            }
         }
+        .frame(height: 72)
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.top, 12)
+        .padding(.bottom, 14)
         .background(
-            RoundedRectangle(cornerRadius: LyriaTheme.radiusMD, style: .continuous)
-                .fill(LyriaTheme.panel.opacity(0.92))
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(LyriaTheme.panel.opacity(0.9))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: LyriaTheme.radiusMD, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .strokeBorder(LyriaTheme.border, lineWidth: 1)
         )
-        .padding(.horizontal, 16)
-        .padding(.bottom, 14)
-        .opacity(track == nil ? 0.45 : 1)
+        .padding(.horizontal, 4)
+        .padding(.top, 8)
+        .opacity(track == nil ? 0.55 : 1)
     }
 
     private var nowPlayingColumn: some View {
         HStack(spacing: 10) {
-            Button {
-                guard let album = track?.album else { return }
-                store.openAlbum(named: album)
-            } label: {
-                CoverArt(seed: track?.id ?? "idle", cornerRadius: 8)
-                    .frame(width: 44, height: 44)
-                    .opacity(track == nil ? 0.4 : 1)
-            }
-            .buttonStyle(.plain)
-            .disabled(track == nil)
-            .accessibilityLabel(track == nil ? "没有正在播放" : "打开专辑")
-
+            CoverArt(seed: track?.albumId ?? "idle", cornerRadius: 8)
+                .frame(width: 44, height: 44)
+                .opacity(track == nil ? 0.35 : 1)
             VStack(alignment: .leading, spacing: 2) {
-                Text(track?.title ?? "未在播放")
+                Text(track?.title ?? "—")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(LyriaTheme.foreground)
                     .lineLimit(1)
@@ -59,22 +55,6 @@ struct TransportBar: View {
                     .foregroundStyle(LyriaTheme.text2)
                     .lineLimit(1)
             }
-
-            if let track {
-                Menu {
-                    TrackMenu.items(track: track, playlistID: nil, store: store)
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(LyriaTheme.text2)
-                        .frame(width: 28, height: 28)
-                        .contentShape(Rectangle())
-                }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
-                .frame(width: 28, height: 28)
-                .accessibilityLabel("更多")
-            }
             Spacer(minLength: 0)
         }
     }
@@ -82,7 +62,7 @@ struct TransportBar: View {
     private var controlsColumn: some View {
         VStack(spacing: 8) {
             HStack(spacing: 8) {
-                Text(TimeFormat.label(ms: store.positionMs))
+                Text(track == nil ? "0:00" : TimeFormat.label(ms: store.positionMs))
                     .frame(width: 36, alignment: .trailing)
                 progressBar
                 Text(track?.durationLabel ?? "0:00")
@@ -101,7 +81,7 @@ struct TransportBar: View {
                 iconButton(
                     store.repeatMode.systemImage,
                     active: store.repeatMode != .off,
-                    label: "重复：\(store.repeatMode.label)"
+                    label: store.repeatMode.tooltip
                 ) {
                     store.cycleRepeat()
                 }
@@ -157,6 +137,15 @@ struct TransportBar: View {
 
     private var volumeColumn: some View {
         HStack(spacing: 8) {
+            Button { store.toggleQueue() } label: {
+                Image(systemName: "music.note.list")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(store.queueVisible ? LyriaTheme.primary : LyriaTheme.text2)
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(store.queueVisible ? "关闭队列" : "队列")
+
             Button {
                 if store.volume > 0.001 {
                     volumeBeforeMute = store.volume
@@ -177,20 +166,6 @@ struct TransportBar: View {
                 .controlSize(.mini)
                 .tint(LyriaTheme.primary)
                 .frame(width: 90)
-
-            Button { store.toggleQueue() } label: {
-                Image(systemName: "music.note.list")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(store.queueVisible ? LyriaTheme.primary : LyriaTheme.text2)
-                    .frame(width: 28, height: 28)
-                    .background {
-                        if store.queueVisible {
-                            Circle().fill(LyriaTheme.primary.opacity(0.16))
-                        }
-                    }
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(store.queueVisible ? "关闭队列" : "打开队列")
         }
     }
 
@@ -215,6 +190,7 @@ struct TransportBar: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .help(label)
         .disabled(track == nil)
         .accessibilityLabel(label)
     }

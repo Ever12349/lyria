@@ -4,11 +4,26 @@ struct SettingsView: View {
     @EnvironmentObject private var store: FakeLibraryStore
 
     var body: some View {
+        ScrollView {
         VStack(spacing: 12) {
             SettingRow(title: "曲库路径", detail: "~/Music/Lyria · 添加 / 移除文件夹后自动扫描") {
-                PillButton(title: "管理…") {
-                    store.showToast("选择文件夹仍是静态壳")
+                Menu {
+                    Button(store.libraryEmpty ? "恢复示例曲库" : "查看空曲库") {
+                        if store.libraryEmpty { store.restoreLibrary() }
+                        else { store.previewEmptyLibrary() }
+                    }
+                } label: {
+                    Text("管理…")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.white)
+                        .padding(.horizontal, 14)
+                        .frame(height: 32)
+                        .background(Capsule().fill(Color.white.opacity(0.06)))
+                        .overlay(Capsule().strokeBorder(LyriaTheme.border, lineWidth: 1))
                 }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
             }
             SettingRow(title: "重新扫描曲库", detail: "按路径指纹重建索引，不改动文件") {
                 PillButton(title: "立即扫描") {
@@ -35,6 +50,7 @@ struct SettingsView: View {
                     store.showToast("清除指纹缓存仍是静态壳")
                 }
             }
+        }
         }
     }
 }

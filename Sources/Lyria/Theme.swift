@@ -21,6 +21,7 @@ enum LyriaTheme {
     static let radiusSM: CGFloat = 12
     static let radiusMD: CGFloat = 16
     static let radiusLG: CGFloat = 22
+    static let sidebarRadius: CGFloat = 18
     static let sidebarInset: CGFloat = 12
 
     static var accentGradient: LinearGradient {
@@ -47,19 +48,36 @@ enum LyriaTheme {
         )
     }
 
+    /// Same hash as the HTML prototype `coverStyle`: hue from the album id.
     static func coverGradient(seed: String) -> LinearGradient {
-        let presets: [[Color]] = [
-            [primary, primaryDeep],
-            [Color(red: 176 / 255, green: 140 / 255, blue: 1), primaryDeep],
-            [Color(red: 125 / 255, green: 108 / 255, blue: 245 / 255), Color(red: 88 / 255, green: 48 / 255, blue: 214 / 255)],
-            [Color(red: 196 / 255, green: 160 / 255, blue: 1), Color(red: 109 / 255, green: 70 / 255, blue: 224 / 255)],
-            [primary.opacity(0.95), Color(red: 76 / 255, green: 42 / 255, blue: 196 / 255)],
-        ]
-        let index = abs(seed.unicodeScalars.reduce(0) { $0 &* 31 &+ Int($1.value) }) % presets.count
+        var hash: UInt32 = 0
+        for scalar in seed.unicodeScalars {
+            hash = hash &* 33 &+ UInt32(scalar.value)
+        }
+        let hue = Double(hash % 360)
         return LinearGradient(
-            colors: presets[index],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
+            colors: [hsl(hue, 58, 58), hsl((hue + 32).truncatingRemainder(dividingBy: 360), 46, 34)],
+            startPoint: UnitPoint(x: 0.2, y: 0),
+            endPoint: UnitPoint(x: 0.8, y: 1)
         )
+    }
+
+    private static func hsl(_ h: Double, _ s: Double, _ l: Double) -> Color {
+        let sat = s / 100
+        let lig = l / 100
+        let c = (1 - abs(2 * lig - 1)) * sat
+        let hp = h / 60
+        let x = c * (1 - abs(hp.truncatingRemainder(dividingBy: 2) - 1))
+        let m = lig - c / 2
+        let rgb: (Double, Double, Double)
+        switch hp {
+        case 0..<1: rgb = (c, x, 0)
+        case 1..<2: rgb = (x, c, 0)
+        case 2..<3: rgb = (0, c, x)
+        case 3..<4: rgb = (0, x, c)
+        case 4..<5: rgb = (x, 0, c)
+        default: rgb = (c, 0, x)
+        }
+        return Color(red: rgb.0 + m, green: rgb.1 + m, blue: rgb.2 + m)
     }
 }

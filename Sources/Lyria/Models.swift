@@ -2,9 +2,13 @@ import Foundation
 
 struct Track: Identifiable, Hashable {
     let id: String
+    /// Chinese title. The English line is stored for search only and is not shown.
     let title: String
+    let english: String
     let artist: String
+    let artistId: String
     let album: String
+    let albumId: String
     let durationMs: Int
 
     var durationLabel: String { TimeFormat.label(ms: durationMs) }
@@ -45,6 +49,14 @@ enum RepeatMode: String, CaseIterable {
         switch self {
         case .off, .all: return "repeat"
         case .one: return "repeat.1"
+        }
+    }
+
+    var tooltip: String {
+        switch self {
+        case .off: return "重复关闭"
+        case .all: return "重复全部"
+        case .one: return "单曲循环"
         }
     }
 

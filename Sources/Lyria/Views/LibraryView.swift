@@ -4,7 +4,7 @@ struct LibraryView: View {
     @EnvironmentObject private var store: FakeLibraryStore
 
     var body: some View {
-        TrackTable(tracks: store.tracks)
+        TrackTable(tracks: store.visibleTracks)
     }
 }
 

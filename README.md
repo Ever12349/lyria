@@ -63,6 +63,6 @@ Deep Space：背景 `#0a0b1a`，强调色 `#9b87f5 → #7c3aed`，圆角 16–24
 - 曲目行：封面、标题、艺人、专辑、时长、更多；正在播放行用强调色
 - 原生透明标题栏 + 系统双击放大。`TitlebarPassthroughContentView` 只把**系统标题栏拖动带**交给系统，不再把整窗顶 52pt 一律穿透
 
-对照静态稿：`.design/ui-mocks/html/`（`theme.css` 与 01–14）。交互原型 `index.html` / `prototype.js` 不在仓库里；壳层按这些快照的结构，加上文档里已经锁死的 Amb-UI 决定（内缩侧栏、page-head、去掉副标题、Spec 空态文案）。
+对照 `.design/ui-mocks/html/`（`index.html`、`prototype.js`、`prototype.css`、`theme.css`，以及 01–14）。空曲库 / 空播放列表文案仍按规格，不按原型屏幕里的旧句子。
 
 产品显示名与 MCP 名：**Lyria** / **`lyria`**。正式项目目录名：**`lyria`**。

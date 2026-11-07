@@ -6,9 +6,11 @@ struct AlbumsView: View {
     private let columns = [GridItem(.adaptive(minimum: 150, maximum: 220), spacing: 16)]
 
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 16) {
-            ForEach(store.albums) { album in
-                AlbumCard(album: album)
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: 16) {
+                ForEach(store.albums) { album in
+                    AlbumCard(album: album)
+                }
             }
         }
     }
@@ -21,6 +23,7 @@ struct AlbumDetailView: View {
     var body: some View {
         if let album = store.album(albumID) {
             let songs = store.tracks(forAlbum: album.name)
+            ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 DetailHero(
                     seed: album.id,
@@ -45,8 +48,9 @@ struct AlbumDetailView: View {
                         .foregroundStyle(LyriaTheme.text2)
                         .frame(maxWidth: .infinity, minHeight: 120)
                 } else {
-                    TrackTable(tracks: songs)
+                    TrackTable(tracks: songs, scrolls: false)
                 }
+            }
             }
         } else {
             EmptyState(systemImage: "opticaldisc", title: "找不到这张专辑") { EmptyView() }

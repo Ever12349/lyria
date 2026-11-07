@@ -1,12 +1,13 @@
-<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="theme.css"></head>
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="theme.css?v=layout"></head>
 <body><div class="annot">
 <h1>Lyria · Window Chrome（原生标题栏约定）</h1>
 <ol>
 <li><code>NSWindow.styleMask</code> 含 <code>.titled</code> + <code>.fullSizeContentView</code></li>
 <li><code>titlebarAppearsTransparent = true</code>、<code>titleVisibility = .hidden</code> — 无自定义黑色顶栏条</li>
 <li>红绿灯由系统绘制，视觉上落在<strong>左侧栏顶部内部</strong>（侧栏玻璃通顶）</li>
-<li>拖动 / 双击放大还原走系统 <code>NSThemeFrame</code>；穿透仅限系统标题栏拖动带（勿整窗顶 52pt 一律 <code>hitTest → nil</code>），不自定义 <code>performZoom</code></li>
-<li>侧栏通底全高；底栏（Transport）只在详情列下方，不延伸到侧栏下</li>
+<li>拖动 / 双击放大还原走系统 <code>NSThemeFrame</code>；穿透区收窄为系统标题栏拖动带（<code>hitTest → nil</code>），<strong>勿</strong>整顶约 52pt 一律穿透；不自定义 <code>performZoom</code></li>
+<li>侧栏相对窗口四边留出约 12px，圆角约 18px；底栏（Transport）只在详情列下方，不延伸到侧栏下。设置下不放拖宽示意点</li>
+<li>详情列顶部是导航标题，与搜索、列表、底栏左右对齐。能返回时，后退图标在标题左侧并与文字对齐</li>
 <li>侧栏可拖宽 <strong>168–320</strong>（默认 ~228）</li>
 <li>Deep Space：左右同色 <code>#0a0b1a</code> 系，禁用吸壁纸 vibrancy</li>
 <li>Accent 渐变 <code>#9b87f5 → #7c3aed</code>；圆角 16–24</li>

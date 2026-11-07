@@ -6,6 +6,7 @@ struct PlaylistsView: View {
     private let columns = [GridItem(.adaptive(minimum: 150, maximum: 220), spacing: 16)]
 
     var body: some View {
+        ScrollView {
         LazyVGrid(columns: columns, spacing: 16) {
             Button { store.createPlaylist() } label: {
                 VStack(spacing: 8) {
@@ -29,6 +30,7 @@ struct PlaylistsView: View {
             ForEach(store.playlists) { playlist in
                 PlaylistCard(playlist: playlist)
             }
+        }
         }
     }
 }
@@ -75,6 +77,7 @@ struct PlaylistDetailView: View {
     var body: some View {
         if let playlist = store.playlist(playlistID) {
             let songs = store.tracks(in: playlist)
+            ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 DetailHero(
                     seed: playlist.id,
@@ -106,8 +109,9 @@ struct PlaylistDetailView: View {
                     }
                     .frame(minHeight: 220)
                 } else {
-                    TrackTable(tracks: songs, playlistID: playlist.id)
+                    TrackTable(tracks: songs, playlistID: playlist.id, scrolls: false)
                 }
+            }
             }
             .confirmationDialog("删除这个播放列表？", isPresented: $confirmDelete, titleVisibility: .visible) {
                 Button("删除「\(playlist.name)」", role: .destructive) {
