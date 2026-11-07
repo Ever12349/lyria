@@ -1,6 +1,5 @@
 import SwiftUI
 import AppKit
-import ObjectiveC
 
 private let deepSpace = NSColor(
     calibratedRed: 10 / 255,
@@ -10,7 +9,7 @@ private let deepSpace = NSColor(
 )
 
 /// Music.app-style chrome. Native title bar owns drag + double-click zoom.
-/// Passthrough wrapper is reinstalled whenever SwiftUI replaces contentView.
+/// The passthrough band is only the system titlebar height — not a fixed 52pt strip.
 struct WindowChromeConfigurer: NSViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -26,30 +25,22 @@ struct WindowChromeConfigurer: NSViewRepresentable {
 
     final class Coordinator {
         private var workItem: DispatchWorkItem?
-        private var pollTimer: Timer?
 
         func schedule(from view: NSView) {
             workItem?.cancel()
-            let item = DispatchWorkItem { [weak self, weak view] in
-                guard let self, let window = view?.window else { return }
+            let item = DispatchWorkItem { [weak view] in
+                guard let window = view?.window else { return }
                 WindowChromeConfigurer.apply(to: window)
-                self.startPolling(window)
+                // SwiftUI sometimes swaps contentView again after the first layout pass.
+                for delay in [0.35, 1.0] {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak window] in
+                        guard let window, !(window.contentView is TitlebarPassthroughContentView) else { return }
+                        WindowChromeConfigurer.apply(to: window)
+                    }
+                }
             }
             workItem = item
             DispatchQueue.main.async(execute: item)
-        }
-
-        private func startPolling(_ window: NSWindow) {
-            pollTimer?.invalidate()
-            var ticks = 0
-            pollTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] timer in
-                ticks += 1
-                WindowChromeConfigurer.apply(to: window)
-                if ticks >= 15 { // ~3s after layout settles
-                    timer.invalidate()
-                    self?.pollTimer = nil
-                }
-            }
         }
     }
 
@@ -82,7 +73,8 @@ struct WindowChromeConfigurer: NSViewRepresentable {
     }
 }
 
-/// Returns nil in the top title-bar band so NSThemeFrame handles native zoom/drag.
+/// Returns nil only inside the system titlebar drag band so NSThemeFrame can drag and zoom.
+/// Interactive controls (search, sidebar rows) sit below that band and keep their clicks.
 final class TitlebarPassthroughContentView: NSView {
     private weak var hosted: NSView?
 
@@ -115,14 +107,14 @@ final class TitlebarPassthroughContentView: NSView {
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
-        guard window != nil else { return super.hitTest(point) }
+        guard let window else { return super.hitTest(point) }
 
         let local = convert(point, from: superview)
-        let layoutDelta = (window?.frame.height ?? 0) - (window?.contentLayoutRect.height ?? 0)
-        let titleband = max(layoutDelta, 52)
+        let layoutDelta = window.frame.height - window.contentLayoutRect.height
+        let band = layoutDelta > 1 ? layoutDelta : 28
 
-        if local.y >= bounds.maxY - titleband {
-            return nil // system title bar
+        if local.y >= bounds.maxY - band {
+            return nil
         }
 
         guard let hosted else { return super.hitTest(point) }

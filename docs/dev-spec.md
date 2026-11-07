@@ -216,13 +216,13 @@ MCP 不要求也不应默认代理 HTTP；两者并列挂在同一状态机上�
 | --- | --- |
 | 窗口类型 | `NSWindow` · `styleMask = titled \| closable \| miniaturizable \| resizable \| fullSizeContentView` |
 | 标题栏 | `titlebarAppearsTransparent = true` · `titleVisibility = .hidden` · `titlebarSeparatorStyle = .none` |
-| 红绿灯 | 系统按钮；视觉上落在左侧栏内部（侧栏玻璃/底色通顶到窗口上缘，压在透明标题栏下） |
+| 红绿灯 | 系统按钮；视觉上落在 12px 内缩侧栏圆角卡的顶部空白带里 |
 | 拖动 / 双击 | 原生 `NSThemeFrame`：拖动与双击放大/还原由系统处理；禁止自定义 `NSEvent` 监视器，禁止自调 `performZoom` |
-| SwiftUI 补丁 | `TitlebarPassthroughContentView`：顶约 52pt `hitTest` 返回 `nil`，避免 SwiftUI 内容吃掉标题栏点击 |
+| SwiftUI 补丁 | `TitlebarPassthroughContentView`：穿透区收窄为系统标题栏拖动带（窗口高度与 `contentLayoutRect` 之差；勿把整窗顶 52pt 一律 `hitTest → nil`）。搜索与侧栏可点控件放在该带下方 |
 | 侧栏宽度 | 可拖 168–320，理想约 228 |
-| 分栏 | 左侧栏通窗高（贴底，与传输条并排到窗口底）；详情列 = 搜索 + 页面内容 + 底栏传输；传输条不伸进侧栏下方 |
+| 分栏 | 左侧栏是距窗口边缘 12px 的圆角卡，与传输条并排到接近窗口底；详情列 = 搜索 + page-head + 页面内容 + 底栏传输；传输条不伸进侧栏下方 |
 | 色板 | Deep Space：bg `#0a0b1a` · accent `#9b87f5 → #7c3aed`；左右同一 Deep Space 底色；禁用 behindWindow vibrancy（会吸桌面壁纸色调） |
-| 曲目列表 | 带边框的列表卡片 + 可见行描边 |
+| 曲目列表 | 可见行描边；封面 · 标题 · 艺人 · 专辑 · 时长 · 更多；无双语副标题 |
 
 **实现备注：** 当前静态样例用 `HStack` + `SidebarResizeHandle` 替代 `NavigationSplitView`，以实现「红绿灯落在侧栏内」与侧栏拖宽；文档锁定的是行为与布局，具体控件可演进。队列不是永久第三列，而是详情区内可选浮层/面板。
 
@@ -398,8 +398,8 @@ MVP HTTP = health + status + 传输六件套（play/pause/toggle/next/previous/s
 | 2 | Library 扫描 + 指纹/id DB | 待开工 | 另需开工 · 改名后 id 仍稳定 |
 | 3 | MCP 烟雾（`lyria_status` / `play` / `pause` / `search`） | 待开工 | 另需开工 · stdio · server name `lyria` |
 | 4 | Queue + shuffle/repeat | 待开工 | ended 行为正确 |
-| 5 | SwiftUI 各页（艺人/专辑/歌单/设置）+ 空态 | 待开工 | 壳已有；页面树按 UI/IA 补齐 |
-| 6 | 空态/错误态 | 待开工 | 按锁定文案 |
+| 5 | SwiftUI 各页（艺人/专辑/歌单/设置）+ 空态 | 静态壳已铺 | 主窗假数据已按 Amb-UI 范围 B 铺开；无引擎、无 MenuBarExtra。引擎相关错误态仍待开工 |
+| 6 | 空态/错误态 | 主窗文案已铺 | 空曲库 / 空歌单 / 搜索无结果按锁定文案。不可播、引擎横幅、文件缺失仍待引擎开工 |
 | 7 | 可选 HTTP 层 | 待开工 | 可关且 MCP 仍好 |
 | 8 | 菜单栏 + 设置打磨 | 待开工 | popover 同步状态 |
 | 9 | 真机证明清单 | 待开工 | 见验收 |

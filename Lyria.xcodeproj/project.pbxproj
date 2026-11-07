@@ -12,8 +12,17 @@
 		C046F0215E15483E98C17D30 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C877B0A580E645F6B4E0D2F0 /* ContentView.swift */; };
 		94427E1BE5874C56AD3C4425 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7169993B0B13474890E1FE55 /* Theme.swift */; };
 		93E278906CC0456491349C62 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D8C0413CC2849248C9A3855 /* Models.swift */; };
-		D4BA01F5AD7A441D9437FE54 /* VisualEffectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C93A0D31839449AC88E98E68 /* VisualEffectView.swift */; };
 		3FCCFAE05AEC4DD096BD0DC4 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75F41FD029144B698CEC20E5 /* SidebarView.swift */; };
+		435ECDDCE95D401EA610AF4C /* FakeLibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA3BFD20B65A49098DDA8E42 /* FakeLibraryStore.swift */; };
+		174EEB68D25F451D9D6F5F9F /* ShellControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 213A5EEDCC8E42338D9A1144 /* ShellControls.swift */; };
+		8B66152888F4490FAE28F53A /* TrackTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 560ABC61B9F440318D9E57B2 /* TrackTable.swift */; };
+		EB1551EE094545F293F28450 /* ArtistsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23B9EA7CC27C448085B6747C /* ArtistsView.swift */; };
+		82915AC6D4354508A1AB04DA /* AlbumsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEFE89252F124805BE9B23D7 /* AlbumsView.swift */; };
+		502EA1527AC5453C812D928B /* PlaylistsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4950D505E79047BB8C3BE110 /* PlaylistsView.swift */; };
+		A20B1594DA1C4001AACBCCB8 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC3A350EBB6E41D189A4880A /* SettingsView.swift */; };
+		4C360CA6FEDE451EB5B44101 /* QueuePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCA886B42B2045BA9AD56681 /* QueuePanel.swift */; };
+		50EFA6210A254D81ABBE8DCF /* SearchResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AFBB66142764E56A0D83C1E /* SearchResultsView.swift */; };
+		67653BB3189B4E81BE8A472F /* SidebarResizeHandle.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABB1A05624834278B751409B /* SidebarResizeHandle.swift */; };
 		D432588F094D4D038672857D /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 597CCA83E4DF462AB4AE0CCD /* LibraryView.swift */; };
 		37DC3CD03F0B4DEB8E17DF0E /* TransportBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5698C8C8CD948D283AE6A2A /* TransportBar.swift */; };
 /* End PBXBuildFile section */
@@ -24,8 +33,17 @@
 		C877B0A580E645F6B4E0D2F0 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		7169993B0B13474890E1FE55 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		0D8C0413CC2849248C9A3855 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
-		C93A0D31839449AC88E98E68 /* VisualEffectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualEffectView.swift; sourceTree = "<group>"; };
 		75F41FD029144B698CEC20E5 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
+		FA3BFD20B65A49098DDA8E42 /* FakeLibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FakeLibraryStore.swift; sourceTree = "<group>"; };
+		213A5EEDCC8E42338D9A1144 /* ShellControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellControls.swift; sourceTree = "<group>"; };
+		560ABC61B9F440318D9E57B2 /* TrackTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackTable.swift; sourceTree = "<group>"; };
+		23B9EA7CC27C448085B6747C /* ArtistsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtistsView.swift; sourceTree = "<group>"; };
+		BEFE89252F124805BE9B23D7 /* AlbumsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumsView.swift; sourceTree = "<group>"; };
+		4950D505E79047BB8C3BE110 /* PlaylistsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistsView.swift; sourceTree = "<group>"; };
+		CC3A350EBB6E41D189A4880A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		BCA886B42B2045BA9AD56681 /* QueuePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueuePanel.swift; sourceTree = "<group>"; };
+		0AFBB66142764E56A0D83C1E /* SearchResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultsView.swift; sourceTree = "<group>"; };
+		ABB1A05624834278B751409B /* SidebarResizeHandle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarResizeHandle.swift; sourceTree = "<group>"; };
 		597CCA83E4DF462AB4AE0CCD /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		E5698C8C8CD948D283AE6A2A /* TransportBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransportBar.swift; sourceTree = "<group>"; };
 		845ABF3E3697414FBA284EFD /* Lyria.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Lyria.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -65,6 +83,7 @@
 				C877B0A580E645F6B4E0D2F0 /* ContentView.swift */,
 				7169993B0B13474890E1FE55 /* Theme.swift */,
 				0D8C0413CC2849248C9A3855 /* Models.swift */,
+				FA3BFD20B65A49098DDA8E42 /* FakeLibraryStore.swift */,
 				1D1673F8135B461384BB9050 /* Views */,
 			);
 			path = Sources/Lyria;
@@ -73,10 +92,18 @@
 		1D1673F8135B461384BB9050 /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				C93A0D31839449AC88E98E68 /* VisualEffectView.swift */,
 				698A7071D4D241C798E12669 /* WindowChromeConfigurer.swift */,
+				ABB1A05624834278B751409B /* SidebarResizeHandle.swift */,
 				75F41FD029144B698CEC20E5 /* SidebarView.swift */,
+				213A5EEDCC8E42338D9A1144 /* ShellControls.swift */,
+				560ABC61B9F440318D9E57B2 /* TrackTable.swift */,
 				597CCA83E4DF462AB4AE0CCD /* LibraryView.swift */,
+				23B9EA7CC27C448085B6747C /* ArtistsView.swift */,
+				BEFE89252F124805BE9B23D7 /* AlbumsView.swift */,
+				4950D505E79047BB8C3BE110 /* PlaylistsView.swift */,
+				CC3A350EBB6E41D189A4880A /* SettingsView.swift */,
+				BCA886B42B2045BA9AD56681 /* QueuePanel.swift */,
+				0AFBB66142764E56A0D83C1E /* SearchResultsView.swift */,
 				E5698C8C8CD948D283AE6A2A /* TransportBar.swift */,
 			);
 			path = Views;
@@ -139,10 +166,19 @@
 				C046F0215E15483E98C17D30 /* ContentView.swift in Sources */,
 				94427E1BE5874C56AD3C4425 /* Theme.swift in Sources */,
 				93E278906CC0456491349C62 /* Models.swift in Sources */,
-				D4BA01F5AD7A441D9437FE54 /* VisualEffectView.swift in Sources */,
 				DFB2494C225C4B93B7571413 /* WindowChromeConfigurer.swift in Sources */,
+				67653BB3189B4E81BE8A472F /* SidebarResizeHandle.swift in Sources */,
 				3FCCFAE05AEC4DD096BD0DC4 /* SidebarView.swift in Sources */,
+				435ECDDCE95D401EA610AF4C /* FakeLibraryStore.swift in Sources */,
+				174EEB68D25F451D9D6F5F9F /* ShellControls.swift in Sources */,
+				8B66152888F4490FAE28F53A /* TrackTable.swift in Sources */,
 				D432588F094D4D038672857D /* LibraryView.swift in Sources */,
+				EB1551EE094545F293F28450 /* ArtistsView.swift in Sources */,
+				82915AC6D4354508A1AB04DA /* AlbumsView.swift in Sources */,
+				502EA1527AC5453C812D928B /* PlaylistsView.swift in Sources */,
+				A20B1594DA1C4001AACBCCB8 /* SettingsView.swift in Sources */,
+				4C360CA6FEDE451EB5B44101 /* QueuePanel.swift in Sources */,
+				50EFA6210A254D81ABBE8DCF /* SearchResultsView.swift in Sources */,
 				37DC3CD03F0B4DEB8E17DF0E /* TransportBar.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -3,16 +3,85 @@ import Foundation
 struct Track: Identifiable, Hashable {
     let id: String
     let title: String
-    let subtitle: String
     let artist: String
     let album: String
     let durationMs: Int
 
-    var durationLabel: String {
-        let total = max(durationMs, 0) / 1000
-        let m = total / 60
-        let s = total % 60
-        return String(format: "%d:%02d", m, s)
+    var durationLabel: String { TimeFormat.label(ms: durationMs) }
+}
+
+struct Artist: Identifiable, Hashable {
+    let id: String
+    let name: String
+}
+
+struct Album: Identifiable, Hashable {
+    let id: String
+    let name: String
+    let artistName: String
+    let year: Int
+}
+
+struct Playlist: Identifiable, Hashable {
+    let id: String
+    var name: String
+    var trackIDs: [String]
+}
+
+enum RepeatMode: String, CaseIterable {
+    case off
+    case all
+    case one
+
+    var label: String {
+        switch self {
+        case .off: return "关闭"
+        case .all: return "全部"
+        case .one: return "单曲"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .off, .all: return "repeat"
+        case .one: return "repeat.1"
+        }
+    }
+
+    var next: RepeatMode {
+        switch self {
+        case .off: return .all
+        case .all: return .one
+        case .one: return .off
+        }
+    }
+}
+
+enum AppRoute: Hashable {
+    case library
+    case artists
+    case artist(String)
+    case albums
+    case album(String)
+    case playlists
+    case playlist(String)
+    case settings
+
+    var nav: NavItem {
+        switch self {
+        case .library: return .library
+        case .artists, .artist: return .artists
+        case .albums, .album: return .albums
+        case .playlists, .playlist: return .playlists
+        case .settings: return .settings
+        }
+    }
+
+    var showsBack: Bool {
+        switch self {
+        case .artist, .album, .playlist: return true
+        default: return false
+        }
     }
 }
 
@@ -35,25 +104,28 @@ enum NavItem: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Primary nav vs bottom-pinned settings.
+    var route: AppRoute {
+        switch self {
+        case .library: return .library
+        case .artists: return .artists
+        case .albums: return .albums
+        case .playlists: return .playlists
+        case .settings: return .settings
+        }
+    }
+
     static var primaryItems: [NavItem] { [.library, .artists, .albums, .playlists] }
 }
 
-enum FakeData {
-    static let tracks: [Track] = [
-        Track(id: "trk_01J9X2K4M7NQP8RSTUVWYA", title: "星际旅行", subtitle: "Interstellar Voyage", artist: "The Paper Kites", album: "States", durationMs: 272_000),
-        Track(id: "trk_01J9X2K4M7NQP8RSTUVWXY", title: "夜航星", subtitle: "Night Voyager", artist: "陈绮贞", album: "太阳", durationMs: 268_000),
-        Track(id: "trk_01J9X2K4M7NQP8RSTUVWXZ", title: "挪威的森林", subtitle: "Norwegian Wood", artist: "伍佰", album: "浪人情歌", durationMs: 312_000),
-        Track(id: "trk_01J9X2K4M7NQP8RSTUVWYB", title: "平凡之路", subtitle: "Ordinary Road", artist: "朴树", album: "猎人手记", durationMs: 298_000),
-        Track(id: "trk_01J9X2K4M7NQP8RSTUVWYC", title: "午夜城市", subtitle: "Midnight City", artist: "M83", album: "Hurry Up, We're Dreaming", durationMs: 243_000),
-        Track(id: "trk_01J9X2K4M7NQP8RSTUVWYD", title: "起风了", subtitle: "The Wind Rises", artist: "买辣椒也用券", album: "起风了", durationMs: 325_000),
-        Track(id: "trk_01J9X2K4M7NQP8RSTUVWYE", title: "全新世", subtitle: "Holocene", artist: "Bon Iver", album: "Bon Iver", durationMs: 336_000),
-        Track(id: "trk_01J9X2K4M7NQP8RSTUVWYF", title: "海阔天空", subtitle: "Boundless Oceans", artist: "Beyond", album: "乐与怒", durationMs: 326_000),
-        Track(id: "trk_01J9X2K4M7NQP8RSTUVWYG", title: "序曲", subtitle: "Intro", artist: "The xx", album: "xx", durationMs: 127_000),
-        Track(id: "trk_01J9X2K4M7NQP8RSTUVWYH", title: "光辉岁月", subtitle: "Glorious Years", artist: "Beyond", album: "命运派对", durationMs: 299_000),
-        Track(id: "trk_01J9X2K4M7NQP8RSTUVWYI", title: "土星", subtitle: "Saturn", artist: "Sleeping At Last", album: "Atlas: Space", durationMs: 289_000),
-        Track(id: "trk_01J9X2K4M7NQP8RSTUVWYJ", title: "成全", subtitle: "Make It Complete", artist: "林宥嘉", album: "大小说家", durationMs: 274_000),
-    ]
+enum TimeFormat {
+    static func label(ms: Int) -> String {
+        let total = max(ms, 0) / 1000
+        return String(format: "%d:%02d", total / 60, total % 60)
+    }
 
-    static let nowPlayingId = tracks[0].id
+    static func words(ms: Int) -> String {
+        let minutes = max(ms, 0) / 60_000
+        if minutes < 60 { return "约 \(max(minutes, 1)) 分钟" }
+        return "约 \(minutes / 60) 小时 \(minutes % 60) 分"
+    }
 }

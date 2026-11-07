@@ -1,88 +1,76 @@
 import SwiftUI
 
 struct SidebarView: View {
-    @Binding var selection: NavItem
+    @EnvironmentObject private var store: FakeLibraryStore
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Lyria")
-                .font(.system(size: 28, weight: .semibold, design: .serif))
+                .font(.system(size: 28, weight: .medium, design: .serif))
                 .foregroundStyle(LyriaTheme.foreground)
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
-                .padding(.bottom, 22)
+                .padding(.horizontal, 16)
+                .padding(.top, 36)
+                .padding(.bottom, 18)
 
             VStack(spacing: 6) {
                 ForEach(NavItem.primaryItems) { item in
                     navRow(item)
                 }
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 10)
 
             Spacer(minLength: 12)
 
             navRow(.settings)
-                .padding(.horizontal, 12)
-                .padding(.bottom, 8)
+                .padding(.horizontal, 10)
+                .padding(.bottom, 10)
 
-            HStack(spacing: 5) {
-                ForEach(0..<3, id: \.self) { _ in
-                    Circle()
-                        .fill(LyriaTheme.mutedForeground.opacity(0.35))
-                        .frame(width: 3, height: 3)
-                }
-            }
-            .padding(.leading, 22)
-            .padding(.bottom, 16)
+            Capsule()
+                .fill(LyriaTheme.text3.opacity(0.45))
+                .frame(width: 4, height: 28)
+                .frame(maxWidth: .infinity)
+                .padding(.bottom, 14)
+                .accessibilityHidden(true)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        // Same Deep Space base as the detail column. Avoid .hudWindow/.behindWindow —
-        // that samples desktop wallpaper and casts gray/green vs the solid right pane.
         .background {
-            ZStack {
-                LyriaTheme.background
-                // Soft purple sheen so the column still reads slightly glassier
-                LinearGradient(
-                    colors: [
-                        Color.white.opacity(0.045),
-                        LyriaTheme.primary.opacity(0.05),
-                        LyriaTheme.background.opacity(0.15)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            }
-            .ignoresSafeArea()
-            .allowsHitTesting(false)
+            RoundedRectangle(cornerRadius: LyriaTheme.radiusLG, style: .continuous)
+                .fill(LyriaTheme.panel.opacity(0.92))
         }
+        .overlay {
+            RoundedRectangle(cornerRadius: LyriaTheme.radiusLG, style: .continuous)
+                .strokeBorder(LyriaTheme.border, lineWidth: 1)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: LyriaTheme.radiusLG, style: .continuous))
     }
 
     private func navRow(_ item: NavItem) -> some View {
-        let selected = selection == item
+        let selected = store.currentNav == item
         return Button {
-            selection = item
+            store.select(item)
         } label: {
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 Image(systemName: item.systemImage)
-                    .font(.system(size: 15, weight: .semibold))
-                    .frame(width: 22)
+                    .font(.system(size: 14, weight: .semibold))
+                    .frame(width: 20)
                 Text(item.rawValue)
                     .font(.system(size: 14, weight: selected ? .semibold : .medium))
                     .lineLimit(1)
                 Spacer(minLength: 0)
             }
-            .foregroundStyle(selected ? Color.white : LyriaTheme.mutedForeground)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 11)
+            .foregroundStyle(selected ? Color.white : LyriaTheme.text2)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
             .background {
                 if selected {
-                    RoundedRectangle(cornerRadius: LyriaTheme.radiusSM, style: .continuous)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(LyriaTheme.selectedPillGradient)
-                        .shadow(color: LyriaTheme.primary.opacity(0.35), radius: 12, y: 4)
+                        .shadow(color: LyriaTheme.primaryDeep.opacity(0.35), radius: 12, y: 4)
                 }
             }
-            .contentShape(RoundedRectangle(cornerRadius: LyriaTheme.radiusSM, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
