@@ -12,7 +12,8 @@ struct ContentView: View {
             SidebarView()
                 .frame(width: sidebarWidth)
                 .padding(.leading, LyriaTheme.sidebarInset)
-                .padding(.vertical, LyriaTheme.sidebarInset)
+                .padding(.bottom, LyriaTheme.sidebarInset)
+                .ignoresSafeArea(edges: .top)
 
             SidebarResizeHandle(
                 sidebarWidth: $sidebarWidth,
