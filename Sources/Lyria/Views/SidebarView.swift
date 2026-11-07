@@ -1,17 +1,5 @@
 import SwiftUI
 
-/// Flush with the window top so the traffic lights sit in the sidebar band.
-/// Bottom corners stay rounded above the 12pt margin.
-private func sidebarCard() -> UnevenRoundedRectangle {
-    UnevenRoundedRectangle(
-        topLeadingRadius: 0,
-        bottomLeadingRadius: LyriaTheme.sidebarRadius,
-        bottomTrailingRadius: LyriaTheme.sidebarRadius,
-        topTrailingRadius: 0,
-        style: .continuous
-    )
-}
-
 struct SidebarView: View {
     @EnvironmentObject private var store: FakeLibraryStore
 
@@ -43,16 +31,14 @@ struct SidebarView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background {
-            sidebarCard()
+            RoundedRectangle(cornerRadius: LyriaTheme.sidebarRadius, style: .continuous)
                 .fill(LyriaTheme.panel.opacity(0.92))
-                .ignoresSafeArea(edges: .top)
         }
         .overlay {
-            sidebarCard()
+            RoundedRectangle(cornerRadius: LyriaTheme.sidebarRadius, style: .continuous)
                 .strokeBorder(LyriaTheme.border, lineWidth: 1)
-                .ignoresSafeArea(edges: .top)
         }
-        .clipShape(sidebarCard())
+        .clipShape(RoundedRectangle(cornerRadius: LyriaTheme.sidebarRadius, style: .continuous))
     }
 
     private func navRow(_ item: NavItem) -> some View {

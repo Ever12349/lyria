@@ -8,7 +8,7 @@
 - Deep Space 底色 `#0a0b1a`；Accent `#9b87f5 → #7c3aed`
 - 左右栏**同色**深空底，禁止吸壁纸 vibrancy
 - 主窗约 `1180×760`，圆角 `16–24`
-- 红绿灯视觉上落在**侧栏顶部空白带内**。侧栏卡通到窗口上缘（顶边不留 12px 空隙），左缘与底边仍留约 12px；品牌文案在红绿灯下方
+- 侧栏卡四角圆角 18px，左 / 上 / 下各留约 12px 外边距。红绿灯落在卡顶空白带里，品牌文案在红绿灯下方
 - 侧栏卡底边高于窗口底约 12px；底栏 Transport **只在详情列**，不延伸到侧栏下
 - 无自定义黑色顶栏条
 
@@ -16,7 +16,7 @@
 
 1. `NSWindow.styleMask` 含 `.titled` + `.fullSizeContentView`
 2. `titlebarAppearsTransparent = true`、`titleVisibility = .hidden`
-3. 红绿灯由系统绘制；拖动 / 双击放大还原走系统 `NSThemeFrame`
+3. 红绿灯仍是系统 `standardWindowButton`，布局后把原点移进 12px 内缩侧栏卡的顶部空白带（圆角 18）；不自绘假按钮。拖动 / 双击放大还原走系统 `NSThemeFrame`
 4. **不**自定义 `NSEvent` 监听双击，**不**手调 `performZoom`
 5. SwiftUI 内容会盖住标题栏命中区 → 穿透**仅限**系统标题栏拖动带（约为 `frame` 与 `contentLayoutRect` 的高度差，落空时约 28pt）。勿把整窗顶 52pt 一律 `hitTest → nil`。搜索与侧栏可点控件放在该带下方
 6. 侧栏可拖宽 **168–320**（默认 ~228）

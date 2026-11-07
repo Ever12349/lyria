@@ -31,10 +31,10 @@ struct WindowChromeConfigurer: NSViewRepresentable {
             let item = DispatchWorkItem { [weak view] in
                 guard let window = view?.window else { return }
                 WindowChromeConfigurer.apply(to: window)
-                // SwiftUI sometimes swaps contentView again after the first layout pass.
+                // SwiftUI sometimes resets contentView or button frames after the first pass.
                 for delay in [0.35, 1.0] {
                     DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak window] in
-                        guard let window, !(window.contentView is TitlebarPassthroughContentView) else { return }
+                        guard let window else { return }
                         WindowChromeConfigurer.apply(to: window)
                     }
                 }
@@ -70,6 +70,49 @@ struct WindowChromeConfigurer: NSViewRepresentable {
         }
 
         TitlebarPassthroughContentView.installIfNeeded(on: window)
+        positionTrafficLights(on: window)
+    }
+
+    /// System buttons, shifted so they sit in the sidebar card’s top blank band
+    /// (card is inset 12pt; corner radius 18). Reparented onto the content view
+    /// so they stay clickable below the titlebar strip.
+    private static var trafficPitch: CGFloat = 20
+
+    static func positionTrafficLights(on window: NSWindow) {
+        let types: [NSWindow.ButtonType] = [.closeButton, .miniaturizeButton, .zoomButton]
+        let buttons = types.compactMap { window.standardWindowButton($0) }
+        guard buttons.count == 3, let content = window.contentView else { return }
+        guard content.bounds.width > 200, content.bounds.height > 200 else { return }
+
+        if buttons[0].superview === buttons[1].superview {
+            let pitch = buttons[1].frame.minX - buttons[0].frame.minX
+            if pitch >= 14, pitch <= 32 {
+                trafficPitch = pitch
+            }
+        }
+
+        let margin: CGFloat = 12
+        let insetX: CGFloat = 16
+        let insetY: CGFloat = 8
+        let topFromTop = margin + insetY
+
+        for (index, button) in buttons.enumerated() {
+            if button.superview !== content {
+                button.removeFromSuperview()
+                content.addSubview(button)
+            }
+            button.translatesAutoresizingMaskIntoConstraints = true
+            button.autoresizingMask = []
+            let size = button.bounds.size
+            let x = margin + insetX + CGFloat(index) * trafficPitch
+            let y = content.isFlipped
+                ? topFromTop
+                : content.bounds.height - topFromTop - size.height
+            let origin = NSPoint(x: x, y: y)
+            if abs(button.frame.origin.x - origin.x) > 0.5 || abs(button.frame.origin.y - origin.y) > 0.5 {
+                button.setFrameOrigin(origin)
+            }
+        }
     }
 }
 
@@ -104,12 +147,23 @@ final class TitlebarPassthroughContentView: NSView {
     override func layout() {
         super.layout()
         hosted?.frame = bounds
+        if let window {
+            WindowChromeConfigurer.positionTrafficLights(on: window)
+        }
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
         guard let window else { return super.hitTest(point) }
 
         let local = convert(point, from: superview)
+        // System traffic lights live on this view so they can sit inside the
+        // inset sidebar card and still receive clicks inside the drag band.
+        for subview in subviews.reversed() where subview !== hosted {
+            if let hit = subview.hitTest(local) {
+                return hit
+            }
+        }
+
         let layoutDelta = window.frame.height - window.contentLayoutRect.height
         let band = layoutDelta > 1 ? layoutDelta : 28
 
