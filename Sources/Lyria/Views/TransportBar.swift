@@ -1,15 +1,7 @@
 import SwiftUI
 
 struct TransportBar: View {
-    @EnvironmentObject private var store: FakeLibraryStore
-    @State private var volumeBeforeMute = 0.6
-
-    private var track: Track? { store.shownTrack }
-    private var durationMs: Int { track?.durationMs ?? 0 }
-    private var progress: Double {
-        guard durationMs > 0 else { return 0 }
-        return min(max(Double(store.positionMs) / Double(durationMs), 0), 1)
-    }
+    @EnvironmentObject private var store: AppSession
 
     var body: some View {
         GeometryReader { geo in
@@ -37,20 +29,20 @@ struct TransportBar: View {
         )
         .padding(.horizontal, 4)
         .padding(.top, 8)
-        .opacity(track == nil ? 0.55 : 1)
+        .opacity(0.55)
     }
 
     private var nowPlayingColumn: some View {
         HStack(spacing: 10) {
-            CoverArt(seed: track?.albumId ?? "idle", cornerRadius: 8)
+            CoverArt(seed: "idle", cornerRadius: 8)
                 .frame(width: 44, height: 44)
-                .opacity(track == nil ? 0.35 : 1)
+                .opacity(0.35)
             VStack(alignment: .leading, spacing: 2) {
-                Text(track?.title ?? "—")
+                Text("—")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(LyriaTheme.foreground)
                     .lineLimit(1)
-                Text(track?.artist ?? "—")
+                Text("—")
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(LyriaTheme.text2)
                     .lineLimit(1)
@@ -62,136 +54,102 @@ struct TransportBar: View {
     private var controlsColumn: some View {
         VStack(spacing: 8) {
             HStack(spacing: 8) {
-                Text(track == nil ? "0:00" : TimeFormat.label(ms: store.positionMs))
+                Text("0:00")
                     .frame(width: 36, alignment: .trailing)
                 progressBar
-                Text(track?.durationLabel ?? "0:00")
+                Text("0:00")
                     .frame(width: 36, alignment: .leading)
             }
             .font(.system(size: 10, weight: .medium).monospacedDigit())
             .foregroundStyle(LyriaTheme.text3)
 
             HStack(spacing: 16) {
-                iconButton("shuffle", active: store.shuffleOn, label: store.shuffleOn ? "关闭随机" : "随机播放") {
-                    store.toggleShuffle()
-                }
-                iconButton("backward.fill", label: "上一首") { store.skip(-1) }
+                // TODO(engine): shuffle, previous, play/pause, next, repeat.
+                iconButton("shuffle", label: "随机播放")
+                iconButton("backward.fill", label: "上一首")
                 playButton
-                iconButton("forward.fill", label: "下一首") { store.skip(1) }
-                iconButton(
-                    store.repeatMode.systemImage,
-                    active: store.repeatMode != .off,
-                    label: store.repeatMode.tooltip
-                ) {
-                    store.cycleRepeat()
-                }
+                iconButton("forward.fill", label: "下一首")
+                iconButton(RepeatMode.off.systemImage, label: RepeatMode.off.tooltip)
             }
         }
         .frame(maxWidth: 460)
     }
 
     private var progressBar: some View {
-        GeometryReader { geo in
-            let width = max(geo.size.width, 1)
-            ZStack(alignment: .leading) {
-                Capsule().fill(Color.white.opacity(0.12)).frame(height: 3)
-                Capsule()
-                    .fill(LyriaTheme.accentGradient)
-                    .frame(width: max(0, width * progress), height: 3)
-                Circle()
-                    .fill(Color.white)
-                    .frame(width: 10, height: 10)
-                    .shadow(color: LyriaTheme.primary.opacity(0.45), radius: 4)
-                    .offset(x: max(0, width * progress - 5))
-            }
-            .frame(maxHeight: .infinity, alignment: .center)
-            .contentShape(Rectangle())
-            .gesture(
-                DragGesture(minimumDistance: 0).onChanged { value in
-                    guard durationMs > 0 else { return }
-                    store.seek(toProgress: value.location.x / width, durationMs: durationMs)
-                }
-            )
+        ZStack(alignment: .leading) {
+            Capsule().fill(Color.white.opacity(0.12)).frame(height: 3)
+            Circle()
+                .fill(Color.white)
+                .frame(width: 10, height: 10)
+                .shadow(color: LyriaTheme.primary.opacity(0.45), radius: 4)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .allowsHitTesting(false)
         .frame(height: 16)
         .accessibilityLabel("播放进度")
+        .disabled(true)
     }
 
     private var playButton: some View {
-        Button { store.togglePlay() } label: {
+        Button {} label: {
             ZStack {
                 Circle()
                     .fill(LyriaTheme.accentGradient)
                     .frame(width: 40, height: 40)
                     .shadow(color: LyriaTheme.primaryDeep.opacity(0.45), radius: 10, y: 3)
-                Image(systemName: store.isPlaying ? "pause.fill" : "play.fill")
+                Image(systemName: "play.fill")
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(.white)
-                    .offset(x: store.isPlaying ? 0 : 1)
+                    .offset(x: 1)
             }
         }
         .buttonStyle(.plain)
-        .disabled(track == nil)
-        .accessibilityLabel(store.isPlaying ? "暂停" : "播放")
+        .disabled(true) // TODO(engine)
+        .accessibilityLabel("播放")
     }
 
     private var volumeColumn: some View {
         HStack(spacing: 8) {
-            Button { store.toggleQueue() } label: {
+            Button {} label: {
                 Image(systemName: "music.note.list")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(store.queueVisible ? LyriaTheme.primary : LyriaTheme.text2)
+                    .foregroundStyle(LyriaTheme.text2)
                     .frame(width: 28, height: 28)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(store.queueVisible ? "关闭队列" : "队列")
+            .disabled(true) // TODO(engine): queue panel
+            .accessibilityLabel("队列")
+            .opacity(store.queueVisible ? 1 : 0.85)
 
-            Button {
-                if store.volume > 0.001 {
-                    volumeBeforeMute = store.volume
-                    store.volume = 0
-                } else {
-                    store.volume = volumeBeforeMute > 0 ? volumeBeforeMute : 0.6
-                }
-            } label: {
-                Image(systemName: volumeSymbol)
+            Button {} label: {
+                Image(systemName: "speaker.wave.2.fill")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(LyriaTheme.text2)
                     .frame(width: 18, height: 18)
             }
             .buttonStyle(.plain)
+            .disabled(true) // TODO(engine)
             .accessibilityLabel("音量")
 
-            Slider(value: $store.volume, in: 0...1)
+            Slider(value: .constant(1.0), in: 0...1)
                 .controlSize(.mini)
                 .tint(LyriaTheme.primary)
                 .frame(width: 90)
+                .disabled(true) // TODO(engine): volume starts at 1.0 once the engine exists
         }
     }
 
-    private var volumeSymbol: String {
-        if store.volume <= 0.001 { return "speaker.slash.fill" }
-        if store.volume < 0.34 { return "speaker.fill" }
-        if store.volume < 0.67 { return "speaker.wave.1.fill" }
-        return "speaker.wave.2.fill"
-    }
-
-    private func iconButton(
-        _ systemName: String,
-        active: Bool = false,
-        label: String,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
+    private func iconButton(_ systemName: String, label: String) -> some View {
+        Button {} label: {
             Image(systemName: systemName)
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(active ? LyriaTheme.primary : LyriaTheme.text2)
+                .foregroundStyle(LyriaTheme.text2)
                 .frame(width: 28, height: 28)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .help(label)
-        .disabled(track == nil)
+        .disabled(true) // TODO(engine)
         .accessibilityLabel(label)
     }
 }

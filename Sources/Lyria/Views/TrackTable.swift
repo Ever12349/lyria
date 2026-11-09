@@ -6,12 +6,16 @@ enum TrackMenu {
     static func items(
         track: Track,
         playlistID: String?,
-        store: FakeLibraryStore,
+        store: AppSession,
         requestRemoveFromLibrary: @escaping () -> Void
     ) -> some View {
-        Button("播放") { store.play(track.id) }
-        Button("下一首播放") { store.playNext(track.id) }
-        Button("加入队列") { store.enqueue(track.id) }
+        // TODO(engine): play, queue, and play-next.
+        Button("播放") {}
+            .disabled(true)
+        Button("下一首播放") {}
+            .disabled(true)
+        Button("加入队列") {}
+            .disabled(true)
         Menu("加入播放列表") {
             if store.playlists.isEmpty {
                 Button("没有播放列表") {}
@@ -23,8 +27,14 @@ enum TrackMenu {
             }
         }
         Divider()
-        Button("前往艺人") { store.openArtist(named: track.artist) }
-        Button("前往专辑") { store.openAlbum(named: track.album) }
+        Button("前往艺人") {
+            if let id = track.artistId { store.openArtist(id) }
+        }
+        .disabled(!track.canOpenArtist)
+        Button("前往专辑") {
+            if let id = track.albumId { store.openAlbum(id) }
+        }
+        .disabled(!track.canOpenAlbum)
         if let playlistID {
             Divider()
             Button("从播放列表移除") { store.remove(track.id, from: playlistID) }
@@ -37,7 +47,7 @@ struct TrackTable: View {
     let tracks: [Track]
     var playlistID: String? = nil
     var scrolls = true
-    @EnvironmentObject private var store: FakeLibraryStore
+    @EnvironmentObject private var store: AppSession
 
     var body: some View {
         if scrolls {
@@ -94,12 +104,12 @@ struct TrackTable: View {
 private struct TrackRow: View {
     let track: Track
     var playlistID: String? = nil
-    @EnvironmentObject private var store: FakeLibraryStore
+    @EnvironmentObject private var store: AppSession
     @State private var hovering = false
     @State private var confirmRemove = false
 
-    private var isCurrent: Bool { track.id == store.nowPlayingId && store.shownTrack != nil }
-    private var isSelected: Bool { track.id == store.selectedTrackId && !isCurrent }
+    private var isCurrent: Bool { false }
+    private var isSelected: Bool { track.id == store.selectedTrackId }
 
     var body: some View {
         HStack(spacing: 8) {
@@ -112,14 +122,18 @@ private struct TrackRow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            metaButton(track.artist) { store.openArtist(named: track.artist) }
-            metaButton(track.album) { store.openAlbum(named: track.album) }
+            metaButton(track.artistLabel, enabled: track.canOpenArtist) {
+                if let id = track.artistId { store.openArtist(id) }
+            }
+            metaButton(track.albumLabel, enabled: track.canOpenAlbum) {
+                if let id = track.albumId { store.openAlbum(id) }
+            }
 
             HStack(spacing: 2) {
-                Text(track.durationLabel)
+                Text(track.missing ? "文件缺失" : track.durationLabel)
                     .font(.system(size: 12, weight: .medium).monospacedDigit())
-                    .foregroundStyle(LyriaTheme.text3)
-                    .frame(width: 44, alignment: .trailing)
+                    .foregroundStyle(track.missing ? LyriaTheme.danger : LyriaTheme.text3)
+                    .frame(width: track.missing ? 56 : 44, alignment: .trailing)
                 moreMenu
             }
             .frame(width: 96, alignment: .trailing)
@@ -144,7 +158,6 @@ private struct TrackRow: View {
         }
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
-        .onTapGesture(count: 2) { store.play(track.id, announce: false) }
         .onTapGesture { store.selectedTrackId = track.id }
         .contextMenu {
             TrackMenu.items(track: track, playlistID: playlistID, store: store) {
@@ -155,34 +168,19 @@ private struct TrackRow: View {
             Button("从曲库移除", role: .destructive) { store.removeFromLibrary(track.id) }
             Button("取消", role: .cancel) {}
         } message: {
-            Text("文件仍会留在磁盘上。")
+            Text("文件会留在磁盘上。这一首会从曲库和播放列表里删掉，再次导入仍使用原来的 id。")
         }
     }
 
     private var coverButton: some View {
-        let showPause = isCurrent && store.isPlaying
-        return Button {
-            if isCurrent { store.togglePlay() }
-            else { store.play(track.id, announce: false) }
-        } label: {
-            ZStack {
-                if isCurrent {
-                    EqBars(live: store.isPlaying)
-                        .opacity(hovering ? 0 : 1)
-                }
-                Image(systemName: showPause ? "pause.fill" : "play.fill")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color(red: 10 / 255, green: 11 / 255, blue: 26 / 255).opacity(hovering ? 0.45 : 0))
-                    .opacity(hovering || !isCurrent ? (hovering ? 1 : 0) : 0)
-            }
-            .frame(width: 36, height: 36)
-            .background(LyriaTheme.coverGradient(seed: track.albumId))
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        // TODO(engine): cover button plays or pauses.
+        Button {} label: {
+            CoverArt(seed: track.albumId ?? track.id, artworkPath: track.artworkPath, cornerRadius: 8)
+                .frame(width: 36, height: 36)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(showPause ? "暂停 \(track.title)" : "播放 \(track.title)")
+        .disabled(true)
+        .accessibilityLabel(track.title)
     }
 
     private var moreMenu: some View {
@@ -204,41 +202,16 @@ private struct TrackRow: View {
         .accessibilityLabel("更多操作")
     }
 
-    private func metaButton(_ title: String, action: @escaping () -> Void) -> some View {
+    private func metaButton(_ title: String, enabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(LyriaTheme.text2)
+                .foregroundStyle(enabled ? LyriaTheme.text2 : LyriaTheme.text3)
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .buttonStyle(.plain)
+        .disabled(!enabled)
     }
 }
 
-private struct EqBars: View {
-    var live: Bool
-    @State private var animating = false
-
-    var body: some View {
-        HStack(alignment: .bottom, spacing: 2) {
-            bar(0.40, delay: 0)
-            bar(0.90, delay: 0.15)
-            bar(0.60, delay: 0.30)
-            bar(1.00, delay: 0.08)
-        }
-        .frame(width: 16, height: 16)
-        .onAppear { animating = true }
-    }
-
-    private func bar(_ scale: CGFloat, delay: Double) -> some View {
-        Capsule()
-            .fill(Color.white)
-            .frame(width: 3, height: 14 * scale)
-            .scaleEffect(y: live && animating ? 1 : 0.35, anchor: .bottom)
-            .animation(
-                live ? .easeInOut(duration: 0.9).repeatForever(autoreverses: true).delay(delay) : .default,
-                value: animating
-            )
-    }
-}

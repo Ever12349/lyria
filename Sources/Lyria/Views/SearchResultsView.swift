@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SearchResultsView: View {
-    @EnvironmentObject private var store: FakeLibraryStore
+    @EnvironmentObject private var store: AppSession
 
     var body: some View {
         if store.searchTracks.isEmpty {

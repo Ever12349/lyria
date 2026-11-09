@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct PlaylistsView: View {
-    @EnvironmentObject private var store: FakeLibraryStore
+    @EnvironmentObject private var store: AppSession
 
     private let columns = [GridItem(.adaptive(minimum: 150, maximum: 220), spacing: 16)]
 
@@ -37,7 +37,7 @@ struct PlaylistsView: View {
 
 private struct PlaylistCard: View {
     let playlist: Playlist
-    @EnvironmentObject private var store: FakeLibraryStore
+    @EnvironmentObject private var store: AppSession
 
     var body: some View {
         Button { store.openPlaylist(playlist.id) } label: {
@@ -71,8 +71,11 @@ private struct PlaylistCard: View {
 
 struct PlaylistDetailView: View {
     let playlistID: String
-    @EnvironmentObject private var store: FakeLibraryStore
+    @EnvironmentObject private var store: AppSession
     @State private var confirmDelete = false
+    @State private var renaming = false
+    @State private var nameDraft = ""
+    @State private var cancelRename = false
 
     var body: some View {
         if let playlist = store.playlist(playlistID) {
@@ -86,19 +89,23 @@ struct PlaylistDetailView: View {
                     title: playlist.name,
                     subtitle: songs.isEmpty
                         ? "0 首"
-                        : "\(songs.count) 首 · \(TimeFormat.words(ms: store.durationMs(of: playlist.trackIDs)))"
+                        : "\(songs.count) 首 · \(TimeFormat.words(ms: store.durationMs(of: playlist.trackIDs)))",
+                    renaming: renaming ? $nameDraft : nil,
+                    onCommitRename: commitRename,
+                    onCancelRename: { cancelRename = true; renaming = false }
                 ) {
                     if !songs.isEmpty {
-                        PillButton(title: "全部播放", systemImage: "play.fill", prominent: true) {
-                            store.playAll(playlist.trackIDs, shuffled: false)
-                        }
-                        PillButton(title: "随机", systemImage: "shuffle") {
-                            store.playAll(playlist.trackIDs, shuffled: true)
-                        }
+                        // TODO(engine): play this playlist.
+                        PillButton(title: "全部播放", systemImage: "play.fill", prominent: true) {}
+                            .disabled(true)
+                        PillButton(title: "随机", systemImage: "shuffle") {}
+                            .disabled(true)
                         AddSongsMenu(playlist: playlist)
                     }
                     PillButton(title: "编辑", systemImage: "pencil") {
-                        store.showToast("编辑仍是静态壳")
+                        nameDraft = playlist.name
+                        cancelRename = false
+                        renaming = true
                     }
                     PillButton(title: "删除", danger: true) { confirmDelete = true }
                 }
@@ -125,15 +132,28 @@ struct PlaylistDetailView: View {
             EmptyState(systemImage: "music.note.list", title: "找不到这个播放列表") { EmptyView() }
         }
     }
+
+    private func commitRename() {
+        guard renaming else { return }
+        if cancelRename {
+            cancelRename = false
+            renaming = false
+            return
+        }
+        let trimmed = nameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        renaming = false
+        guard !trimmed.isEmpty, let playlist = store.playlist(playlistID), trimmed != playlist.name else { return }
+        store.renamePlaylist(playlist.id, to: trimmed)
+    }
 }
 
 struct AddSongsMenu: View {
     let playlist: Playlist
     var prominent = false
-    @EnvironmentObject private var store: FakeLibraryStore
+    @EnvironmentObject private var store: AppSession
 
     private var remaining: [Track] {
-        store.tracks.filter { !playlist.trackIDs.contains($0.id) }
+        store.tracks.filter { !$0.missing && !playlist.trackIDs.contains($0.id) }
     }
 
     var body: some View {

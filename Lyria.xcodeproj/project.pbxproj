@@ -13,7 +13,6 @@
 		94427E1BE5874C56AD3C4425 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7169993B0B13474890E1FE55 /* Theme.swift */; };
 		93E278906CC0456491349C62 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D8C0413CC2849248C9A3855 /* Models.swift */; };
 		3FCCFAE05AEC4DD096BD0DC4 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75F41FD029144B698CEC20E5 /* SidebarView.swift */; };
-		435ECDDCE95D401EA610AF4C /* FakeLibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA3BFD20B65A49098DDA8E42 /* FakeLibraryStore.swift */; };
 		174EEB68D25F451D9D6F5F9F /* ShellControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 213A5EEDCC8E42338D9A1144 /* ShellControls.swift */; };
 		8B66152888F4490FAE28F53A /* TrackTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 560ABC61B9F440318D9E57B2 /* TrackTable.swift */; };
 		EB1551EE094545F293F28450 /* ArtistsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23B9EA7CC27C448085B6747C /* ArtistsView.swift */; };
@@ -25,6 +24,24 @@
 		67653BB3189B4E81BE8A472F /* SidebarResizeHandle.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABB1A05624834278B751409B /* SidebarResizeHandle.swift */; };
 		D432588F094D4D038672857D /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 597CCA83E4DF462AB4AE0CCD /* LibraryView.swift */; };
 		37DC3CD03F0B4DEB8E17DF0E /* TransportBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5698C8C8CD948D283AE6A2A /* TransportBar.swift */; };
+
+		A1C100000000000000000101 /* AppSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C100000000000000000001 /* AppSession.swift */; };
+		A1C100000000000000000103 /* Schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C100000000000000000003 /* Schema.swift */; };
+		A1C100000000000000000104 /* SupportPaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C100000000000000000004 /* SupportPaths.swift */; };
+		A1C100000000000000000105 /* MetadataReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C100000000000000000005 /* MetadataReader.swift */; };
+		A1C100000000000000000106 /* LibraryDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C100000000000000000006 /* LibraryDatabase.swift */; };
+		A1C100000000000000000107 /* LibraryScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C100000000000000000007 /* LibraryScanner.swift */; };
+		A1C100000000000000000108 /* LibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C100000000000000000008 /* LibraryStore.swift */; };
+		A1C000000000000000000021 /* Crockford.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000011 /* Crockford.swift */; };
+		A1C000000000000000000022 /* SHA256.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000012 /* SHA256.swift */; };
+		A1C000000000000000000023 /* Normalize.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000013 /* Normalize.swift */; };
+		A1C000000000000000000024 /* EntityID.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000014 /* EntityID.swift */; };
+		A1C000000000000000000025 /* Fingerprint.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000015 /* Fingerprint.swift */; };
+		A1C000000000000000000051 /* CrockfordTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000041 /* CrockfordTests.swift */; };
+		A1C000000000000000000052 /* NormalizeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000042 /* NormalizeTests.swift */; };
+		A1C000000000000000000053 /* FingerprintTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000043 /* FingerprintTests.swift */; };
+		A1C000000000000000000071 /* libLyriaCore.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000002 /* libLyriaCore.a */; };
+		A1C000000000000000000072 /* libLyriaCore.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000002 /* libLyriaCore.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,7 +51,6 @@
 		7169993B0B13474890E1FE55 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		0D8C0413CC2849248C9A3855 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		75F41FD029144B698CEC20E5 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
-		FA3BFD20B65A49098DDA8E42 /* FakeLibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FakeLibraryStore.swift; sourceTree = "<group>"; };
 		213A5EEDCC8E42338D9A1144 /* ShellControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellControls.swift; sourceTree = "<group>"; };
 		560ABC61B9F440318D9E57B2 /* TrackTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackTable.swift; sourceTree = "<group>"; };
 		23B9EA7CC27C448085B6747C /* ArtistsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtistsView.swift; sourceTree = "<group>"; };
@@ -47,6 +63,24 @@
 		597CCA83E4DF462AB4AE0CCD /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		E5698C8C8CD948D283AE6A2A /* TransportBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransportBar.swift; sourceTree = "<group>"; };
 		845ABF3E3697414FBA284EFD /* Lyria.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Lyria.app; sourceTree = BUILT_PRODUCTS_DIR; };
+
+		A1C100000000000000000001 /* AppSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSession.swift; sourceTree = "<group>"; };
+		A1C100000000000000000003 /* Schema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Schema.swift; sourceTree = "<group>"; };
+		A1C100000000000000000004 /* SupportPaths.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportPaths.swift; sourceTree = "<group>"; };
+		A1C100000000000000000005 /* MetadataReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataReader.swift; sourceTree = "<group>"; };
+		A1C100000000000000000006 /* LibraryDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryDatabase.swift; sourceTree = "<group>"; };
+		A1C100000000000000000007 /* LibraryScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryScanner.swift; sourceTree = "<group>"; };
+		A1C100000000000000000008 /* LibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryStore.swift; sourceTree = "<group>"; };
+		A1C000000000000000000011 /* Crockford.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Crockford.swift; sourceTree = "<group>"; };
+		A1C000000000000000000012 /* SHA256.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SHA256.swift; sourceTree = "<group>"; };
+		A1C000000000000000000013 /* Normalize.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Normalize.swift; sourceTree = "<group>"; };
+		A1C000000000000000000014 /* EntityID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntityID.swift; sourceTree = "<group>"; };
+		A1C000000000000000000015 /* Fingerprint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fingerprint.swift; sourceTree = "<group>"; };
+		A1C000000000000000000041 /* CrockfordTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrockfordTests.swift; sourceTree = "<group>"; };
+		A1C000000000000000000042 /* NormalizeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NormalizeTests.swift; sourceTree = "<group>"; };
+		A1C000000000000000000043 /* FingerprintTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FingerprintTests.swift; sourceTree = "<group>"; };
+		A1C000000000000000000002 /* libLyriaCore.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libLyriaCore.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1C000000000000000000032 /* LyriaTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LyriaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -54,6 +88,22 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1C000000000000000000071 /* libLyriaCore.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1C000000000000000000004 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1C000000000000000000034 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1C000000000000000000072 /* libLyriaCore.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -64,6 +114,8 @@
 			isa = PBXGroup;
 			children = (
 				219785E656E54689A04B50B7 /* Lyria */,
+				A1C000000000000000000008 /* LyriaCore */,
+				A1C000000000000000000038 /* LyriaTests */,
 				DB915B8B6C864E24B39792E4 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -72,6 +124,8 @@
 			isa = PBXGroup;
 			children = (
 				845ABF3E3697414FBA284EFD /* Lyria.app */,
+				A1C000000000000000000002 /* libLyriaCore.a */,
+				A1C000000000000000000032 /* LyriaTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -81,9 +135,10 @@
 			children = (
 				6BE1E5DAEF8B4284804BB7E1 /* LyriaApp.swift */,
 				C877B0A580E645F6B4E0D2F0 /* ContentView.swift */,
+				A1C100000000000000000001 /* AppSession.swift */,
 				7169993B0B13474890E1FE55 /* Theme.swift */,
 				0D8C0413CC2849248C9A3855 /* Models.swift */,
-				FA3BFD20B65A49098DDA8E42 /* FakeLibraryStore.swift */,
+				A1C100000000000000000002 /* Library */,
 				1D1673F8135B461384BB9050 /* Views */,
 			);
 			path = Sources/Lyria;
@@ -109,6 +164,42 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
+
+		A1C100000000000000000002 /* Library */ = {
+			isa = PBXGroup;
+			children = (
+				A1C100000000000000000003 /* Schema.swift */,
+				A1C100000000000000000004 /* SupportPaths.swift */,
+				A1C100000000000000000006 /* LibraryDatabase.swift */,
+				A1C100000000000000000007 /* LibraryScanner.swift */,
+				A1C100000000000000000005 /* MetadataReader.swift */,
+				A1C100000000000000000008 /* LibraryStore.swift */,
+			);
+			path = Library;
+			sourceTree = "<group>";
+		};
+		A1C000000000000000000008 /* LyriaCore */ = {
+			isa = PBXGroup;
+			children = (
+				A1C000000000000000000011 /* Crockford.swift */,
+				A1C000000000000000000012 /* SHA256.swift */,
+				A1C000000000000000000013 /* Normalize.swift */,
+				A1C000000000000000000014 /* EntityID.swift */,
+				A1C000000000000000000015 /* Fingerprint.swift */,
+			);
+			path = Sources/LyriaCore;
+			sourceTree = "<group>";
+		};
+		A1C000000000000000000038 /* LyriaTests */ = {
+			isa = PBXGroup;
+			children = (
+				A1C000000000000000000041 /* CrockfordTests.swift */,
+				A1C000000000000000000042 /* NormalizeTests.swift */,
+				A1C000000000000000000043 /* FingerprintTests.swift */,
+			);
+			path = Tests/LyriaTests;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -122,11 +213,46 @@
 			buildRules = (
 			);
 			dependencies = (
+				A1C000000000000000000062 /* PBXTargetDependency */,
 			);
 			name = Lyria;
 			productName = Lyria;
 			productReference = 845ABF3E3697414FBA284EFD /* Lyria.app */;
 			productType = "com.apple.product-type.application";
+		};
+
+		A1C000000000000000000001 /* LyriaCore */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1C000000000000000000005 /* Build configuration list for PBXNativeTarget "LyriaCore" */;
+			buildPhases = (
+				A1C000000000000000000003 /* Sources */,
+				A1C000000000000000000004 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = LyriaCore;
+			productName = LyriaCore;
+			productReference = A1C000000000000000000002 /* libLyriaCore.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+		A1C000000000000000000031 /* LyriaTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1C000000000000000000035 /* Build configuration list for PBXNativeTarget "LyriaTests" */;
+			buildPhases = (
+				A1C000000000000000000033 /* Sources */,
+				A1C000000000000000000034 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A1C000000000000000000064 /* PBXTargetDependency */,
+			);
+			name = LyriaTests;
+			productName = LyriaTests;
+			productReference = A1C000000000000000000032 /* LyriaTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -152,7 +278,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+				A1C000000000000000000001 /* LyriaCore */,
 				39FB234EEC8F4CA8AE35292E /* Lyria */,
+				A1C000000000000000000031 /* LyriaTests */,
 			);
 		};
 /* End PBXProject section */
@@ -169,7 +297,6 @@
 				DFB2494C225C4B93B7571413 /* WindowChromeConfigurer.swift in Sources */,
 				67653BB3189B4E81BE8A472F /* SidebarResizeHandle.swift in Sources */,
 				3FCCFAE05AEC4DD096BD0DC4 /* SidebarView.swift in Sources */,
-				435ECDDCE95D401EA610AF4C /* FakeLibraryStore.swift in Sources */,
 				174EEB68D25F451D9D6F5F9F /* ShellControls.swift in Sources */,
 				8B66152888F4490FAE28F53A /* TrackTable.swift in Sources */,
 				D432588F094D4D038672857D /* LibraryView.swift in Sources */,
@@ -180,10 +307,71 @@
 				4C360CA6FEDE451EB5B44101 /* QueuePanel.swift in Sources */,
 				50EFA6210A254D81ABBE8DCF /* SearchResultsView.swift in Sources */,
 				37DC3CD03F0B4DEB8E17DF0E /* TransportBar.swift in Sources */,
+				A1C100000000000000000101 /* AppSession.swift in Sources */,
+				A1C100000000000000000103 /* Schema.swift in Sources */,
+				A1C100000000000000000104 /* SupportPaths.swift in Sources */,
+				A1C100000000000000000105 /* MetadataReader.swift in Sources */,
+				A1C100000000000000000106 /* LibraryDatabase.swift in Sources */,
+				A1C100000000000000000107 /* LibraryScanner.swift in Sources */,
+				A1C100000000000000000108 /* LibraryStore.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+
+		A1C000000000000000000003 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1C000000000000000000021 /* Crockford.swift in Sources */,
+				A1C000000000000000000022 /* SHA256.swift in Sources */,
+				A1C000000000000000000023 /* Normalize.swift in Sources */,
+				A1C000000000000000000024 /* EntityID.swift in Sources */,
+				A1C000000000000000000025 /* Fingerprint.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1C000000000000000000033 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1C000000000000000000051 /* CrockfordTests.swift in Sources */,
+				A1C000000000000000000052 /* NormalizeTests.swift in Sources */,
+				A1C000000000000000000053 /* FingerprintTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXContainerItemProxy section */
+		A1C000000000000000000061 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = ADA4340BCE274303A7BCDA79 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A1C000000000000000000001;
+			remoteInfo = LyriaCore;
+		};
+		A1C000000000000000000063 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = ADA4340BCE274303A7BCDA79 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A1C000000000000000000001;
+			remoteInfo = LyriaCore;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXTargetDependency section */
+		A1C000000000000000000062 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A1C000000000000000000001 /* LyriaCore */;
+			targetProxy = A1C000000000000000000061 /* PBXContainerItemProxy */;
+		};
+		A1C000000000000000000064 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A1C000000000000000000001 /* LyriaCore */;
+			targetProxy = A1C000000000000000000063 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 
 /* Begin XCBuildConfiguration section */
 		30D0584735374D4B8B7FFCAB /* Debug */ = {
@@ -231,6 +419,10 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lsqlite3",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 0.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = local.lyria.sample;
@@ -256,12 +448,92 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lsqlite3",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 0.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = local.lyria.sample;
 				PRODUCT_NAME = Lyria;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+
+		A1C000000000000000000006 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = NO;
+				DEFINES_MODULE = YES;
+				ENABLE_TESTABILITY = YES;
+				EXECUTABLE_PREFIX = lib;
+				GENERATE_INFOPLIST_FILE = NO;
+				MACH_O_TYPE = staticlib;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_NAME = LyriaCore;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A1C000000000000000000007 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = NO;
+				DEFINES_MODULE = YES;
+				EXECUTABLE_PREFIX = lib;
+				GENERATE_INFOPLIST_FILE = NO;
+				MACH_O_TYPE = staticlib;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_NAME = LyriaCore;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		A1C000000000000000000036 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = local.lyria.sample.tests;
+				PRODUCT_NAME = LyriaTests;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "";
+			};
+			name = Debug;
+		};
+		A1C000000000000000000037 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = local.lyria.sample.tests;
+				PRODUCT_NAME = LyriaTests;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "";
 			};
 			name = Release;
 		};
@@ -282,6 +554,25 @@
 			buildConfigurations = (
 				D36892DBF24042828514D1D8 /* Debug */,
 				43C4C1162F2D4389A9CB418C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+
+		A1C000000000000000000005 /* Build configuration list for PBXNativeTarget "LyriaCore" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1C000000000000000000006 /* Debug */,
+				A1C000000000000000000007 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A1C000000000000000000035 /* Build configuration list for PBXNativeTarget "LyriaTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1C000000000000000000036 /* Debug */,
+				A1C000000000000000000037 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

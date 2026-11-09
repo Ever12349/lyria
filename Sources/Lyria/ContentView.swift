@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var store = FakeLibraryStore()
+    @StateObject private var store = AppSession()
     @State private var sidebarWidth: CGFloat = 228
 
     private let sidebarMin: CGFloat = 168
@@ -33,6 +33,7 @@ struct ContentView: View {
         .toolbarColorScheme(.dark, for: .windowToolbar)
         .preferredColorScheme(.dark)
         .background(WindowChromeConfigurer())
+        .task { await store.bootstrap() }
     }
 
     private var windowBackground: some View {
@@ -138,7 +139,7 @@ struct ContentView: View {
         } else {
             switch store.route {
             case .library:
-                if store.libraryEmpty || store.visibleTracks.isEmpty {
+                if store.visibleTracks.isEmpty {
                     LibraryEmptyView()
                 } else {
                     LibraryView()
@@ -180,7 +181,7 @@ struct ContentView: View {
         if store.isSearching {
             return store.hasSearchHits ? "\(store.searchTracks.count) 首" : "无结果"
         }
-        if case .library = store.route, !store.libraryEmpty, !store.visibleTracks.isEmpty {
+        if case .library = store.route, !store.visibleTracks.isEmpty {
             return "\(store.visibleTracks.count) 首"
         }
         return " "

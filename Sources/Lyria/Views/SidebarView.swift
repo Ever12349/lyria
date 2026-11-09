@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SidebarView: View {
-    @EnvironmentObject private var store: FakeLibraryStore
+    @EnvironmentObject private var store: AppSession
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {

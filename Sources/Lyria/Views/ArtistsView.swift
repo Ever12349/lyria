@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ArtistsView: View {
-    @EnvironmentObject private var store: FakeLibraryStore
+    @EnvironmentObject private var store: AppSession
 
     private let columns = [GridItem(.adaptive(minimum: 150, maximum: 220), spacing: 16)]
 
@@ -9,7 +9,7 @@ struct ArtistsView: View {
         ScrollView {
         LazyVGrid(columns: columns, spacing: 16) {
             ForEach(store.artists) { artist in
-                let count = store.tracks(forArtist: artist.name).count
+                let count = store.tracks(artistID: artist.id).count
                 Button { store.openArtist(artist.id) } label: {
                     VStack(spacing: 8) {
                         CoverArt(seed: artist.id, systemImage: "person.fill", circle: true)
@@ -41,12 +41,12 @@ struct ArtistsView: View {
 
 struct ArtistDetailView: View {
     let artistID: String
-    @EnvironmentObject private var store: FakeLibraryStore
+    @EnvironmentObject private var store: AppSession
 
     var body: some View {
         if let artist = store.artist(artistID) {
-            let songs = store.tracks(forArtist: artist.name)
-            let albums = store.albums(forArtist: artist.name)
+            let songs = store.tracks(artistID: artist.id)
+            let albums = store.albums(artistID: artist.id)
             ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 DetailHero(
@@ -57,12 +57,11 @@ struct ArtistDetailView: View {
                     title: artist.name,
                     subtitle: "\(albums.count) 张专辑 · \(songs.count) 首曲目"
                 ) {
-                    PillButton(title: "全部播放", systemImage: "play.fill", prominent: true) {
-                        store.playAll(songs.map(\.id), shuffled: false)
-                    }
-                    PillButton(title: "随机播放", systemImage: "shuffle") {
-                        store.playAll(songs.map(\.id), shuffled: true)
-                    }
+                    // TODO(engine): play this artist's tracks.
+                    PillButton(title: "全部播放", systemImage: "play.fill", prominent: true) {}
+                        .disabled(true)
+                    PillButton(title: "随机播放", systemImage: "shuffle") {}
+                        .disabled(true)
                 }
 
                 SectionLabel(title: "专辑")
@@ -102,19 +101,19 @@ struct ArtistDetailView: View {
 
 struct AlbumCard: View {
     let album: Album
-    @EnvironmentObject private var store: FakeLibraryStore
+    @EnvironmentObject private var store: AppSession
 
     var body: some View {
         Button { store.openAlbum(album.id) } label: {
             VStack(alignment: .leading, spacing: 0) {
-                CoverArt(seed: album.id, cornerRadius: 0)
+                CoverArt(seed: album.id, artworkPath: album.artworkPath, cornerRadius: 0)
                     .aspectRatio(1, contentMode: .fit)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(album.name)
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(LyriaTheme.foreground)
                         .lineLimit(1)
-                    Text(album.artistName)
+                    Text(album.artistLabel)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(LyriaTheme.text2)
                         .lineLimit(1)

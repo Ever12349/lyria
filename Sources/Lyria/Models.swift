@@ -2,28 +2,56 @@ import Foundation
 
 struct Track: Identifiable, Hashable {
     let id: String
-    /// Chinese title. The English line is stored for search only and is not shown.
     let title: String
-    let english: String
     let artist: String
-    let artistId: String
+    let artistId: String?
     let album: String
-    let albumId: String
+    let albumId: String?
     let durationMs: Int
+    let missing: Bool
+    let encodingSuspect: Bool
+    let path: String
+    let artworkPath: String?
 
     var durationLabel: String { TimeFormat.label(ms: durationMs) }
+    var artistLabel: String { artist.isEmpty ? "未知艺人" : artist }
+    var albumLabel: String { album.isEmpty ? "未知专辑" : album }
+    var canOpenArtist: Bool { artistId != nil }
+    var canOpenAlbum: Bool { albumId != nil }
+
+    static func missingPlaceholder(id: String) -> Track {
+        Track(
+            id: id,
+            title: "文件缺失",
+            artist: "",
+            artistId: nil,
+            album: "",
+            albumId: nil,
+            durationMs: 0,
+            missing: true,
+            encodingSuspect: false,
+            path: "",
+            artworkPath: nil
+        )
+    }
 }
 
 struct Artist: Identifiable, Hashable {
     let id: String
     let name: String
+    let sortName: String
+    let trackCount: Int
 }
 
 struct Album: Identifiable, Hashable {
     let id: String
     let name: String
+    let artistId: String?
     let artistName: String
     let year: Int
+    let artworkPath: String?
+
+    var artistLabel: String { artistName.isEmpty ? "未知艺人" : artistName }
 }
 
 struct Playlist: Identifiable, Hashable {

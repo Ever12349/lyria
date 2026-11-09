@@ -1,56 +1,61 @@
+import AppKit
 import SwiftUI
 
 struct SettingsView: View {
-    @EnvironmentObject private var store: FakeLibraryStore
+    @EnvironmentObject private var store: AppSession
 
     var body: some View {
         ScrollView {
-        VStack(spacing: 12) {
-            SettingRow(title: "曲库路径", detail: "~/Music/Lyria · 添加 / 移除文件夹后自动扫描") {
-                Menu {
-                    Button(store.libraryEmpty ? "恢复示例曲库" : "查看空曲库") {
-                        if store.libraryEmpty { store.restoreLibrary() }
-                        else { store.previewEmptyLibrary() }
+            VStack(spacing: 12) {
+                SettingRow(title: "曲库路径", detail: store.rootLabel) {
+                    PillButton(title: "选择文件夹", systemImage: "folder") {
+                        store.chooseRootAndScan()
                     }
-                } label: {
-                    Text("管理…")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Color.white)
-                        .padding(.horizontal, 14)
-                        .frame(height: 32)
-                        .background(Capsule().fill(Color.white.opacity(0.06)))
-                        .overlay(Capsule().strokeBorder(LyriaTheme.border, lineWidth: 1))
+                    .disabled(store.isScanning)
                 }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
-                .fixedSize()
-            }
-            SettingRow(title: "重新扫描曲库", detail: "按路径指纹重建索引，不改动文件") {
-                PillButton(title: "立即扫描") {
-                    store.showToast("重新扫描仍是静态壳")
+                SettingRow(title: "重新扫描曲库", detail: "强制重算指纹，不改动磁盘上的文件") {
+                    PillButton(title: scanTitle) {
+                        store.rescanNow()
+                    }
+                    .disabled(store.isScanning)
                 }
-            }
-            SettingRow(title: "本地 HTTP API", detail: "可选，默认关闭 · 端口 17890") {
-                OffToggle(label: "本地 HTTP API") {
-                    store.showToast("本地 HTTP API 保持关闭")
+                SettingRow(title: "本地 HTTP API", detail: "可选，默认关闭 · 端口 17890") {
+                    OffToggle(label: "本地 HTTP API") {
+                        store.showToast("本地 HTTP API 保持关闭")
+                    }
                 }
-            }
-            SettingRow(title: "登录时启动", detail: "开机后以菜单栏形态待命") {
-                OffToggle(label: "登录时启动") {
-                    store.showToast("登录时启动仍是静态壳")
+                SettingRow(title: "登录时启动", detail: "开机后以菜单栏形态待命") {
+                    OffToggle(label: "登录时启动") {
+                        store.showToast("登录时启动仍未开放")
+                    }
                 }
-            }
-            SettingRow(title: "外观 · Deep Space", detail: "左右栏同色深空底，无壁纸吸色 vibrancy") {
-                PillButton(title: "当前主题") {
-                    store.showToast("外观固定为 Deep Space")
+                SettingRow(title: "外观 · Deep Space", detail: "左右栏同色深空底，无壁纸吸色 vibrancy") {
+                    PillButton(title: "当前主题") {
+                        store.showToast("外观固定为 Deep Space")
+                    }
                 }
-            }
-            SettingRow(title: "清除指纹缓存", detail: "危险操作 · 下次打开将全量重建 trk_ 索引", danger: true) {
-                PillButton(title: "清除", danger: true) {
-                    store.showToast("清除指纹缓存仍是静态壳")
+                SettingRow(title: "清除指纹缓存", detail: "危险操作 · 旧 id 全部失效，歌单里的旧 id 会变成缺失", danger: true) {
+                    PillButton(title: "清除", danger: true) {
+                        confirmClearFingerprints()
+                    }
+                    .disabled(store.isScanning)
                 }
             }
         }
-        }
+    }
+
+    private var scanTitle: String {
+        store.isScanning ? "正在扫描…\(store.scanPercent)%" : "立即扫描"
+    }
+
+    private func confirmClearFingerprints() {
+        let alert = NSAlert()
+        alert.messageText = "清除指纹缓存？"
+        alert.informativeText = "旧 id 将全部失效。曲目索引会被清空，播放列表里的旧 id 会显示为文件缺失。磁盘上的音频文件不会删除。"
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "清除")
+        alert.addButton(withTitle: "取消")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        store.clearFingerprints()
     }
 }

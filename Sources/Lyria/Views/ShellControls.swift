@@ -1,11 +1,14 @@
+import AppKit
 import SwiftUI
 
 struct CoverArt: View {
     var seed: String
+    var artworkPath: String? = nil
     var systemImage: String = "music.note"
     var cornerRadius: CGFloat = 8
     var circle = false
     var elevated = false
+    @State private var artwork: NSImage?
 
     var body: some View {
         let shape = circle
@@ -14,14 +17,28 @@ struct CoverArt: View {
         shape
             .fill(LyriaTheme.coverGradient(seed: seed))
             .overlay {
-                GeometryReader { geo in
-                    Image(systemName: systemImage)
-                        .font(.system(size: max(11, geo.size.width * 0.28), weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.92))
-                        .frame(width: geo.size.width, height: geo.size.height)
+                if let artwork {
+                    Image(nsImage: artwork)
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    GeometryReader { geo in
+                        Image(systemName: systemImage)
+                            .font(.system(size: max(11, geo.size.width * 0.28), weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.92))
+                            .frame(width: geo.size.width, height: geo.size.height)
+                    }
                 }
             }
+            .clipShape(shape)
             .shadow(color: elevated ? LyriaTheme.primaryDeep.opacity(0.35) : .clear, radius: elevated ? 18 : 0, y: elevated ? 8 : 0)
+            .task(id: artworkPath) {
+                guard let artworkPath else {
+                    artwork = nil
+                    return
+                }
+                artwork = NSImage(contentsOfFile: artworkPath)
+            }
     }
 }
 
@@ -31,6 +48,7 @@ struct PillButton: View {
     var prominent = false
     var danger = false
     let action: () -> Void
+    @Environment(\.isEnabled) private var isEnabled
 
     var body: some View {
         Button(action: action) {
@@ -58,6 +76,7 @@ struct PillButton: View {
             }
         }
         .buttonStyle(.plain)
+        .opacity(isEnabled ? 1 : 0.4)
     }
 }
 
@@ -188,22 +207,27 @@ struct SectionLabel: View {
 
 struct DetailHero<Actions: View>: View {
     let seed: String
+    var artworkPath: String? = nil
     var systemImage: String = "music.note"
     var circle = false
     let eyebrow: String
     let title: String
     let subtitle: String
+    var renaming: Binding<String>? = nil
+    var onCommitRename: () -> Void = {}
+    var onCancelRename: () -> Void = {}
+    @FocusState private var nameFieldFocused: Bool
     @ViewBuilder var actions: () -> Actions
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 20) {
-            CoverArt(seed: seed, systemImage: systemImage, cornerRadius: 16, circle: circle, elevated: true)
+            CoverArt(seed: seed, artworkPath: artworkPath, systemImage: systemImage, cornerRadius: 16, circle: circle, elevated: true)
                 .frame(width: 160, height: 160)
             VStack(alignment: .leading, spacing: 6) {
                 Text(eyebrow)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(LyriaTheme.text2)
-                Text(title)
+                titleView
                     .font(.system(size: 28, weight: .bold))
                     .foregroundStyle(LyriaTheme.foreground)
                     .lineLimit(2)
@@ -216,6 +240,23 @@ struct DetailHero<Actions: View>: View {
             Spacer(minLength: 0)
         }
         .padding(.bottom, 8)
+    }
+
+    @ViewBuilder
+    private var titleView: some View {
+        if let renaming {
+            TextField("名称", text: renaming)
+                .textFieldStyle(.plain)
+                .focused($nameFieldFocused)
+                .onSubmit(onCommitRename)
+                .onExitCommand(perform: onCancelRename)
+                .onAppear { nameFieldFocused = true }
+                .onChange(of: nameFieldFocused) { _, focused in
+                    if !focused { onCommitRename() }
+                }
+        } else {
+            Text(title)
+        }
     }
 }
 

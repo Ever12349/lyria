@@ -1,8 +1,8 @@
 # Lyria
 
-个人本地音乐播放器（macOS / Apple Silicon）。仅本机曲库；人机面是原生窗口 + 菜单栏；agent 面以 MCP（server name `lyria`）为主，可选 loopback HTTP。
+个人本地音乐播放器（macOS / Apple Silicon）。仅本机曲库；人机面是原生窗口 + 菜单栏；agent 面以 MCP（server name `lyria`）为主——客户端经 **stdio 薄桥**附着到已运行的 App 内唯一引擎（Unix socket：Application Support API → `Lyria/mcp.sock`；见 `docs/dev-spec.md`「MCP 进程模型」）；可选 loopback HTTP。
 
-当前仓库状态：**静态 UI 壳样例已落地**（假数据，无真播放 / 无 MCP / 无 HTTP）。引擎与 agent 面需另说「开工」。
+当前仓库状态：**主窗 UI 壳已落地，阶段 2 曲库导入已接上。** 选择一个文件夹后扫描真实音频并写入 SQLite。**还没有**播放引擎、MCP、HTTP、MenuBarExtra。传输条置灰，显示「—」。启动不会自动扫描，也不会预置 `~/Music`；没选文件夹时设置显示「未选择」。个人 MVP **关** App Sandbox，仍写 `scan_roots.bookmark`。Bundle id 仍是 `local.lyria.sample`。
 
 **Checkout 路径：** `/Users/qianxiao/worker/AIAgent/lyria`
 
@@ -14,6 +14,7 @@
 | 全流程开发规格（Markdown） | [`docs/dev-spec.md`](./docs/dev-spec.md) |
 | 交互式规格（Canvas） | [Lyria 全流程开发文档](https://cursor.com/canvas/store-669ca32f-ae0c-4bc0-be04-6e46150cff28/37c89944-4d8d-4256-b8f6-e516d782a9f4) |
 | UI 设计稿 PNG | [`.design/ui-mocks/`](./.design/ui-mocks/)（01–14） |
+| HTML 原型（壳层视觉真源） | [`.design/ui-mocks/html/`](./.design/ui-mocks/html/)（结构真源；不要求像素级） |
 | 窗口与壳层约定 | [`.design/docs/window-chrome.md`](./.design/docs/window-chrome.md) |
 | Figma | [Lyria macOS UI](https://www.figma.com/design/JJFaj1UysoberBKEr8G8Jc) |
 
@@ -25,15 +26,9 @@
 open /Users/qianxiao/worker/AIAgent/lyria/Lyria.xcodeproj
 ```
 
-选 scheme **Lyria**，本机 Mac，⌘R。
+选 scheme **Lyria**，本机 Mac，⌘R。曲库数据库在「应用程序支持 / Lyria / library.sqlite」（经 Application Support API 解析，不手写家目录字符串）。
 
-**或直接打开已构建的 App**
-
-```bash
-open /Users/qianxiao/worker/AIAgent/lyria/Lyria.app
-```
-
-**命令行重编**
+**命令行重编（macOS）**
 
 ```bash
 cd /Users/qianxiao/worker/AIAgent/lyria
@@ -42,17 +37,26 @@ cp .build/debug/Lyria Lyria.app/Contents/MacOS/Lyria
 open Lyria.app
 ```
 
-也可：`./scripts/run.sh`（前台跑二进制）。
+也可：`./scripts/run.sh`（前台跑二进制）。`Package.swift` 在 macOS 上包含 App 目标；在 Linux 上只构建 `LyriaCore` 与 `LyriaTests`，因为壳层依赖 SwiftUI。
 
-## 窗口内容（静态壳）
+**核心单测**
 
-假数据，无播放引擎 / 曲库扫描 / MCP / HTTP，也没有菜单栏弹出。
+```bash
+swift test --filter LyriaTests
+```
 
-- 左栏：12px 内缩圆角卡。曲库 / 艺人 / 专辑 / 播放列表 / 设置，都可以点
-- 详情列：搜索（记住来源页，清空后返回）、page-head（详情与搜索可返回）、曲库表、艺人/专辑/播放列表网格与详情、设置六行 stub、空态
-- 底栏：三栏传输。封面和「更多」是假动作；repeat 为关闭 / 全部 / 单曲三态，只改图标
-- 队列是详情列里的浮层。操作反馈是浅色 pill toast
-- 假曲库是 Dreamscape / 银河边缘 / 星际旅行 这一套，曲目行没有中英双标题
+锁住 Crockford 全零向量（`trk_` + 22 个 `0`）、名称规范化和指纹 `full` / `head_tail_size` 分支。Xcode scheme **Lyria** 的 Test action 同样包含 `LyriaTests`。
+
+## 窗口内容
+
+- 左栏：12px 内缩圆角卡。曲库 / 艺人 / 专辑 / 播放列表 / 设置
+- 详情列：搜索（记住来源页）、page-head、曲库表、艺人/专辑/播放列表、设置、空态
+- 曲库为空时显示「还没有音乐」，可以选文件夹或打开设置
+- 设置里选定唯一根目录后立刻扫描；「立即扫描」在扫描中显示「正在扫描…N%」
+- 从曲库移除会删掉数据库里的曲目行（文件留在磁盘；指纹保留，再次导入仍是同一个 id）
+- 播放列表可以新建、改名、删除、加歌、移出。本切片不能拖拽排序，也不能播放
+- 底栏传输条保持三栏布局，控件置灰
+- 队列浮层留给引擎阶段
 
 Deep Space：背景 `#0a0b1a`，强调色 `#9b87f5 → #7c3aed`，圆角 16–24。
 
@@ -60,9 +64,9 @@ Deep Space：背景 `#0a0b1a`，强调色 `#9b87f5 → #7c3aed`，圆角 16–24
 
 - 侧栏是一张距窗口边缘 12px 的圆角卡，**可拖拽改宽**（约 168–320，默认 ~228）。红绿灯落在卡顶空白带里
 - 播放条只在右侧详情列底部，圆角卡片，不伸进侧栏下方
-- 曲目行：封面、标题、艺人、专辑、时长、更多；正在播放行用强调色
+- 曲目行：封面、标题、艺人、专辑、时长、更多。艺人或专辑没有 id 时，前往按钮不可用
 - 原生透明标题栏 + 系统双击放大。`TitlebarPassthroughContentView` 只把**系统标题栏拖动带**交给系统，不再把整窗顶 52pt 一律穿透
 
-对照 `.design/ui-mocks/html/`（`index.html`、`prototype.js`、`prototype.css`、`theme.css`，以及 01–14）。空曲库 / 空播放列表文案仍按规格，不按原型屏幕里的旧句子。
+对照 `.design/ui-mocks/html/`（`index.html`、`prototype.js`、`prototype.css`、`theme.css`，以及 01–14）。空曲库 / 空播放列表文案仍按规格。
 
 产品显示名与 MCP 名：**Lyria** / **`lyria`**。正式项目目录名：**`lyria`**。
