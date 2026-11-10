@@ -137,10 +137,10 @@ struct TrackTable: View {
             .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             Text("艺人")
                 .lineLimit(1)
-                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                .frame(minWidth: 0, idealWidth: trackMetaColumnMax, maxWidth: trackMetaColumnMax, alignment: .leading)
             Text("专辑")
                 .lineLimit(1)
-                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                .frame(minWidth: 0, idealWidth: trackMetaColumnMax, maxWidth: trackMetaColumnMax, alignment: .leading)
             HStack(spacing: 2) {
                 Text("时长")
                     .frame(width: 44, alignment: .trailing)
@@ -273,7 +273,7 @@ private struct TrackRow: View {
             .font(.system(size: 12, weight: .medium))
             .foregroundStyle(LyriaTheme.text2)
             .lineLimit(1)
-            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+            .frame(minWidth: 0, idealWidth: trackMetaColumnMax, maxWidth: trackMetaColumnMax, alignment: .leading)
             .allowsHitTesting(false)
     }
 
@@ -296,6 +296,9 @@ private struct TrackRow: View {
         }
     }
 }
+
+/// Artist and album cap. Wide windows stop here; tighter windows still shrink to zero.
+private let trackMetaColumnMax: CGFloat = 120
 
 /// Left clicks report modifier flags. Right-clicks pass upward so the row context menu can open.
 private struct RowClickCatcher: NSViewRepresentable {
