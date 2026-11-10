@@ -1,14 +1,24 @@
+import AppKit
 import SwiftUI
 
 enum TrackMenu {
     @MainActor
     @ViewBuilder
-    static func items(
-        track: Track,
-        playlistID: String?,
-        store: AppSession,
-        requestRemoveFromLibrary: @escaping () -> Void
-    ) -> some View {
+    static func items(track: Track, playlistID: String?) -> some View {
+        TrackMenuItems(track: track, playlistID: playlistID)
+    }
+}
+
+private struct TrackMenuItems: View {
+    let track: Track
+    var playlistID: String?
+    @EnvironmentObject private var store: AppSession
+
+    var body: some View {
+        let targets = beginMenu()
+        let artistID = sharedID(in: targets, keyPath: \.artistId)
+        let albumID = sharedID(in: targets, keyPath: \.albumId)
+
         // TODO(engine): play, queue, and play-next.
         Button("播放") {}
             .disabled(true)
@@ -22,24 +32,53 @@ enum TrackMenu {
                     .disabled(true)
             } else {
                 ForEach(store.playlists) { playlist in
-                    Button(playlist.name) { store.add(track.id, to: playlist.id) }
+                    Button(playlist.name) {
+                        store.addToPlaylist(targets, playlistID: playlist.id)
+                    }
                 }
             }
         }
         Divider()
         Button("前往艺人") {
-            if let id = track.artistId { store.openArtist(id) }
+            if let artistID { store.openArtist(artistID) }
         }
-        .disabled(!track.canOpenArtist)
+        .disabled(artistID == nil)
         Button("前往专辑") {
-            if let id = track.albumId { store.openAlbum(id) }
+            if let albumID { store.openAlbum(albumID) }
         }
-        .disabled(!track.canOpenAlbum)
+        .disabled(albumID == nil)
         if let playlistID {
             Divider()
-            Button("从播放列表移除") { store.remove(track.id, from: playlistID) }
+            Button("从播放列表移除") {
+                store.removeFromPlaylist(targets, playlistID: playlistID)
+            }
         }
-        Button("从曲库移除", role: .destructive) { requestRemoveFromLibrary() }
+        Button("从曲库移除", role: .destructive) {
+            store.requestLibraryRemoval(targets)
+        }
+    }
+
+    /// Menu contents follow the selection rule immediately. Highlight catches up on the next turn
+    /// so opening the menu does not publish state during the menu's view update.
+    private func beginMenu() -> [String] {
+        let targets = TrackSelection.menuTrackIDs(
+            trackID: track.id,
+            selected: store.selectedTrackIds,
+            orderedIDs: store.selectionScopeIDs
+        )
+        store.scheduleMenuSelection(for: track.id)
+        return targets
+    }
+
+    private func sharedID(in ids: [String], keyPath: KeyPath<Track, String?>) -> String? {
+        var shared: String?
+        for id in ids {
+            let row = store.track(id) ?? (id == track.id ? track : nil)
+            guard let row, let value = row[keyPath: keyPath] else { return nil }
+            if let shared, shared != value { return nil }
+            shared = value
+        }
+        return shared
     }
 }
 
@@ -48,16 +87,31 @@ struct TrackTable: View {
     var playlistID: String? = nil
     var scrolls = true
     @EnvironmentObject private var store: AppSession
+    @State private var scopeActive = false
 
     var body: some View {
-        if scrolls {
-            ScrollView {
+        Group {
+            if scrolls {
+                ScrollView { rows }
+            } else {
                 rows
             }
-        } else {
-            rows
+        }
+        .onAppear {
+            scopeActive = true
+            store.noteSelectionScope(trackIDs)
+        }
+        .onChange(of: trackIDs) { _, ids in
+            guard scopeActive else { return }
+            store.noteSelectionScope(ids)
+        }
+        .onDisappear {
+            scopeActive = false
+            store.trackTableFocused = false
         }
     }
+
+    private var trackIDs: [String] { tracks.map(\.id) }
 
     private var rows: some View {
         LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
@@ -106,12 +160,45 @@ private struct TrackRow: View {
     var playlistID: String? = nil
     @EnvironmentObject private var store: AppSession
     @State private var hovering = false
-    @State private var confirmRemove = false
 
     private var isCurrent: Bool { false }
-    private var isSelected: Bool { track.id == store.selectedTrackId }
+    private var isSelected: Bool { store.selectedTrackIds.contains(track.id) }
 
     var body: some View {
+        rowContent
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background {
+                RowClickCatcher { flags in
+                    select(flags: flags)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .background {
+                if isCurrent {
+                    LyriaTheme.softAccentGradient
+                } else if isSelected {
+                    Color.white.opacity(0.07)
+                } else if hovering {
+                    Color.white.opacity(0.04)
+                }
+            }
+            .overlay(alignment: .bottom) {
+                if !isCurrent {
+                    Rectangle()
+                        .fill(Color.white.opacity(isSelected ? 0.2 : 0.08))
+                        .frame(height: 1)
+                }
+            }
+            .onHover { hovering = $0 }
+            .contextMenu {
+                TrackMenu.items(track: track, playlistID: playlistID)
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private var rowContent: some View {
         HStack(spacing: 8) {
             HStack(spacing: 10) {
                 coverButton
@@ -119,6 +206,7 @@ private struct TrackRow: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(LyriaTheme.foreground)
                     .lineLimit(1)
+                    .allowsHitTesting(false)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -134,41 +222,10 @@ private struct TrackRow: View {
                     .font(.system(size: 12, weight: .medium).monospacedDigit())
                     .foregroundStyle(track.missing ? LyriaTheme.danger : LyriaTheme.text3)
                     .frame(width: track.missing ? 56 : 44, alignment: .trailing)
+                    .allowsHitTesting(false)
                 moreMenu
             }
             .frame(width: 96, alignment: .trailing)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .background {
-            if isCurrent {
-                LyriaTheme.softAccentGradient
-            } else if isSelected {
-                Color.white.opacity(0.07)
-            } else if hovering {
-                Color.white.opacity(0.04)
-            }
-        }
-        .overlay(alignment: .bottom) {
-            if !isCurrent {
-                Rectangle()
-                    .fill(Color.white.opacity(isSelected ? 0.2 : 0.08))
-                    .frame(height: 1)
-            }
-        }
-        .contentShape(Rectangle())
-        .onHover { hovering = $0 }
-        .onTapGesture { store.selectedTrackId = track.id }
-        .contextMenu {
-            TrackMenu.items(track: track, playlistID: playlistID, store: store) {
-                confirmRemove = true
-            }
-        }
-        .confirmationDialog("从曲库移除「\(track.title)」？", isPresented: $confirmRemove, titleVisibility: .visible) {
-            Button("从曲库移除", role: .destructive) { store.removeFromLibrary(track.id) }
-            Button("取消", role: .cancel) {}
-        } message: {
-            Text("文件会留在磁盘上。这一首会从曲库和播放列表里删掉，再次导入仍使用原来的 id。")
         }
     }
 
@@ -185,9 +242,7 @@ private struct TrackRow: View {
 
     private var moreMenu: some View {
         Menu {
-            TrackMenu.items(track: track, playlistID: playlistID, store: store) {
-                confirmRemove = true
-            }
+            TrackMenu.items(track: track, playlistID: playlistID)
         } label: {
             Image(systemName: "ellipsis")
                 .font(.system(size: 13, weight: .semibold))
@@ -213,5 +268,56 @@ private struct TrackRow: View {
         .buttonStyle(.plain)
         .disabled(!enabled)
     }
+
+    private func select(flags: NSEvent.ModifierFlags) {
+        let modifiers = flags.intersection(.deviceIndependentFlagsMask)
+        if modifiers.contains(.control) { return }
+        resignTextInput()
+        store.clickTrack(
+            track.id,
+            command: modifiers.contains(.command),
+            shift: modifiers.contains(.shift)
+        )
+    }
+
+    private func resignTextInput() {
+        guard let window = NSApp.keyWindow ?? NSApp.mainWindow else { return }
+        let responder = window.firstResponder
+        if responder is NSTextView || responder is NSTextField {
+            window.makeFirstResponder(nil)
+        }
+    }
 }
 
+/// Left clicks report modifier flags. Right-clicks pass upward so the row context menu can open.
+private struct RowClickCatcher: NSViewRepresentable {
+    var onClick: (NSEvent.ModifierFlags) -> Void
+
+    func makeNSView(context: Context) -> RowClickCatcherView {
+        let view = RowClickCatcherView()
+        view.onClick = onClick
+        return view
+    }
+
+    func updateNSView(_ nsView: RowClickCatcherView, context: Context) {
+        nsView.onClick = onClick
+    }
+}
+
+private final class RowClickCatcherView: NSView {
+    var onClick: ((NSEvent.ModifierFlags) -> Void)?
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    override func mouseDown(with event: NSEvent) {
+        if event.modifierFlags.contains(.control) {
+            rightMouseDown(with: event)
+            return
+        }
+        onClick?(event.modifierFlags)
+    }
+
+    override func rightMouseDown(with event: NSEvent) {
+        superview?.rightMouseDown(with: event)
+    }
+}

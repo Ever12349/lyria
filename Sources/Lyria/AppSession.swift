@@ -2,6 +2,12 @@ import Combine
 import Foundation
 import LyriaCore
 
+struct LibraryRemovalPrompt: Equatable {
+    var trackIDs: [String]
+    var title: String
+    var message: String
+}
+
 /// Navigation, search, selection, and toasts. The database lives on `library`.
 @MainActor
 final class AppSession: ObservableObject {
@@ -10,19 +16,33 @@ final class AppSession: ObservableObject {
     @Published var stack: [AppRoute] = [.library]
     @Published var searchText = ""
     private var returnStack: [AppRoute]?
-    @Published var selectedTrackId: String?
+    @Published private(set) var selectedTrackIds: Set<String> = []
+    private(set) var selectionAnchor: String?
+    private(set) var selectionScopeIDs: [String] = []
+    /// True after a click or menu on the current track table. ⌘A is ignored unless this is set.
+    var trackTableFocused = false
+    @Published var libraryRemovalPrompt: LibraryRemovalPrompt?
+    /// Kept beside the prompt so confirm still runs if the dialog clears the prompt first.
+    private var libraryRemovalIDs: [String] = []
     @Published var queueVisible = false
     @Published var toast: String?
     private var toastToken = 0
     private var didBootstrap = false
-    private var libraryTicket: AnyCancellable?
+    private var liveTrackIDs: Set<String> = []
+    /// Bumped on navigation so a menu-open selection update cannot land on the next page.
+    private var menuEpoch = 0
+    private var cancellables = Set<AnyCancellable>()
 
     init() {
         let library = LibraryStore()
         self.library = library
-        libraryTicket = library.objectWillChange.sink { [weak self] _ in
+        library.objectWillChange.sink { [weak self] _ in
             self?.objectWillChange.send()
-        }
+        }.store(in: &cancellables)
+        // dropFirst skips the synchronous current-value event during init.
+        library.$tracks.dropFirst().sink { [weak self] tracks in
+            self?.libraryTracksChanged(tracks)
+        }.store(in: &cancellables)
         library.onToast = { [weak self] message in
             self?.showToast(message)
         }
@@ -36,6 +56,7 @@ final class AppSession: ObservableObject {
 
     var route: AppRoute { stack.last ?? .library }
     var currentNav: NavItem { route.nav }
+    var showsBatchBar: Bool { selectedTrackIds.count >= 2 }
 
     var trimmedQuery: String {
         searchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -96,11 +117,63 @@ final class AppSession: ObservableObject {
         }
     }
 
+    func orderedSelectionIDs() -> [String] {
+        TrackSelection.orderedIDs(selected: selectedTrackIds, orderedIDs: selectionScopeIDs)
+    }
+
+    func noteSelectionScope(_ ids: [String]) {
+        if ids != selectionScopeIDs {
+            selectionScopeIDs = ids
+        }
+        apply(TrackSelection.prune(selectionState, keeping: Set(ids)))
+    }
+
+    func clickTrack(_ id: String, command: Bool, shift: Bool) {
+        trackTableFocused = true
+        apply(TrackSelection.click(
+            id,
+            command: command,
+            shift: shift,
+            state: selectionState,
+            orderedIDs: selectionScopeIDs
+        ))
+    }
+
+    /// Right-click / ⋯ on an unselected row replaces the selection with that row.
+    func prepareMenu(for trackID: String) {
+        guard !selectedTrackIds.contains(trackID) else { return }
+        guard selectionScopeIDs.contains(trackID) else { return }
+        apply(TrackSelection.replace(trackID))
+    }
+
+    func scheduleMenuSelection(for trackID: String) {
+        let needsSelection = !selectedTrackIds.contains(trackID)
+        guard needsSelection || !trackTableFocused else { return }
+        let epoch = menuEpoch
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.menuEpoch == epoch else { return }
+            self.prepareMenu(for: trackID)
+            self.trackTableFocused = true
+        }
+    }
+
+    func selectAllInScope() {
+        guard !selectionScopeIDs.isEmpty else { return }
+        apply(TrackSelection.selectAll(orderedIDs: selectionScopeIDs, state: selectionState))
+    }
+
+    func clearSelection() {
+        apply(TrackSelection.clear())
+    }
+
     func updateQuery(_ raw: String) {
-        let wasEmpty = trimmedQuery.isEmpty
+        let previous = trimmedQuery
         let nowEmpty = raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        if !nowEmpty && wasEmpty {
+        if !nowEmpty && previous.isEmpty {
             returnStack = stack
+        }
+        if raw.trimmingCharacters(in: .whitespacesAndNewlines) != previous {
+            dismissSelectionForNavigation()
         }
         searchText = raw
         if nowEmpty, let saved = returnStack {
@@ -110,12 +183,14 @@ final class AppSession: ObservableObject {
     }
 
     func select(_ item: NavItem) {
+        dismissSelectionForNavigation()
         returnStack = nil
         searchText = ""
         stack = [item.route]
     }
 
     func goBack() {
+        dismissSelectionForNavigation()
         if isSearching {
             updateQuery("")
             return
@@ -125,18 +200,21 @@ final class AppSession: ObservableObject {
     }
 
     func openArtist(_ id: String) {
+        dismissSelectionForNavigation()
         returnStack = nil
         searchText = ""
         stack = [.artists, .artist(id)]
     }
 
     func openAlbum(_ id: String) {
+        dismissSelectionForNavigation()
         returnStack = nil
         searchText = ""
         stack = [.albums, .album(id)]
     }
 
     func openPlaylist(_ id: String) {
+        dismissSelectionForNavigation()
         returnStack = nil
         searchText = ""
         stack = [.playlists, .playlist(id)]
@@ -150,16 +228,40 @@ final class AppSession: ObservableObject {
         library.cancelScan()
     }
 
-    func removeFromLibrary(_ id: String) {
-        let title = track(id)?.title ?? "曲目"
+    func requestLibraryRemoval(_ ids: [String]) {
+        let ordered = Self.deduped(ids)
+        guard !ordered.isEmpty else { return }
+        let title: String
+        let message: String
+        if ordered.count == 1 {
+            let name = track(ordered[0])?.title ?? "曲目"
+            title = "从曲库移除「\(name)」？"
+            message = "文件会留在磁盘上。这一首会从曲库和播放列表里删掉，再次导入仍使用原来的 id。"
+        } else {
+            title = "从曲库移除 \(ordered.count) 首？"
+            message = "文件会留在磁盘上。这些曲目会从曲库和播放列表里删掉，再次导入仍使用原来的 id。"
+        }
+        libraryRemovalIDs = ordered
+        libraryRemovalPrompt = LibraryRemovalPrompt(trackIDs: ordered, title: title, message: message)
+    }
+
+    func commitLibraryRemoval() {
+        let ids = libraryRemovalIDs
+        guard !ids.isEmpty else { return }
+        libraryRemovalIDs = []
+        libraryRemovalPrompt = nil
+        let singleTitle = ids.count == 1 ? (track(ids[0])?.title ?? "曲目") : nil
         Task {
-            let removed = await library.deleteTrack(id: id)
+            let removed = await library.deleteTracks(ids: ids)
             guard removed else {
                 showToast("移除曲目失败")
                 return
             }
-            if selectedTrackId == id { selectedTrackId = nil }
-            showToast("已从曲库移除「\(title)」")
+            if let singleTitle {
+                showToast("已从曲库移除「\(singleTitle)」")
+            } else {
+                showToast("已从曲库移除 \(ids.count) 首")
+            }
         }
     }
 
@@ -197,6 +299,7 @@ final class AppSession: ObservableObject {
                 return
             }
             if case .playlist(let current) = route, current == id {
+                dismissSelectionForNavigation()
                 stack = [.playlists]
             }
             showToast("已删除「\(playlist.name)」")
@@ -215,10 +318,52 @@ final class AppSession: ObservableObject {
         }
     }
 
+    func addToPlaylist(_ ids: [String], playlistID: String) {
+        let ordered = Self.deduped(ids)
+        guard let playlist = playlist(playlistID), !ordered.isEmpty else { return }
+        if ordered.count == 1 {
+            add(ordered[0], to: playlistID)
+            return
+        }
+        let name = playlist.name
+        Task {
+            guard let result = await library.addTracks(ordered, to: playlistID) else {
+                showToast("加入播放列表失败")
+                return
+            }
+            // Selection stays; a single-track add does not clear it either.
+            if result.added == 0, result.skipped > 0 {
+                showToast("已在「\(name)」中")
+            } else if result.added > 0, result.skipped > 0 {
+                showToast("已加入 \(result.added) 首到「\(name)」，跳过 \(result.skipped) 首（已在列表）")
+            } else if result.added > 0 {
+                showToast("已加入 \(result.added) 首到「\(name)」")
+            } else {
+                showToast("加入播放列表失败")
+            }
+        }
+    }
+
     func remove(_ trackID: String, from playlistID: String) {
         Task {
             let removed = await library.removeTrackFromPlaylist(trackID, playlistID: playlistID)
             showToast(removed ? "已从播放列表移除" : "从播放列表移除失败")
+        }
+    }
+
+    func removeFromPlaylist(_ ids: [String], playlistID: String) {
+        let ordered = Self.deduped(ids)
+        guard !ordered.isEmpty else { return }
+        if ordered.count == 1 {
+            remove(ordered[0], from: playlistID)
+            return
+        }
+        Task {
+            guard let removed = await library.removeTracksFromPlaylist(ordered, playlistID: playlistID) else {
+                showToast("从播放列表移除失败")
+                return
+            }
+            showToast(removed > 0 ? "已从播放列表移除 \(removed) 首" : "从播放列表移除失败")
         }
     }
 
@@ -230,6 +375,38 @@ final class AppSession: ObservableObject {
             try? await Task.sleep(nanoseconds: 2_200_000_000)
             if toastToken == token { toast = nil }
         }
+    }
+
+    private var selectionState: TrackSelectionState {
+        TrackSelectionState(ids: selectedTrackIds, anchor: selectionAnchor)
+    }
+
+    private func apply(_ state: TrackSelectionState) {
+        selectionAnchor = state.anchor
+        if selectedTrackIds != state.ids {
+            selectedTrackIds = state.ids
+        }
+    }
+
+    private func dismissSelectionForNavigation() {
+        menuEpoch += 1
+        clearSelection()
+        trackTableFocused = false
+    }
+
+    /// Playlist placeholders live only in the current table, so a reload must not drop them.
+    /// Ids that disappeared from the library are removed even if the table scope is still stale.
+    private func libraryTracksChanged(_ tracks: [Track]) {
+        let live = Set(tracks.map(\.id))
+        let scope = Set(selectionScopeIDs)
+        let placeholders = scope.subtracting(liveTrackIDs).subtracting(live)
+        liveTrackIDs = live
+        apply(TrackSelection.prune(selectionState, keeping: live.union(placeholders)))
+    }
+
+    private static func deduped(_ ids: [String]) -> [String] {
+        var seen = Set<String>()
+        return ids.filter { seen.insert($0).inserted }
     }
 
     private static func uniquePlaylistName(existing: [String]) -> String {

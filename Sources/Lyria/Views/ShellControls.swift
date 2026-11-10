@@ -120,6 +120,8 @@ struct PageHeader: View {
 
 struct SearchField: View {
     @Binding var text: String
+    @EnvironmentObject private var store: AppSession
+    @FocusState private var fieldFocused: Bool
 
     var body: some View {
         HStack(spacing: 8) {
@@ -130,6 +132,10 @@ struct SearchField: View {
                 .textFieldStyle(.plain)
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(LyriaTheme.foreground)
+                .focused($fieldFocused)
+                .onChange(of: fieldFocused) { _, focused in
+                    if focused { store.trackTableFocused = false }
+                }
             if !text.isEmpty {
                 Button { text = "" } label: {
                     Image(systemName: "xmark.circle.fill")
@@ -216,6 +222,7 @@ struct DetailHero<Actions: View>: View {
     var renaming: Binding<String>? = nil
     var onCommitRename: () -> Void = {}
     var onCancelRename: () -> Void = {}
+    @EnvironmentObject private var store: AppSession
     @FocusState private var nameFieldFocused: Bool
     @ViewBuilder var actions: () -> Actions
 
@@ -252,6 +259,7 @@ struct DetailHero<Actions: View>: View {
                 .onExitCommand(perform: onCancelRename)
                 .onAppear { nameFieldFocused = true }
                 .onChange(of: nameFieldFocused) { _, focused in
+                    if focused { store.trackTableFocused = false }
                     if !focused { onCommitRename() }
                 }
         } else {

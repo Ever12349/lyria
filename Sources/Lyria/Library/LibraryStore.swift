@@ -73,9 +73,17 @@ final class LibraryStore: ObservableObject {
     }
 
     func deleteTrack(id: String) async -> Bool {
+        await deleteTracks(ids: [id])
+    }
+
+    /// One transaction, then one reload. Artwork files are removed only after the commit.
+    func deleteTracks(ids: [String]) async -> Bool {
+        guard !ids.isEmpty else { return false }
         do {
-            try await database.deleteTrack(id: id)
-            SupportPaths.deleteArtwork(trackID: id)
+            try await database.deleteTracks(ids: ids)
+            for id in ids {
+                SupportPaths.deleteArtwork(trackID: id)
+            }
             try await reload()
             return true
         } catch {
@@ -141,6 +149,32 @@ final class LibraryStore: ObservableObject {
             return true
         } catch {
             return false
+        }
+    }
+
+    /// Reloads only when at least one track was newly inserted.
+    func addTracks(_ trackIDs: [String], to playlistID: String) async -> PlaylistBatchAdd? {
+        do {
+            let result = try await database.addTracks(trackIDs, to: playlistID)
+            if result.added > 0 {
+                try await reload()
+            }
+            return result
+        } catch {
+            return nil
+        }
+    }
+
+    /// Reloads only when a link was removed. `nil` is a database error.
+    func removeTracksFromPlaylist(_ trackIDs: [String], playlistID: String) async -> Int? {
+        do {
+            let removed = try await database.removeTracksFromPlaylist(trackIDs, playlistID: playlistID)
+            if removed > 0 {
+                try await reload()
+            }
+            return removed
+        } catch {
+            return nil
         }
     }
 

@@ -1,8 +1,10 @@
+import AppKit
 import SwiftUI
 
 struct ContentView: View {
     @StateObject private var store = AppSession()
     @State private var sidebarWidth: CGFloat = 228
+    @State private var keyMonitor: Any?
 
     private let sidebarMin: CGFloat = 168
     private let sidebarMax: CGFloat = 320
@@ -34,6 +36,42 @@ struct ContentView: View {
         .preferredColorScheme(.dark)
         .background(WindowChromeConfigurer())
         .task { await store.bootstrap() }
+        .onAppear(perform: installKeyMonitor)
+        .onDisappear(perform: removeKeyMonitor)
+        .confirmationDialog(
+            store.libraryRemovalPrompt?.title ?? "从曲库移除？",
+            isPresented: removalPresented,
+            titleVisibility: .visible
+        ) {
+            Button("从曲库移除", role: .destructive) { store.commitLibraryRemoval() }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text(store.libraryRemovalPrompt?.message ?? "")
+        }
+    }
+
+    private var removalPresented: Binding<Bool> {
+        Binding(
+            get: { store.libraryRemovalPrompt != nil },
+            set: { presented in
+                if !presented { store.libraryRemovalPrompt = nil }
+            }
+        )
+    }
+
+    private func installKeyMonitor() {
+        guard keyMonitor == nil else { return }
+        let session = store
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            KeyMonitor.handle(event, session: session)
+        }
+    }
+
+    private func removeKeyMonitor() {
+        if let keyMonitor {
+            NSEvent.removeMonitor(keyMonitor)
+        }
+        keyMonitor = nil
     }
 
     private var windowBackground: some View {
@@ -61,6 +99,9 @@ struct ContentView: View {
             pageHead
             if showsScanProgress {
                 ScanProgressBar(percent: store.scanSession.percent, onCancel: store.cancelScan)
+            }
+            if store.showsBatchBar {
+                BatchActionBar(playlistID: batchPlaylistID)
             }
             ZStack(alignment: .topTrailing) {
                 page
@@ -169,6 +210,12 @@ struct ContentView: View {
         store.route == .library && !store.isSearching && store.scanSession.isRunning
     }
 
+    /// Playlist removal is only offered on that playlist's own table, not in search.
+    private var batchPlaylistID: String? {
+        guard !store.isSearching, case .playlist(let id) = store.route else { return nil }
+        return id
+    }
+
     private var showsBack: Bool {
         store.isSearching || store.route.showsBack
     }
@@ -192,6 +239,42 @@ struct ContentView: View {
             return "\(store.visibleTracks.count) 首"
         }
         return " "
+    }
+}
+
+/// ⌘A selects the focused track table. A focused text field keeps the system select-all.
+/// Esc clears the selection and leaves the search string alone.
+private enum KeyMonitor {
+    static func handle(_ event: NSEvent, session: AppSession) -> NSEvent? {
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        let isEscape = event.keyCode == 53
+        let selectAll = flags.contains(.command)
+            && !flags.contains(.shift)
+            && !flags.contains(.option)
+            && !flags.contains(.control)
+            && event.charactersIgnoringModifiers?.lowercased() == "a"
+        guard isEscape || selectAll else { return event }
+        if session.libraryRemovalPrompt != nil { return event }
+        if textInputIsFocused || menuOrSheetIsOpen { return event }
+        guard session.trackTableFocused else { return event }
+        if isEscape {
+            guard !session.selectedTrackIds.isEmpty else { return event }
+            session.clearSelection()
+            return nil
+        }
+        session.selectAllInScope()
+        return nil
+    }
+
+    private static var textInputIsFocused: Bool {
+        let responder = NSApp.keyWindow?.firstResponder
+        return responder is NSTextView || responder is NSTextField
+    }
+
+    private static var menuOrSheetIsOpen: Bool {
+        if NSApp.mainWindow?.attachedSheet != nil { return true }
+        if let key = NSApp.keyWindow, let main = NSApp.mainWindow, key != main { return true }
+        return false
     }
 }
 

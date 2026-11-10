@@ -41,6 +41,11 @@ struct LibrarySnapshot {
     var playlists: [Playlist]
 }
 
+struct PlaylistBatchAdd: Equatable {
+    var added: Int
+    var skipped: Int
+}
+
 /// Serial SQLite writer. Readers go through the same actor.
 actor LibraryDatabase {
     private let connection = SQLiteConnection()
@@ -297,9 +302,18 @@ actor LibraryDatabase {
 
     /// Deletes the track row and playlist links. The fingerprint row stays so re-import keeps `trk_`.
     func deleteTrack(id: String) throws {
+        try deleteTracks(ids: [id])
+    }
+
+    /// One transaction for the whole batch, then a single `recomputeCounts`. Fingerprints stay.
+    func deleteTracks(ids: [String]) throws {
+        let unique = Self.uniquePreservingOrder(ids)
+        guard !unique.isEmpty else { return }
         try connection.transaction {
-            try connection.run("DELETE FROM playlist_tracks WHERE track_id = ?", [.text(id)])
-            try connection.run("DELETE FROM tracks WHERE id = ?", [.text(id)])
+            for id in unique {
+                try connection.run("DELETE FROM playlist_tracks WHERE track_id = ?", [.text(id)])
+                try connection.run("DELETE FROM tracks WHERE id = ?", [.text(id)])
+            }
             try recomputeCounts()
         }
     }
@@ -363,6 +377,70 @@ actor LibraryDatabase {
             "DELETE FROM playlist_tracks WHERE playlist_id = ? AND track_id = ?",
             [.text(playlistID), .text(trackID)]
         )
+    }
+
+    /// Inserts in `trackIDs` order (the current table, top to bottom). One transaction.
+    /// `skipped` counts tracks already in the playlist. Unknown track ids are ignored.
+    func addTracks(_ trackIDs: [String], to playlistID: String) throws -> PlaylistBatchAdd {
+        let unique = Self.uniquePreservingOrder(trackIDs)
+        return try connection.transaction {
+            let playlistExists = try count("SELECT COUNT(*) FROM playlists WHERE id = ?", [.text(playlistID)]) > 0
+            guard playlistExists else {
+                throw SQLiteError(message: "找不到播放列表")
+            }
+            var position = try count(
+                "SELECT COALESCE(MAX(position), -1) + 1 FROM playlist_tracks WHERE playlist_id = ?",
+                [.text(playlistID)]
+            )
+            var added = 0
+            var skipped = 0
+            for trackID in unique {
+                let trackExists = try count("SELECT COUNT(*) FROM tracks WHERE id = ?", [.text(trackID)]) > 0
+                guard trackExists else { continue }
+                let already = try count(
+                    "SELECT COUNT(*) FROM playlist_tracks WHERE playlist_id = ? AND track_id = ?",
+                    [.text(playlistID), .text(trackID)]
+                ) > 0
+                if already {
+                    skipped += 1
+                    continue
+                }
+                try connection.run(
+                    "INSERT INTO playlist_tracks (playlist_id, track_id, position) VALUES (?, ?, ?)",
+                    [.text(playlistID), .text(trackID), .int(position)]
+                )
+                position += 1
+                added += 1
+            }
+            if added > 0 {
+                try connection.run(
+                    "UPDATE playlists SET updated_at = ? WHERE id = ?",
+                    [.int(Self.now), .text(playlistID)]
+                )
+            }
+            return PlaylistBatchAdd(added: added, skipped: skipped)
+        }
+    }
+
+    /// One transaction. Returns how many of `trackIDs` were actually linked.
+    func removeTracksFromPlaylist(_ trackIDs: [String], playlistID: String) throws -> Int {
+        let unique = Self.uniquePreservingOrder(trackIDs)
+        return try connection.transaction {
+            var removed = 0
+            for trackID in unique {
+                let linked = try count(
+                    "SELECT COUNT(*) FROM playlist_tracks WHERE playlist_id = ? AND track_id = ?",
+                    [.text(playlistID), .text(trackID)]
+                )
+                guard linked > 0 else { continue }
+                try connection.run(
+                    "DELETE FROM playlist_tracks WHERE playlist_id = ? AND track_id = ?",
+                    [.text(playlistID), .text(trackID)]
+                )
+                removed += 1
+            }
+            return removed
+        }
     }
 
     private struct TrackCore {
@@ -585,6 +663,11 @@ actor LibraryDatabase {
               let array = try? JSONSerialization.jsonObject(with: data) as? [String]
         else { return [] }
         return array
+    }
+
+    static func uniquePreservingOrder(_ ids: [String]) -> [String] {
+        var seen = Set<String>()
+        return ids.filter { seen.insert($0).inserted }
     }
 
     static func encodeAliases(_ paths: [String]) -> String {
