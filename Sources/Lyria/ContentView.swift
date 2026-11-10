@@ -12,7 +12,7 @@ struct ContentView: View {
     private let sidebarMax: CGFloat = 320
 
     var body: some View {
-        HStack(spacing: 0) {
+        HStack(alignment: .top, spacing: 0) {
             SidebarView()
                 .frame(width: sidebarWidth)
                 .padding(.leading, LyriaTheme.sidebarInset)
@@ -29,8 +29,9 @@ struct ContentView: View {
             .frame(maxHeight: .infinity)
 
             detailColumn
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .environmentObject(store)
         .background(windowBackground)
         .toolbarBackground(.hidden, for: .windowToolbar)
