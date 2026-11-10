@@ -49,6 +49,18 @@ enum LyriaTheme {
         )
     }
 
+    /// Batch capsule in the title row. Quieter than the selected row wash.
+    static var batchBarFill: LinearGradient {
+        LinearGradient(
+            colors: [primary.opacity(0.16), primaryDeep.opacity(0.10)],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+    }
+
+    /// Enforced on the SwiftUI frame and on `NSWindow.minSize` / `contentMinSize`.
+    static let windowMinimum = CGSize(width: 980, height: 640)
+
     static var selectedPillGradient: LinearGradient {
         LinearGradient(
             colors: [primary, primaryDeep],

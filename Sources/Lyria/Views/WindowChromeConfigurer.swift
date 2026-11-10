@@ -61,6 +61,7 @@ struct WindowChromeConfigurer: NSViewRepresentable {
         window.backgroundColor = deepSpace
         window.isOpaque = true
         window.isMovableByWindowBackground = false
+        enforceMinimumSize(on: window)
 
         for type: NSWindow.ButtonType in [.closeButton, .miniaturizeButton, .zoomButton] {
             if let button = window.standardWindowButton(type) {
@@ -71,6 +72,19 @@ struct WindowChromeConfigurer: NSViewRepresentable {
 
         TitlebarPassthroughContentView.installIfNeeded(on: window)
         positionTrafficLights(on: window)
+    }
+
+    /// SwiftUI `.frame(minWidth:minHeight:)` does not clamp `NSWindow`. Set both mins and grow a frame that is already smaller.
+    private static func enforceMinimumSize(on window: NSWindow) {
+        let minimum = NSSize(width: LyriaTheme.windowMinimum.width, height: LyriaTheme.windowMinimum.height)
+        window.minSize = minimum
+        window.contentMinSize = minimum
+        let frame = window.frame
+        guard frame.width < minimum.width || frame.height < minimum.height else { return }
+        let width = max(frame.width, minimum.width)
+        let height = max(frame.height, minimum.height)
+        let origin = NSPoint(x: frame.origin.x, y: frame.origin.y + frame.height - height)
+        window.setFrame(NSRect(origin: origin, size: NSSize(width: width, height: height)), display: true)
     }
 
     /// System buttons, shifted so they sit in the sidebar card’s top blank band

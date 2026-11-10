@@ -5,6 +5,8 @@ struct ContentView: View {
     @StateObject private var store = AppSession()
     @State private var sidebarWidth: CGFloat = 228
     @State private var keyMonitor: Any?
+    @State private var searchFieldExpanded = false
+    @State private var batchCapsuleWidth: CGFloat = 0
 
     private let sidebarMin: CGFloat = 168
     private let sidebarMax: CGFloat = 320
@@ -104,9 +106,6 @@ struct ContentView: View {
             if showsScanProgress {
                 ScanProgressBar(percent: store.scanSession.percent, onCancel: store.cancelScan)
             }
-            if store.showsBatchBar {
-                BatchActionBar(playlistID: batchPlaylistID)
-            }
             ZStack(alignment: .topTrailing) {
                 page
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -138,7 +137,7 @@ struct ContentView: View {
 
     private var pageHead: some View {
         GeometryReader { geo in
-            let searchWidth = min(360, geo.size.width * 0.46)
+            let restingSearchWidth = min(360, geo.size.width * 0.46)
             HStack(alignment: .center, spacing: 16) {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 2) {
@@ -165,15 +164,45 @@ struct ContentView: View {
                         .padding(.leading, showsBack ? 20 : 0)
                         .frame(maxWidth: .infinity, minHeight: 16, alignment: .leading)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                .layoutPriority(0)
 
-                SearchField(text: queryBinding)
-                    .frame(width: searchWidth)
+                if store.showsBatchBar {
+                    BatchActionBar(playlistID: batchPlaylistID)
+                        .background {
+                            GeometryReader { proxy in
+                                Color.clear.preference(key: BatchCapsuleWidthKey.self, value: proxy.size.width)
+                            }
+                        }
+                        .layoutPriority(2)
+                        .transition(.opacity)
+                }
+
+                SearchField(
+                    text: queryBinding,
+                    allowsCompact: store.showsBatchBar,
+                    expanded: $searchFieldExpanded
+                )
+                .frame(width: searchLayoutWidth(rowWidth: geo.size.width, resting: restingSearchWidth))
+                .layoutPriority(1)
             }
+            .onPreferenceChange(BatchCapsuleWidthKey.self) { batchCapsuleWidth = $0 }
+            .animation(.easeOut(duration: 0.18), value: store.showsBatchBar)
+            .animation(.easeOut(duration: 0.18), value: searchFieldExpanded)
         }
         .frame(height: 52)
         .padding(.horizontal, 4)
         .padding(.bottom, 10)
+    }
+
+    /// Resting search keeps the 46% / 360 cap. With the capsule, an empty field is 36pt; otherwise it uses leftover space up to 360.
+    private func searchLayoutWidth(rowWidth: CGFloat, resting: CGFloat) -> CGFloat {
+        if !store.showsBatchBar { return resting }
+        if store.searchText.isEmpty && !searchFieldExpanded { return 36 }
+        let gaps: CGFloat = 16 * 2
+        let titleFloor: CGFloat = 88
+        let leftover = rowWidth - batchCapsuleWidth - titleFloor - gaps
+        return min(360, max(36, leftover))
     }
 
     private var queryBinding: Binding<String> {
@@ -243,6 +272,13 @@ struct ContentView: View {
             return "\(store.visibleTracks.count) 首"
         }
         return " "
+    }
+}
+
+private struct BatchCapsuleWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
 

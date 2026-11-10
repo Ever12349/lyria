@@ -120,10 +120,45 @@ struct PageHeader: View {
 
 struct SearchField: View {
     @Binding var text: String
+    /// When the batch capsule is showing, an empty field can collapse to the magnifying glass.
+    var allowsCompact = false
+    @Binding var expanded: Bool
     @EnvironmentObject private var store: AppSession
     @FocusState private var fieldFocused: Bool
+    @State private var didFocus = false
+
+    private var showsCompact: Bool {
+        allowsCompact && text.isEmpty && !expanded
+    }
 
     var body: some View {
+        Group {
+            if showsCompact {
+                Button {
+                    expanded = true
+                } label: {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(LyriaTheme.text3)
+                        .frame(width: 36, height: 36)
+                        .background(Capsule(style: .continuous).fill(LyriaTheme.searchFill))
+                        .overlay(Capsule(style: .continuous).strokeBorder(LyriaTheme.border, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("搜索")
+            } else {
+                field
+                    .onAppear {
+                        if expanded { fieldFocused = true }
+                    }
+            }
+        }
+        .onChange(of: allowsCompact) { _, allowed in
+            if !allowed { expanded = false }
+        }
+    }
+
+    private var field: some View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 13, weight: .medium))
@@ -134,7 +169,13 @@ struct SearchField: View {
                 .foregroundStyle(LyriaTheme.foreground)
                 .focused($fieldFocused)
                 .onChange(of: fieldFocused) { _, focused in
-                    if focused { store.trackTableFocused = false }
+                    if focused {
+                        didFocus = true
+                        store.trackTableFocused = false
+                    } else if didFocus && text.isEmpty {
+                        didFocus = false
+                        expanded = false
+                    }
                 }
             if !text.isEmpty {
                 Button { text = "" } label: {
@@ -147,7 +188,7 @@ struct SearchField: View {
         }
         .padding(.horizontal, 14)
         .frame(height: 36)
-        .frame(maxWidth: 420)
+        .frame(maxWidth: .infinity)
         .background(Capsule(style: .continuous).fill(LyriaTheme.searchFill))
         .overlay(Capsule(style: .continuous).strokeBorder(LyriaTheme.border, lineWidth: 1))
     }
