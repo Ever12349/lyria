@@ -229,12 +229,8 @@ private struct TrackRow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            metaButton(track.artistLabel, enabled: track.canOpenArtist) {
-                if let id = track.artistId { store.openArtist(id) }
-            }
-            metaButton(track.albumLabel, enabled: track.canOpenAlbum) {
-                if let id = track.albumId { store.openAlbum(id) }
-            }
+            metaLabel(track.artistLabel)
+            metaLabel(track.albumLabel)
 
             HStack(spacing: 2) {
                 Text(track.missing ? "文件缺失" : track.durationLabel)
@@ -276,16 +272,13 @@ private struct TrackRow: View {
         .accessibilityLabel("更多操作")
     }
 
-    private func metaButton(_ title: String, enabled: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(enabled ? LyriaTheme.text2 : LyriaTheme.text3)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .buttonStyle(.plain)
-        .disabled(!enabled)
+    private func metaLabel(_ title: String) -> some View {
+        Text(title)
+            .font(.system(size: 12, weight: .medium))
+            .foregroundStyle(LyriaTheme.text2)
+            .lineLimit(1)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .allowsHitTesting(false)
     }
 
     private func select(flags: NSEvent.ModifierFlags) {
