@@ -179,7 +179,7 @@ private struct TrackRow: View {
                 if isCurrent {
                     LyriaTheme.softAccentGradient
                 } else if isSelected {
-                    Color.white.opacity(0.07)
+                    LyriaTheme.selectedRowFill
                 } else if hovering {
                     Color.white.opacity(0.04)
                 }

@@ -40,6 +40,15 @@ enum LyriaTheme {
         )
     }
 
+    /// Selected track row. Softer than `softAccentGradient`, which stays the now-playing wash.
+    static var selectedRowFill: LinearGradient {
+        LinearGradient(
+            colors: [primary.opacity(0.17), primaryDeep.opacity(0.09)],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+    }
+
     static var selectedPillGradient: LinearGradient {
         LinearGradient(
             colors: [primary, primaryDeep],
