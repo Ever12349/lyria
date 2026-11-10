@@ -47,9 +47,7 @@ final class AppSession: ObservableObject {
     var artists: [Artist] { library.artists }
     var albums: [Album] { library.albums }
     var playlists: [Playlist] { library.playlists }
-    var rootLabel: String { library.rootLabel }
-    var isScanning: Bool { library.isScanning }
-    var scanPercent: Int { library.scanPercent }
+    var scanSession: ScanSession { library.scanSession }
 
     var visibleTracks: [Track] { tracks }
 
@@ -144,12 +142,12 @@ final class AppSession: ObservableObject {
         stack = [.playlists, .playlist(id)]
     }
 
-    func chooseRootAndScan() {
-        library.chooseRootAndScan(force: false)
+    func scanTracks() {
+        library.scanTracks()
     }
 
-    func rescanNow() {
-        library.rescanNow()
+    func cancelScan() {
+        library.cancelScan()
     }
 
     func removeFromLibrary(_ id: String) {

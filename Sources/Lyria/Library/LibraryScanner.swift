@@ -3,6 +3,7 @@ import LyriaCore
 
 struct ScanOutcome {
     var skipped: Int
+    var cancelled: Bool
 }
 
 private struct ScanCandidate {
@@ -24,14 +25,17 @@ enum LibraryScanner {
         rootPath: String,
         force: Bool,
         database: LibraryDatabase,
+        isCancelled: @escaping @Sendable () -> Bool,
         onProgress: @escaping @Sendable (Int) async -> Void
     ) async throws -> ScanOutcome {
         let candidates = enumerate(rootPath: rootPath)
         let observed = Set(candidates.map(\.path))
-        if candidates.isEmpty {
+        if candidates.isEmpty || isCancelled() {
             try await database.finishScan(root: rootPath, seen: [], seenTrackIDs: [], observedPaths: observed)
-            await onProgress(100)
-            return ScanOutcome(skipped: 0)
+            if !isCancelled() {
+                await onProgress(100)
+            }
+            return ScanOutcome(skipped: 0, cancelled: isCancelled())
         }
 
         var skipped = 0
@@ -39,11 +43,12 @@ enum LibraryScanner {
         var seenIDs = Set<String>()
         let total = candidates.count
         var lastPercent = -1
+        var cancelled = false
 
         try await withThrowingTaskGroup(of: PreparedItem.self) { group in
             var next = 0
             func schedule() {
-                guard next < candidates.count else { return }
+                guard !isCancelled(), next < candidates.count else { return }
                 let candidate = candidates[next]
                 next += 1
                 group.addTask {
@@ -61,23 +66,31 @@ enum LibraryScanner {
                     seenIDs.insert(file.trackID)
                 }
                 done += 1
-                let percent = min(99, Int((Double(done) / Double(total) * 100).rounded()))
+                let percent = ScanSession.percent(done: done, total: total)
                 if percent != lastPercent {
                     lastPercent = percent
                     await onProgress(percent)
                 }
-                schedule()
+                if isCancelled() {
+                    cancelled = true
+                } else {
+                    schedule()
+                }
             }
         }
 
+        if isCancelled() { cancelled = true }
         try await database.finishScan(
             root: rootPath,
             seen: seen,
             seenTrackIDs: seenIDs,
             observedPaths: observed
         )
+        if cancelled {
+            return ScanOutcome(skipped: skipped, cancelled: true)
+        }
         await onProgress(100)
-        return ScanOutcome(skipped: skipped)
+        return ScanOutcome(skipped: skipped, cancelled: false)
     }
 
     private static func enumerate(rootPath: String) -> [ScanCandidate] {

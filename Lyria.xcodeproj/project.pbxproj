@@ -37,6 +37,9 @@
 		A1C000000000000000000023 /* Normalize.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000013 /* Normalize.swift */; };
 		A1C000000000000000000024 /* EntityID.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000014 /* EntityID.swift */; };
 		A1C000000000000000000025 /* Fingerprint.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000015 /* Fingerprint.swift */; };
+		A1C000000000000000000026 /* ScanSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000016 /* ScanSession.swift */; };
+		A1C000000000000000000054 /* ScanSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000044 /* ScanSessionTests.swift */; };
+		A1C100000000000000000109 /* ScanProgressBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C100000000000000000009 /* ScanProgressBar.swift */; };
 		A1C000000000000000000051 /* CrockfordTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000041 /* CrockfordTests.swift */; };
 		A1C000000000000000000052 /* NormalizeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000042 /* NormalizeTests.swift */; };
 		A1C000000000000000000053 /* FingerprintTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000043 /* FingerprintTests.swift */; };
@@ -76,6 +79,9 @@
 		A1C000000000000000000013 /* Normalize.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Normalize.swift; sourceTree = "<group>"; };
 		A1C000000000000000000014 /* EntityID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntityID.swift; sourceTree = "<group>"; };
 		A1C000000000000000000015 /* Fingerprint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fingerprint.swift; sourceTree = "<group>"; };
+		A1C000000000000000000016 /* ScanSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanSession.swift; sourceTree = "<group>"; };
+		A1C000000000000000000044 /* ScanSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanSessionTests.swift; sourceTree = "<group>"; };
+		A1C100000000000000000009 /* ScanProgressBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanProgressBar.swift; sourceTree = "<group>"; };
 		A1C000000000000000000041 /* CrockfordTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrockfordTests.swift; sourceTree = "<group>"; };
 		A1C000000000000000000042 /* NormalizeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NormalizeTests.swift; sourceTree = "<group>"; };
 		A1C000000000000000000043 /* FingerprintTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FingerprintTests.swift; sourceTree = "<group>"; };
@@ -160,6 +166,7 @@
 				BCA886B42B2045BA9AD56681 /* QueuePanel.swift */,
 				0AFBB66142764E56A0D83C1E /* SearchResultsView.swift */,
 				E5698C8C8CD948D283AE6A2A /* TransportBar.swift */,
+				A1C100000000000000000009 /* ScanProgressBar.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -186,6 +193,7 @@
 				A1C000000000000000000013 /* Normalize.swift */,
 				A1C000000000000000000014 /* EntityID.swift */,
 				A1C000000000000000000015 /* Fingerprint.swift */,
+				A1C000000000000000000016 /* ScanSession.swift */,
 			);
 			path = Sources/LyriaCore;
 			sourceTree = "<group>";
@@ -196,6 +204,7 @@
 				A1C000000000000000000041 /* CrockfordTests.swift */,
 				A1C000000000000000000042 /* NormalizeTests.swift */,
 				A1C000000000000000000043 /* FingerprintTests.swift */,
+				A1C000000000000000000044 /* ScanSessionTests.swift */,
 			);
 			path = Tests/LyriaTests;
 			sourceTree = "<group>";
@@ -307,6 +316,7 @@
 				4C360CA6FEDE451EB5B44101 /* QueuePanel.swift in Sources */,
 				50EFA6210A254D81ABBE8DCF /* SearchResultsView.swift in Sources */,
 				37DC3CD03F0B4DEB8E17DF0E /* TransportBar.swift in Sources */,
+				A1C100000000000000000109 /* ScanProgressBar.swift in Sources */,
 				A1C100000000000000000101 /* AppSession.swift in Sources */,
 				A1C100000000000000000103 /* Schema.swift in Sources */,
 				A1C100000000000000000104 /* SupportPaths.swift in Sources */,
@@ -327,6 +337,7 @@
 				A1C000000000000000000023 /* Normalize.swift in Sources */,
 				A1C000000000000000000024 /* EntityID.swift in Sources */,
 				A1C000000000000000000025 /* Fingerprint.swift in Sources */,
+				A1C000000000000000000026 /* ScanSession.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -337,6 +348,7 @@
 				A1C000000000000000000051 /* CrockfordTests.swift in Sources */,
 				A1C000000000000000000052 /* NormalizeTests.swift in Sources */,
 				A1C000000000000000000053 /* FingerprintTests.swift in Sources */,
+				A1C000000000000000000054 /* ScanSessionTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

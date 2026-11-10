@@ -59,6 +59,9 @@ struct ContentView: View {
     private var detailColumn: some View {
         VStack(spacing: 0) {
             pageHead
+            if showsScanProgress {
+                ScanProgressBar(percent: store.scanSession.percent, onCancel: store.cancelScan)
+            }
             ZStack(alignment: .topTrailing) {
                 page
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -160,6 +163,10 @@ struct ContentView: View {
                 SettingsView()
             }
         }
+    }
+
+    private var showsScanProgress: Bool {
+        store.route == .library && !store.isSearching && store.scanSession.isRunning
     }
 
     private var showsBack: Bool {

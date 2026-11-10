@@ -14,10 +14,10 @@ struct LibraryEmptyView: View {
     var body: some View {
         EmptyState(systemImage: "opticaldisc", title: "还没有音乐") {
             HStack(spacing: 10) {
-                PillButton(title: "选择文件夹", systemImage: "folder", prominent: true) {
-                    store.chooseRootAndScan()
+                PillButton(title: "扫描曲目", systemImage: "folder", prominent: true) {
+                    store.scanTracks()
                 }
-                .disabled(store.isScanning)
+                .disabled(store.scanSession.isRunning)
                 PillButton(title: "打开设置", systemImage: "gearshape") {
                     store.select(.settings)
                 }

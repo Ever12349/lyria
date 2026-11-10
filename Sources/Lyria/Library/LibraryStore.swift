@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import LyriaCore
 
 /// Library database façade. Scanning never starts by itself.
 @MainActor
@@ -8,15 +9,15 @@ final class LibraryStore: ObservableObject {
     @Published private(set) var artists: [Artist] = []
     @Published private(set) var albums: [Album] = []
     @Published private(set) var playlists: [Playlist] = []
-    @Published private(set) var rootLabel = "未选择"
-    @Published private(set) var isScanning = false
-    @Published private(set) var scanPercent = 0
+    @Published private(set) var scanSession = ScanSession.idle
 
     var onToast: ((String) -> Void)?
 
     private let database = LibraryDatabase()
     private var rootPath: String?
     private var didOpen = false
+    private var scanCancellation = ScanCancellation()
+    private var lastReloadAt: TimeInterval?
 
     func open() async {
         guard !didOpen else { return }
@@ -32,42 +33,43 @@ final class LibraryStore: ObservableObject {
                     let bookmark = BookmarkData.make(for: resolved) ?? stored.bookmark
                     try? await database.setScanRoot(path: path, bookmark: bookmark)
                 }
-                applyRoot(path)
+                rootPath = path
             }
         } catch {
             onToast?("曲库数据库打开失败")
         }
     }
 
-    func chooseRootAndScan(force: Bool) {
-        guard !isScanning else { return }
+    /// Empty-library entry. Every tap opens the folder picker, then an incremental scan.
+    func scanTracks() {
+        guard !scanSession.isRunning else { return }
         let panel = NSOpenPanel()
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
         panel.canCreateDirectories = false
-        panel.prompt = "选择"
+        panel.prompt = "扫描"
         panel.message = "选择曲库文件夹"
+        if let rootPath {
+            panel.directoryURL = URL(fileURLWithPath: rootPath, isDirectory: true)
+        }
         guard panel.runModal() == .OK, let url = panel.url else { return }
         let path = PathUtil.standardize(url)
         let bookmark = BookmarkData.make(for: url)
         Task {
             do {
                 try await database.setScanRoot(path: path, bookmark: bookmark)
-                applyRoot(path)
-                scan(force: force)
+                rootPath = path
+                startScan(force: false)
             } catch {
                 onToast?("无法保存曲库路径")
             }
         }
     }
 
-    func rescanNow() {
-        if rootPath == nil {
-            chooseRootAndScan(force: true)
-        } else {
-            scan(force: true)
-        }
+    func cancelScan() {
+        guard scanSession.isRunning else { return }
+        scanCancellation.cancel()
     }
 
     func deleteTrack(id: String) async -> Bool {
@@ -142,24 +144,26 @@ final class LibraryStore: ObservableObject {
         }
     }
 
-    private func scan(force: Bool) {
-        guard !isScanning, let rootPath else { return }
-        isScanning = true
-        scanPercent = 0
-        onToast?("开始扫描")
+    private func startScan(force: Bool) {
+        guard !scanSession.isRunning, let rootPath else { return }
+        let cancellation = ScanCancellation()
+        scanCancellation = cancellation
+        scanSession = ScanSession(phase: .running, percent: 0)
+        lastReloadAt = nil
         let database = self.database
         Task.detached(priority: .utility) { [weak self] in
             do {
                 let outcome = try await LibraryScanner.run(
                     rootPath: rootPath,
                     force: force,
-                    database: database
+                    database: database,
+                    isCancelled: { cancellation.isCancelled }
                 ) { percent in
                     guard let store = self else { return }
-                    await store.setScanPercent(percent)
+                    await store.noteProgress(percent)
                 }
                 guard let store = self else { return }
-                await store.completeScan(skipped: outcome.skipped)
+                await store.completeScan(outcome)
             } catch {
                 guard let store = self else { return }
                 await store.failScan()
@@ -167,28 +171,40 @@ final class LibraryStore: ObservableObject {
         }
     }
 
-    private func setScanPercent(_ value: Int) {
-        scanPercent = value
+    private func noteProgress(_ percent: Int) async {
+        guard scanSession.isRunning else { return }
+        scanSession = ScanSession(phase: .running, percent: percent)
+        let now = Date().timeIntervalSinceReferenceDate
+        guard ScanSession.shouldReload(now: now, lastReload: lastReloadAt) else { return }
+        lastReloadAt = now
+        try? await reload()
     }
 
-    private func completeScan(skipped: Int) async {
+    private func completeScan(_ outcome: ScanOutcome) async {
         do {
             try await reload()
         } catch {
-            onToast?("扫描结果读取失败")
+            scanSession = ScanSession(phase: .failed, percent: scanSession.percent)
+            onToast?("扫描失败")
+            return
         }
-        isScanning = false
-        scanPercent = 100
+        if outcome.cancelled {
+            scanSession = ScanSession(phase: .cancelled, percent: scanSession.percent)
+            onToast?("已取消扫描")
+            return
+        }
+        scanSession = ScanSession(phase: .completed, percent: 100)
         let count = tracks.filter { !$0.missing }.count
-        if skipped > 0 {
-            onToast?("扫描完成 · \(count) 首，跳过 \(skipped) 个")
+        if outcome.skipped > 0 {
+            onToast?("扫描完成 · \(count) 首，跳过 \(outcome.skipped) 个")
         } else {
             onToast?("扫描完成 · \(count) 首")
         }
     }
 
-    private func failScan() {
-        isScanning = false
+    private func failScan() async {
+        try? await reload()
+        scanSession = ScanSession(phase: .failed, percent: scanSession.percent)
         onToast?("扫描失败")
     }
 
@@ -200,8 +216,21 @@ final class LibraryStore: ObservableObject {
         playlists = snapshot.playlists
     }
 
-    private func applyRoot(_ path: String) {
-        rootPath = path
-        rootLabel = PathUtil.abbreviate(path)
+}
+
+private final class ScanCancellation: @unchecked Sendable {
+    private let lock = NSLock()
+    private var cancelled = false
+
+    func cancel() {
+        lock.lock()
+        cancelled = true
+        lock.unlock()
+    }
+
+    var isCancelled: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return cancelled
     }
 }

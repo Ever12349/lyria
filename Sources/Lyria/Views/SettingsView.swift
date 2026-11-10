@@ -7,18 +7,6 @@ struct SettingsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-                SettingRow(title: "曲库路径", detail: store.rootLabel) {
-                    PillButton(title: "选择文件夹", systemImage: "folder") {
-                        store.chooseRootAndScan()
-                    }
-                    .disabled(store.isScanning)
-                }
-                SettingRow(title: "重新扫描曲库", detail: "强制重算指纹，不改动磁盘上的文件") {
-                    PillButton(title: scanTitle) {
-                        store.rescanNow()
-                    }
-                    .disabled(store.isScanning)
-                }
                 SettingRow(title: "本地 HTTP API", detail: "可选，默认关闭 · 端口 17890") {
                     OffToggle(label: "本地 HTTP API") {
                         store.showToast("本地 HTTP API 保持关闭")
@@ -38,14 +26,10 @@ struct SettingsView: View {
                     PillButton(title: "清除", danger: true) {
                         confirmClearFingerprints()
                     }
-                    .disabled(store.isScanning)
+                    .disabled(store.scanSession.isRunning)
                 }
             }
         }
-    }
-
-    private var scanTitle: String {
-        store.isScanning ? "正在扫描…\(store.scanPercent)%" : "立即扫描"
     }
 
     private func confirmClearFingerprints() {

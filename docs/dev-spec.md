@@ -6,9 +6,9 @@
 > **阶段 2（曲库）先于阶段 1（引擎）。** 本切片做本地导入和曲库管理。引擎 / MCP / HTTP / MenuBarExtra 仍停放，引擎须另说开工。UI 壳已经落地，本切片接在它上面。  
 > **相对下文旧句，实现以本段为准：**  
 > 1. 删除 `user_hidden`（schema 与 UI 都没有）。「从曲库移除」= **硬删除** `tracks` 行；**保留** `fingerprints`（再导入同一内容复用 `trk_`）；级联删除 `playlist_tracks`；删除 `Artwork/trk_….jpg`；艺人/专辑 `track_count` 归零则删除该行。  
-> 2. **启动不自动扫描**，也 **不**把 `~/Music` 写入 `scan_roots`。还没选文件夹时，设置显示「未选择」。选择或更换这一个根目录会写入 bookmark 并马上扫描；「立即扫描」同样扫描，还没有根时先打开文件夹选择器再扫描。  
+> 2. **启动不自动扫描**，也 **不**把 `~/Music` 写入 `scan_roots`。设置里没有曲库路径、也没有「立即扫描」。只有空曲库的「扫描曲目」会打开文件夹选择器（已有根时预填该目录），写入 bookmark 后做增量扫描。换根不弹确认。  
 > 3. 本切片播放控件全部置灰（代码里标 `TODO(engine)`）。传输条显示「—」，没有假 now-playing。保留：加入播放列表、前往艺人/专辑（id 非空）、从曲库移除、设置、播放列表的新建/改名/删除/加歌/移出（**没有**拖拽排序）。  
-> 4. `encoding_suspect` **只**认 U+FFFD，不做 Latin-1 占比启发。规范化后艺人或专辑为空则不铸 `art_` / `alb_`，界面显示「未知艺人」「未知专辑」并禁用前往。缺标题用去掉扩展名的文件名。`sort_name = normalize(name)`。年份解析不了就是 0。封面取内嵌图，否则同目录 `folder.jpg` / `Cover.jpg`。扫描并发上限 **4**。进度写在「立即扫描」按钮上（`正在扫描…N%`），并 toast 开始和结束。清除指纹用 `NSAlert`。  
+> 4. `encoding_suspect` **只**认 U+FFFD，不做 Latin-1 占比启发。规范化后艺人或专辑为空则不铸 `art_` / `alb_`，界面显示「未知艺人」「未知专辑」并禁用前往。缺标题用去掉扩展名的文件名。`sort_name = normalize(name)`。年份解析不了就是 0。封面取内嵌图，否则同目录 `folder.jpg` / `Cover.jpg`。扫描并发上限 **4**。进度只出现在曲库页标题下：`正在扫描曲库 · N%`，可「取消」。Toast 只有结束、失败、取消（「已取消扫描」），没有「开始扫描」。清除指纹用 `NSAlert`。  
 > 5. 沙盒保持关闭；`scan_roots.bookmark` 从第一天写入。Bundle id 保持 `local.lyria.sample`。系统 SQLite3，不用 GRDB。单根。  
 > 设计资产仍在 `.design/`。交互式规格见 [Canvas](https://cursor.com/canvas/store-669ca32f-ae0c-4bc0-be04-6e46150cff28/37c89944-4d8d-4256-b8f6-e516d782a9f4)。
 
@@ -237,7 +237,7 @@ trk_0000000000000000000000
 | 元数据 | 优先 AVAsset / AVMetadataItem；封面嵌在文件或同目录 `folder.jpg` / `Cover.jpg` |
 | 增量（**已锁**） | path + size + mtime 快路径；未变则跳过指纹；变更或新文件再算指纹校验 |
 | 大文件阈值 | **已锁：≥ 32 MiB → `head_tail_size`**；写入 `fingerprints.method`；不得事后改 |
-| 全量 | 设置「重新扫描」**强制**重走指纹（不无故换 id）；与增量快路径相对 |
+| 全量 | 扫描器仍保留 `force` 参数（强制重指纹、不无故换 id）。**当前 UI 不提供重扫**，空曲库入口始终 `force: false` |
 
 ### 扫描步骤
 
@@ -251,7 +251,7 @@ trk_0000000000000000000000
    - **已在库**且本轮发现该 path 变为 iCloud 占位 → 计为本轮 **「见过」**，**不得**因此置 `missing`；可选列/标志 `icloud_offline=1`（UI 可提示「需下载」）。**真删除**（路径不存在且非占位）才 tombstone → `missing`。
 7. **并发** — 指纹与 `AVAsset` 读标签在后台 `Task`，同时最多 **4** 个文件；**不得堵主线程**。本切片还没有播放引擎。
 
-进度显示在设置「立即扫描」按钮上，文案 `正在扫描…N%`，开始和结束各一条 toast。同指纹多路径：主 path + **持久化** `aliases_json`；主 path 没了自动切副本（见 id 节）。没有 `user_hidden`，列表不过滤隐藏行。
+进度只挂在曲库页、搜索未打开、且扫描进行中：标题下方一条 `正在扫描曲库 · N%`，旁边「取消」。不显示当前文件名。取消只停止继续调度，已入库的行保留，并用本轮已经看到的文件做 `finishScan`，然后 toast「已取消扫描」。扫描过程中大约每 0.5 秒刷新一次曲库列表，结束时再刷新一次。Toast 只有完成（`扫描完成 · N 首`，有跳过时带上跳过数）、失败、取消，不报「开始扫描」。同指纹多路径：主 path + **持久化** `aliases_json`；主 path 没了自动切副本（见 id 节）。没有 `user_hidden`，列表不过滤隐藏行。
 
 ---
 
@@ -400,7 +400,7 @@ struct NowPlaying {
 | # | 决策 |
 | --- | --- |
 | Amb-UI-1 范围 | **B**：主窗全部分区假数据可点（曲库 / 艺人 / 专辑 / 播放列表 / 设置 / 空态 / 队列）；**不做**真 `MenuBarExtra`（菜单栏 = 阶段 8） |
-| Amb-UI-2 空曲库文案 | 跟 Spec：「还没有音乐」+ CTA「选择文件夹」/「打开设置」（不以 proto「曲库为空」为准） |
+| Amb-UI-2 空曲库文案 | 「还没有音乐」+ CTA「扫描曲目」/「打开设置」（2026-11-10：原「选择文件夹」改为扫描入口） |
 | Amb-UI-3 空歌单文案 | 跟 Spec：「播放列表是空的」+ CTA「添加歌曲」 |
 | Amb-UI-4 FakeData | 换成 Dreamscape / 银河边缘 / 星际旅行 等原型集；**删除** `subtitle` 与双标题次行 |
 | Amb-UI-5 队列 | **现在**做假队列浮层/面板（可开关） |
@@ -552,8 +552,7 @@ Figma：[Lyria macOS UI](https://www.figma.com/design/JJFaj1UysoberBKEr8G8Jc)
 
 | 控件 | 操作 | 限制 |
 | --- | --- | --- |
-| 曲库路径 / 管理 | 改这一个根目录。未选时显示「未选择」 | MVP 只有一个根。选定或更换后写入 bookmark 并立刻扫描。没有默认 `~/Music`。多根不做 |
-| 重新扫描 | 按钮「立即扫描」。还没有根时先打开文件夹选择器再扫描 | 强制重算指纹。不改磁盘文件。不因此更换没有变化的 `trk_`。后台进行，不堵主线程。进行中再点无效，按钮显示「正在扫描…N%」，并 toast 开始/结束 |
+| 曲库路径 / 重新扫描 | **设置里没有这两行** | 扫描入口只在空曲库：「扫描曲目」→ 文件夹选择器（目录、单选；已有根则预填）→ 写 bookmark → 增量扫描。曲库非空时没有换目录或重扫控件。单根，不预置 `~/Music`，启动不扫 |
 | 本地 HTTP API | 开或关 `127.0.0.1:17890` | 默认关。只监听本机。关掉不影响 MCP。界面给出端口，并可复制 Base URL |
 | 登录时启动 | 开机后以菜单栏形态待命 | 阶段 8 之前这项灰显或隐藏，不能真的写成登录项。在此之前 bundle id 仍是样例 id |
 | 外观 · Deep Space | 只读说明 | MVP 不能换主题 |
@@ -588,7 +587,7 @@ Figma：[Lyria macOS UI](https://www.figma.com/design/JJFaj1UysoberBKEr8G8Jc)
 
 | 场景 | 表现 |
 | --- | --- |
-| 空曲库 | 文案「还没有音乐」· CTA「选择文件夹」/「打开设置」· 底栏无曲时置灰 |
+| 空曲库 | 文案「还没有音乐」· CTA「扫描曲目」/「打开设置」· 底栏无曲时置灰 |
 | 空播放列表 | 「播放列表是空的」· CTA「添加歌曲」 |
 | 搜索无结果 | 列表区空态文案，无假数据 |
 | 无法播放此格式 | 行内警示 + toast；MCP/HTTP 返回明确 error，不假装成功 |
@@ -672,7 +671,7 @@ MVP HTTP = health + status + 传输六件套（play/pause/toggle/next/previous/s
 
 ## 设置
 
-- 曲库路径（**MVP 单根，不预置 `~/Music`**；未选显示「未选择」；多根延后）+ 「立即扫描」（强制重指纹；无根时先选文件夹）
+- 曲库扫描不在设置里。空曲库「扫描曲目」选择唯一根（不预置 `~/Music`，多根延后）并增量扫描。进度条在曲库页，可取消
 - HTTP API 开/关 · 端口 · 复制 Base URL
 - **登录时启动：** **阶段 8 之前不做**；设置项灰显或隐藏。启用 `SMAppService` 前须把工程 bundle id 从样例 `local.lyria.sample` 换成稳定 id（文档目标：**`app.lyria.macos`**——**仅规格锁定，当前不改 pbxproj**）。ad-hoc 签名 + sample id **不是**可用的登录项路径
 - 外观说明：Deep Space（MVP 只读说明）
@@ -730,7 +729,7 @@ MVP HTTP = health + status + 传输六件套（play/pause/toggle/next/previous/s
 | GitHub remote | [Ever12349/lyria](https://github.com/Ever12349/lyria) 已创建；CloudAgent 需 Cursor 对该仓的访问授权 | 仓已有 / 访问待授 |
 | 仓库文件夹名 | 磁盘路径已为 `/Users/qianxiao/worker/AIAgent/lyria`（由原 `vinyl` 更名） | 已落地 |
 | 曲库根 | MVP **单根**，不预置 `~/Music`（未选显示「未选择」）；多根延后 | **2026-11-09 覆盖** |
-| 增量扫描 | path + size + mtime 快路径；「重新扫描」强制重指纹 | **已锁** |
+| 增量扫描 | path + size + mtime 快路径。UI 不暴露强制重扫；`force` 仅留在扫描器里 | **已锁** |
 | FLAC | 系统 AVFoundation 不能播则跳过 + 明确错误；**非目标：第三方 FLAC 解码器** | 接受的平台限制 |
 | App Sandbox（已锁 · C2） | 个人自用 MVP **关闭** App Sandbox（与当前工程无 entitlements / 无 `ENABLE_APP_SANDBOX` 一致）。日后若上架或开沙盒，必须 security-scoped bookmark。`scan_roots.bookmark` **仍从第一天就写**（阶段 2 落库），避免日后开沙盒时路径全废 | **已锁：关** |
 | 艺人/专辑 id 命名空间 | NFC+空白折叠；`encoding_suspect` MVP **仅 U+FFFD**（可选 U+0080–00FF 启发须排除 CJK/假名/谚文码点）；suspect → id NULL，禁伪 `suspect:` 键与「前往艺人/专辑」；`alb_` = artist+`\0`+album；无完整 GBK 分类器 | **已锁** |
