@@ -76,6 +76,40 @@ final class LibraryStore: ObservableObject {
         await deleteTracks(ids: [id])
     }
 
+    func trackPaths(ids: [String]) async -> [StoredTrackPaths] {
+        (try? await database.trackPaths(ids: ids)) ?? []
+    }
+
+    /// `URLResourceValues.isUbiquitousItem`. A failed lookup is not ubiquitous.
+    func isUbiquitousItem(atPath path: String) -> Bool {
+        guard !path.isEmpty else { return false }
+        let values = try? URL(fileURLWithPath: path).resourceValues(forKeys: [.isUbiquitousItemKey])
+        return values?.isUbiquitousItem == true
+    }
+
+    /// Trash recorded audio paths, then the existing library delete. `deleteTracks` itself does not trash.
+    func trashThenDeleteTracks(ids: [String]) async -> [LibraryRemovalTrackOutcome]? {
+        let records = await trackPaths(ids: ids)
+        let byID = Dictionary(uniqueKeysWithValues: records.map { ($0.id, $0) })
+        var resultByPath: [String: LibraryRemovalFileResult] = [:]
+        var orderedPaths: [String] = []
+        var seen = Set<String>()
+        for id in ids {
+            for path in Self.recordedPaths(byID[id]) where seen.insert(path).inserted {
+                orderedPaths.append(path)
+            }
+        }
+        for path in orderedPaths {
+            resultByPath[path] = Self.trashRecordedFile(at: path)
+        }
+        let outcomes = ids.map { id -> LibraryRemovalTrackOutcome in
+            let results = Self.recordedPaths(byID[id]).map { resultByPath[$0] ?? .missing }
+            return LibraryRemovalCopy.trackOutcome(fileResults: results)
+        }
+        let removed = await deleteTracks(ids: ids)
+        return removed ? outcomes : nil
+    }
+
     /// One transaction, then one reload. Artwork files are removed only after the commit.
     func deleteTracks(ids: [String]) async -> Bool {
         guard !ids.isEmpty else { return false }
@@ -250,6 +284,28 @@ final class LibraryStore: ObservableObject {
         playlists = snapshot.playlists
     }
 
+}
+
+extension LibraryStore {
+    /// Primary path, then aliases. Empty strings and duplicates are dropped.
+    fileprivate static func recordedPaths(_ record: StoredTrackPaths?) -> [String] {
+        guard let record else { return [] }
+        var seen = Set<String>()
+        return ([record.path] + record.aliases).filter { path in
+            !path.isEmpty && seen.insert(path).inserted
+        }
+    }
+
+    fileprivate static func trashRecordedFile(at path: String) -> LibraryRemovalFileResult {
+        guard FileManager.default.fileExists(atPath: path) else { return .missing }
+        do {
+            var resulting: NSURL?
+            try FileManager.default.trashItem(at: URL(fileURLWithPath: path), resultingItemURL: &resulting)
+            return .trashed
+        } catch {
+            return .failed
+        }
+    }
 }
 
 private final class ScanCancellation: @unchecked Sendable {

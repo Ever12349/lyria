@@ -34,6 +34,12 @@ struct StoredScanRoot {
     var bookmark: Data?
 }
 
+struct StoredTrackPaths {
+    var id: String
+    var path: String
+    var aliases: [String]
+}
+
 struct LibrarySnapshot {
     var tracks: [Track]
     var artists: [Artist]
@@ -303,6 +309,25 @@ actor LibraryDatabase {
     /// Deletes the track row and playlist links. The fingerprint row stays so re-import keeps `trk_`.
     func deleteTrack(id: String) throws {
         try deleteTracks(ids: [id])
+    }
+
+    /// Primary path plus `aliases_json` for the ids that still exist, in request order.
+    func trackPaths(ids: [String]) throws -> [StoredTrackPaths] {
+        let unique = Self.uniquePreservingOrder(ids)
+        var found: [String: StoredTrackPaths] = [:]
+        for id in unique {
+            try connection.run(
+                "SELECT path, aliases_json FROM tracks WHERE id = ?",
+                [.text(id)]
+            ) { statement in
+                found[id] = StoredTrackPaths(
+                    id: id,
+                    path: SQLiteConnection.text(statement, 0),
+                    aliases: Self.decodeAliases(SQLiteConnection.text(statement, 1))
+                )
+            }
+        }
+        return unique.compactMap { found[$0] }
     }
 
     /// One transaction for the whole batch, then a single `recomputeCounts`. Fingerprints stay.

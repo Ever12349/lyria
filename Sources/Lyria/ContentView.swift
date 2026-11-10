@@ -46,8 +46,9 @@ struct ContentView: View {
             isPresented: removalPresented,
             titleVisibility: .visible
         ) {
-            Button("从曲库移除", role: .destructive) { store.commitLibraryRemoval() }
             Button("取消", role: .cancel) {}
+            Button("仅从曲库移除") { store.commitLibraryRemoval() }
+            Button("移到废纸篓", role: .destructive) { store.commitLibraryRemovalToTrash() }
         } message: {
             Text(store.libraryRemovalPrompt?.message ?? "")
         }

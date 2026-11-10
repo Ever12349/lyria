@@ -39,8 +39,10 @@
 		A1C000000000000000000025 /* Fingerprint.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000015 /* Fingerprint.swift */; };
 		A1C000000000000000000026 /* ScanSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000016 /* ScanSession.swift */; };
 		A1C000000000000000000027 /* TrackSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000017 /* TrackSelection.swift */; };
+		A1C000000000000000000029 /* LibraryRemoval.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000019 /* LibraryRemoval.swift */; };
 		A1C000000000000000000054 /* ScanSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000044 /* ScanSessionTests.swift */; };
 		A1C000000000000000000055 /* TrackSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000045 /* TrackSelectionTests.swift */; };
+		A1C000000000000000000057 /* LibraryRemovalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000047 /* LibraryRemovalTests.swift */; };
 		A1C100000000000000000109 /* ScanProgressBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C100000000000000000009 /* ScanProgressBar.swift */; };
 		A1C10000000000000000010A /* BatchActionBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C10000000000000000000A /* BatchActionBar.swift */; };
 		A1C000000000000000000051 /* CrockfordTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000041 /* CrockfordTests.swift */; };
@@ -84,8 +86,10 @@
 		A1C000000000000000000015 /* Fingerprint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fingerprint.swift; sourceTree = "<group>"; };
 		A1C000000000000000000016 /* ScanSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanSession.swift; sourceTree = "<group>"; };
 		A1C000000000000000000017 /* TrackSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackSelection.swift; sourceTree = "<group>"; };
+		A1C000000000000000000019 /* LibraryRemoval.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryRemoval.swift; sourceTree = "<group>"; };
 		A1C000000000000000000044 /* ScanSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanSessionTests.swift; sourceTree = "<group>"; };
 		A1C000000000000000000045 /* TrackSelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackSelectionTests.swift; sourceTree = "<group>"; };
+		A1C000000000000000000047 /* LibraryRemovalTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryRemovalTests.swift; sourceTree = "<group>"; };
 		A1C100000000000000000009 /* ScanProgressBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanProgressBar.swift; sourceTree = "<group>"; };
 		A1C10000000000000000000A /* BatchActionBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchActionBar.swift; sourceTree = "<group>"; };
 		A1C000000000000000000041 /* CrockfordTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrockfordTests.swift; sourceTree = "<group>"; };
@@ -202,6 +206,7 @@
 				A1C000000000000000000015 /* Fingerprint.swift */,
 				A1C000000000000000000016 /* ScanSession.swift */,
 				A1C000000000000000000017 /* TrackSelection.swift */,
+				A1C000000000000000000019 /* LibraryRemoval.swift */,
 			);
 			path = Sources/LyriaCore;
 			sourceTree = "<group>";
@@ -214,6 +219,7 @@
 				A1C000000000000000000043 /* FingerprintTests.swift */,
 				A1C000000000000000000044 /* ScanSessionTests.swift */,
 				A1C000000000000000000045 /* TrackSelectionTests.swift */,
+				A1C000000000000000000047 /* LibraryRemovalTests.swift */,
 			);
 			path = Tests/LyriaTests;
 			sourceTree = "<group>";
@@ -349,6 +355,7 @@
 				A1C000000000000000000025 /* Fingerprint.swift in Sources */,
 				A1C000000000000000000026 /* ScanSession.swift in Sources */,
 				A1C000000000000000000027 /* TrackSelection.swift in Sources */,
+				A1C000000000000000000029 /* LibraryRemoval.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -361,6 +368,7 @@
 				A1C000000000000000000053 /* FingerprintTests.swift in Sources */,
 				A1C000000000000000000054 /* ScanSessionTests.swift in Sources */,
 				A1C000000000000000000055 /* TrackSelectionTests.swift in Sources */,
+				A1C000000000000000000057 /* LibraryRemovalTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

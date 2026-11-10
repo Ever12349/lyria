@@ -24,6 +24,7 @@ final class AppSession: ObservableObject {
     @Published var libraryRemovalPrompt: LibraryRemovalPrompt?
     /// Kept beside the prompt so confirm still runs if the dialog clears the prompt first.
     private var libraryRemovalIDs: [String] = []
+    private var libraryRemovalRequest = 0
     @Published var queueVisible = false
     @Published var toast: String?
     private var toastToken = 0
@@ -220,18 +221,22 @@ final class AppSession: ObservableObject {
     func requestLibraryRemoval(_ ids: [String]) {
         let ordered = Self.deduped(ids)
         guard !ordered.isEmpty else { return }
-        let title: String
-        let message: String
-        if ordered.count == 1 {
-            let name = track(ordered[0])?.title ?? "曲目"
-            title = "从曲库移除「\(name)」？"
-            message = "文件会留在磁盘上。这一首会从曲库和播放列表里删掉，再次导入仍使用原来的 id。"
-        } else {
-            title = "从曲库移除 \(ordered.count) 首？"
-            message = "文件会留在磁盘上。这些曲目会从曲库和播放列表里删掉，再次导入仍使用原来的 id。"
+        libraryRemovalRequest += 1
+        let request = libraryRemovalRequest
+        let singleTitle = ordered.count == 1 ? (track(ordered[0])?.title ?? "曲目") : nil
+        Task {
+            let records = await library.trackPaths(ids: ordered)
+            let mentionsICloud = records.contains { record in
+                ([record.path] + record.aliases).contains { library.isUbiquitousItem(atPath: $0) }
+            }
+            guard libraryRemovalRequest == request else { return }
+            libraryRemovalIDs = ordered
+            libraryRemovalPrompt = LibraryRemovalPrompt(
+                trackIDs: ordered,
+                title: LibraryRemovalCopy.confirmTitle(count: ordered.count, singleTitle: singleTitle),
+                message: LibraryRemovalCopy.confirmMessage(mentionsICloud: mentionsICloud)
+            )
         }
-        libraryRemovalIDs = ordered
-        libraryRemovalPrompt = LibraryRemovalPrompt(trackIDs: ordered, title: title, message: message)
     }
 
     func commitLibraryRemoval() {
@@ -239,18 +244,29 @@ final class AppSession: ObservableObject {
         guard !ids.isEmpty else { return }
         libraryRemovalIDs = []
         libraryRemovalPrompt = nil
-        let singleTitle = ids.count == 1 ? (track(ids[0])?.title ?? "曲目") : nil
+        let singleTitle = ids.count == 1 ? (track(ids[0])?.title ?? "曲目") : "曲目"
         Task {
             let removed = await library.deleteTracks(ids: ids)
             guard removed else {
-                showToast("移除曲目失败")
+                showToast(LibraryRemovalCopy.deleteFailed)
                 return
             }
-            if let singleTitle {
-                showToast("已从曲库移除「\(singleTitle)」")
-            } else {
-                showToast("已从曲库移除 \(ids.count) 首")
+            showToast(LibraryRemovalCopy.libraryOnlyToast(count: ids.count, singleTitle: singleTitle))
+        }
+    }
+
+    func commitLibraryRemovalToTrash() {
+        let ids = libraryRemovalIDs
+        guard !ids.isEmpty else { return }
+        libraryRemovalIDs = []
+        libraryRemovalPrompt = nil
+        let singleTitle = ids.count == 1 ? (track(ids[0])?.title ?? "曲目") : "曲目"
+        Task {
+            guard let outcomes = await library.trashThenDeleteTracks(ids: ids) else {
+                showToast(LibraryRemovalCopy.deleteFailed)
+                return
             }
+            showToast(LibraryRemovalCopy.trashToast(outcomes: outcomes, singleTitle: singleTitle))
         }
     }
 
