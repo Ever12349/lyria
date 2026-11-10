@@ -117,8 +117,14 @@ struct TrackTable: View {
     private var rows: some View {
         LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
             Section {
-                ForEach(tracks) { track in
-                    TrackRow(track: track, playlistID: playlistID)
+                ForEach(Array(tracks.enumerated()), id: \.element.id) { index, track in
+                    let nextIsSelected = tracks.indices.contains(index + 1)
+                        && store.selectedTrackIds.contains(tracks[index + 1].id)
+                    TrackRow(
+                        track: track,
+                        playlistID: playlistID,
+                        nextIsSelected: nextIsSelected
+                    )
                 }
             } header: {
                 header
@@ -151,19 +157,31 @@ struct TrackTable: View {
         .padding(.top, 6)
         .padding(.bottom, 10)
         .overlay(alignment: .bottom) {
-            Rectangle().fill(Color.white.opacity(0.12)).frame(height: 1)
+            Rectangle()
+                .fill(Color.white.opacity(headerHairlineOpacity))
+                .frame(height: 1)
         }
+    }
+
+    /// The header rule is the first row's top edge, so a selected first track uses the selected weight.
+    private var headerHairlineOpacity: Double {
+        guard let first = tracks.first, store.selectedTrackIds.contains(first.id) else { return 0.12 }
+        return 0.2
     }
 }
 
 private struct TrackRow: View {
     let track: Track
     var playlistID: String? = nil
+    /// The next row is selected, so this bottom rule is that row's top edge.
+    var nextIsSelected = false
     @EnvironmentObject private var store: AppSession
     @State private var hovering = false
 
     private var isCurrent: Bool { false }
     private var isSelected: Bool { store.selectedTrackIds.contains(track.id) }
+    /// One 1px rule. Bright when this row or the next is selected, so a block's top and bottom match.
+    private var hairlineOpacity: Double { (isSelected || nextIsSelected) ? 0.2 : 0.08 }
 
     var body: some View {
         rowContent
@@ -187,7 +205,7 @@ private struct TrackRow: View {
             .overlay(alignment: .bottom) {
                 if !isCurrent {
                     Rectangle()
-                        .fill(Color.white.opacity(isSelected ? 0.2 : 0.08))
+                        .fill(Color.white.opacity(hairlineOpacity))
                         .frame(height: 1)
                 }
             }
