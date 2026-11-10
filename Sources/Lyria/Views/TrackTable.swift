@@ -308,17 +308,103 @@ private struct RowClickCatcher: NSViewRepresentable {
 private final class RowClickCatcherView: NSView {
     var onClick: ((NSEvent.ModifierFlags) -> Void)?
 
+    private static let liveViews = NSHashTable<RowClickCatcherView>.weakObjects()
+    private static var modifierMonitor: Any?
+    private static var suppressPlainUntil: TimeInterval = 0
+    private static var suppressPlainRow: ObjectIdentifier?
+
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if window == nil {
+            Self.liveViews.remove(self)
+        } else {
+            Self.liveViews.add(self)
+            Self.installModifierMonitorIfNeeded()
+        }
+    }
+
     override func mouseDown(with event: NSEvent) {
-        if event.modifierFlags.contains(.control) {
+        // A ⌘/⇧ click is handled from the original event. Ignore the plain rewrite that follows it.
+        if Self.suppressPlainRow == ObjectIdentifier(self),
+           ProcessInfo.processInfo.systemUptime < Self.suppressPlainUntil {
+            return
+        }
+        // Keyboard state covers a click SwiftUI rewrote without modifier bits.
+        let flags = event.modifierFlags.union(NSEvent.modifierFlags)
+        if flags.contains(.control) {
             rightMouseDown(with: event)
             return
         }
-        onClick?(event.modifierFlags)
+        onClick?(flags)
     }
 
     override func rightMouseDown(with event: NSEvent) {
         superview?.rightMouseDown(with: event)
+    }
+
+    /// Hosting views drop ⌘/⇧ clicks before `mouseDown`, or deliver them as a plain click.
+    /// This sees the original event and consumes it so that plain path cannot replace the range.
+    private static func installModifierMonitorIfNeeded() {
+        guard modifierMonitor == nil else { return }
+        modifierMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { event in
+            deliverModifierClick(event)
+        }
+    }
+
+    private static func deliverModifierClick(_ event: NSEvent) -> NSEvent? {
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        guard flags.contains(.command) || flags.contains(.shift), !flags.contains(.control) else {
+            return event
+        }
+        guard let catcher = catcher(containing: event), let onClick = catcher.onClick else {
+            return event
+        }
+        if controlOwns(event) {
+            return event
+        }
+        let callback = onClick
+        suppressPlainRow = ObjectIdentifier(catcher)
+        suppressPlainUntil = ProcessInfo.processInfo.systemUptime + 0.05
+        // Same synchronous hop as the key monitor: the closure updates AppSession.
+        MainActor.assumeIsolated {
+            callback(event.modifierFlags)
+        }
+        return nil
+    }
+
+    private static func controlOwns(_ event: NSEvent) -> Bool {
+        guard let hit = event.window?.contentView?.hitTest(event.locationInWindow) else { return false }
+        var view: NSView? = hit
+        while let current = view {
+            if current is RowClickCatcherView { return false }
+            if current is NSControl { return true }
+            view = current.superview
+        }
+        return false
+    }
+
+    private static func catcher(containing event: NSEvent) -> RowClickCatcherView? {
+        guard let window = event.window else { return nil }
+        let point = event.locationInWindow
+        var best: RowClickCatcherView?
+        var bestArea = CGFloat.greatestFiniteMagnitude
+        for view in liveViews.allObjects {
+            guard view.window === window, view.containsWindowPoint(point) else { continue }
+            let area = view.bounds.width * view.bounds.height
+            if area > 0, area < bestArea {
+                best = view
+                bestArea = area
+            }
+        }
+        return best
+    }
+
+    private func containsWindowPoint(_ point: NSPoint) -> Bool {
+        guard window != nil, !isHiddenOrHasHiddenAncestor, bounds.width > 0, bounds.height > 0 else {
+            return false
+        }
+        return bounds.contains(convert(point, from: nil))
     }
 }
