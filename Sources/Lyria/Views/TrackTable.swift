@@ -134,23 +134,28 @@ struct TrackTable: View {
     }
 
     private var header: some View {
-        HStack(spacing: 8) {
+        TrackColumnHStack {
             HStack(spacing: 10) {
                 Color.clear.frame(width: 36, height: 1)
                 Text("标题")
+                    .lineLimit(1)
+                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             Text("艺人")
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .lineLimit(1)
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             Text("专辑")
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .lineLimit(1)
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             HStack(spacing: 2) {
                 Text("时长")
                     .frame(width: 44, alignment: .trailing)
                 Color.clear.frame(width: 28, height: 1)
             }
-            .frame(width: 96, alignment: .trailing)
+            .frame(width: TrackColumnMetrics.durationWidth, alignment: .trailing)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .font(.system(size: 12, weight: .semibold))
         .foregroundStyle(LyriaTheme.text3)
         .padding(.horizontal, 8)
@@ -218,20 +223,20 @@ private struct TrackRow: View {
     }
 
     private var rowContent: some View {
-        HStack(spacing: 8) {
+        TrackColumnHStack {
             HStack(spacing: 10) {
                 coverButton
+                    .layoutPriority(1)
                 Text(track.title)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(LyriaTheme.foreground)
                     .lineLimit(1)
+                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                     .allowsHitTesting(false)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             metaLabel(track.artistLabel)
             metaLabel(track.albumLabel)
-
             HStack(spacing: 2) {
                 Text(track.missing ? "文件缺失" : track.durationLabel)
                     .font(.system(size: 12, weight: .medium).monospacedDigit())
@@ -240,8 +245,9 @@ private struct TrackRow: View {
                     .allowsHitTesting(false)
                 moreMenu
             }
-            .frame(width: 96, alignment: .trailing)
+            .frame(width: TrackColumnMetrics.durationWidth, alignment: .trailing)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var coverButton: some View {
@@ -277,7 +283,7 @@ private struct TrackRow: View {
             .font(.system(size: 12, weight: .medium))
             .foregroundStyle(LyriaTheme.text2)
             .lineLimit(1)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             .allowsHitTesting(false)
     }
 
@@ -297,6 +303,39 @@ private struct TrackRow: View {
         let responder = window.firstResponder
         if responder is NSTextView || responder is NSTextField {
             window.makeFirstResponder(nil)
+        }
+    }
+}
+
+/// `minmax(0, 1.7fr) minmax(0, 1fr) minmax(0, 1fr) 96px` with an 8pt gap.
+/// Header and rows both pass four children so the columns cannot drift.
+private struct TrackColumnHStack: Layout {
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = proposal.width ?? 0
+        let columns = TrackColumnMetrics.widths(rowWidth: width)
+        let sizes = [columns.title, columns.artist, columns.album, columns.duration]
+        var height: CGFloat = 0
+        for index in subviews.indices where index < sizes.count {
+            let measured = subviews[index].sizeThatFits(
+                ProposedViewSize(width: sizes[index], height: proposal.height)
+            )
+            height = max(height, measured.height)
+        }
+        return CGSize(width: width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let columns = TrackColumnMetrics.widths(rowWidth: bounds.width)
+        let sizes = [columns.title, columns.artist, columns.album, columns.duration]
+        var x = bounds.minX
+        for index in subviews.indices where index < sizes.count {
+            let width = sizes[index]
+            subviews[index].place(
+                at: CGPoint(x: x, y: bounds.midY),
+                anchor: .leading,
+                proposal: ProposedViewSize(width: width, height: bounds.height)
+            )
+            x += width + TrackColumnMetrics.gutter
         }
     }
 }
