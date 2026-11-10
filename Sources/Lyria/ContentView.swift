@@ -60,14 +60,18 @@ struct ContentView: View {
     }
 
     private func installKeyMonitor() {
+        KeyMonitor.session = store
         guard keyMonitor == nil else { return }
-        let session = store
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            KeyMonitor.handle(event, session: session)
+            // Local monitors run on the main thread and must return synchronously.
+            MainActor.assumeIsolated {
+                KeyMonitor.handle(event)
+            }
         }
     }
 
     private func removeKeyMonitor() {
+        KeyMonitor.session = nil
         if let keyMonitor {
             NSEvent.removeMonitor(keyMonitor)
         }
@@ -244,8 +248,12 @@ struct ContentView: View {
 
 /// ⌘A selects the focused track table. A focused text field keeps the system select-all.
 /// Esc clears the selection and leaves the search string alone.
+@MainActor
 private enum KeyMonitor {
-    static func handle(_ event: NSEvent, session: AppSession) -> NSEvent? {
+    static weak var session: AppSession?
+
+    static func handle(_ event: NSEvent) -> NSEvent? {
+        guard let session else { return event }
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         let isEscape = event.keyCode == 53
         let selectAll = flags.contains(.command)

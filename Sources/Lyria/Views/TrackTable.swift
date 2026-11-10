@@ -1,4 +1,5 @@
 import AppKit
+import LyriaCore
 import SwiftUI
 
 enum TrackMenu {
