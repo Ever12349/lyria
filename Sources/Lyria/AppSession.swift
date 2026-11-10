@@ -29,8 +29,6 @@ final class AppSession: ObservableObject {
     private var toastToken = 0
     private var didBootstrap = false
     private var liveTrackIDs: Set<String> = []
-    /// Bumped on navigation so a menu-open selection update cannot land on the next page.
-    private var menuEpoch = 0
     private var cancellables = Set<AnyCancellable>()
 
     init() {
@@ -140,21 +138,12 @@ final class AppSession: ObservableObject {
     }
 
     /// Right-click / ⋯ on an unselected row replaces the selection with that row.
+    /// Call only when the menu opens, not while its content is refreshed.
     func prepareMenu(for trackID: String) {
         guard !selectedTrackIds.contains(trackID) else { return }
         guard selectionScopeIDs.contains(trackID) else { return }
+        trackTableFocused = true
         apply(TrackSelection.replace(trackID))
-    }
-
-    func scheduleMenuSelection(for trackID: String) {
-        let needsSelection = !selectedTrackIds.contains(trackID)
-        guard needsSelection || !trackTableFocused else { return }
-        let epoch = menuEpoch
-        DispatchQueue.main.async { [weak self] in
-            guard let self, self.menuEpoch == epoch else { return }
-            self.prepareMenu(for: trackID)
-            self.trackTableFocused = true
-        }
     }
 
     func selectAllInScope() {
@@ -389,7 +378,6 @@ final class AppSession: ObservableObject {
     }
 
     private func dismissSelectionForNavigation() {
-        menuEpoch += 1
         clearSelection()
         trackTableFocused = false
     }

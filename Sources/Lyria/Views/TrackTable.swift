@@ -16,7 +16,11 @@ private struct TrackMenuItems: View {
     @EnvironmentObject private var store: AppSession
 
     var body: some View {
-        let targets = beginMenu()
+        let targets = TrackSelection.menuTrackIDs(
+            trackID: track.id,
+            selected: store.selectedTrackIds,
+            orderedIDs: store.selectionScopeIDs
+        )
         let artistID = sharedID(in: targets, keyPath: \.artistId)
         let albumID = sharedID(in: targets, keyPath: \.albumId)
 
@@ -57,18 +61,7 @@ private struct TrackMenuItems: View {
         Button("从曲库移除", role: .destructive) {
             store.requestLibraryRemoval(targets)
         }
-    }
-
-    /// Menu contents follow the selection rule immediately. Highlight catches up on the next turn
-    /// so opening the menu does not publish state during the menu's view update.
-    private func beginMenu() -> [String] {
-        let targets = TrackSelection.menuTrackIDs(
-            trackID: track.id,
-            selected: store.selectedTrackIds,
-            orderedIDs: store.selectionScopeIDs
-        )
-        store.scheduleMenuSelection(for: track.id)
-        return targets
+        .onAppear { store.prepareMenu(for: track.id) }
     }
 
     private func sharedID(in ids: [String], keyPath: KeyPath<Track, String?>) -> String? {
@@ -329,6 +322,15 @@ private final class RowClickCatcherView: NSView {
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
+    /// Control-click and right-click belong to the row context menu. Handling them here
+    /// swallowed mouseUp and left later clicks unable to select.
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        let local = convert(point, from: superview)
+        guard bounds.contains(local), !isHiddenOrHasHiddenAncestor else { return nil }
+        if Self.isContextClick(NSApp.currentEvent) { return nil }
+        return self
+    }
+
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         if window == nil {
@@ -347,19 +349,24 @@ private final class RowClickCatcherView: NSView {
         }
         // Keyboard state covers a click SwiftUI rewrote without modifier bits.
         let flags = event.modifierFlags.union(NSEvent.modifierFlags)
-        if flags.contains(.control) {
-            rightMouseDown(with: event)
-            return
-        }
+        if flags.contains(.control) { return }
         onClick?(flags)
-    }
-
-    override func rightMouseDown(with event: NSEvent) {
-        superview?.rightMouseDown(with: event)
     }
 
     /// Hosting views drop ⌘/⇧ clicks before `mouseDown`, or deliver them as a plain click.
     /// This sees the original event and consumes it so that plain path cannot replace the range.
+    private static func isContextClick(_ event: NSEvent?) -> Bool {
+        guard let event else { return false }
+        switch event.type {
+        case .rightMouseDown, .rightMouseUp, .rightMouseDragged:
+            return true
+        case .leftMouseDown, .leftMouseUp, .leftMouseDragged:
+            return event.modifierFlags.contains(.control)
+        default:
+            return false
+        }
+    }
+
     private static func installModifierMonitorIfNeeded() {
         guard modifierMonitor == nil else { return }
         modifierMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { event in

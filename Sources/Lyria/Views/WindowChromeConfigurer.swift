@@ -25,18 +25,23 @@ struct WindowChromeConfigurer: NSViewRepresentable {
 
     final class Coordinator {
         private var workItem: DispatchWorkItem?
+        private var delayed: [DispatchWorkItem] = []
 
         func schedule(from view: NSView) {
             workItem?.cancel()
-            let item = DispatchWorkItem { [weak view] in
+            delayed.forEach { $0.cancel() }
+            delayed.removeAll()
+            let item = DispatchWorkItem { [weak view, weak self] in
                 guard let window = view?.window else { return }
                 WindowChromeConfigurer.apply(to: window)
                 // SwiftUI sometimes resets contentView or button frames after the first pass.
                 for delay in [0.35, 1.0] {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak window] in
+                    let followUp = DispatchWorkItem { [weak window] in
                         guard let window else { return }
                         WindowChromeConfigurer.apply(to: window)
                     }
+                    self?.delayed.append(followUp)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: followUp)
                 }
             }
             workItem = item
@@ -47,20 +52,21 @@ struct WindowChromeConfigurer: NSViewRepresentable {
     static func apply(to window: NSWindow?) {
         guard let window else { return }
 
-        window.styleMask = [
+        let chrome: NSWindow.StyleMask = [
             .titled,
             .closable,
             .miniaturizable,
             .resizable,
             .fullSizeContentView
         ]
-        window.titleVisibility = .hidden
-        window.titlebarAppearsTransparent = true
-        window.titlebarSeparatorStyle = .none
-        window.toolbar = nil
-        window.backgroundColor = deepSpace
-        window.isOpaque = true
-        window.isMovableByWindowBackground = false
+        if window.styleMask != chrome { window.styleMask = chrome }
+        if window.titleVisibility != .hidden { window.titleVisibility = .hidden }
+        if !window.titlebarAppearsTransparent { window.titlebarAppearsTransparent = true }
+        if window.titlebarSeparatorStyle != .none { window.titlebarSeparatorStyle = .none }
+        if window.toolbar != nil { window.toolbar = nil }
+        if window.backgroundColor != deepSpace { window.backgroundColor = deepSpace }
+        if !window.isOpaque { window.isOpaque = true }
+        if window.isMovableByWindowBackground { window.isMovableByWindowBackground = false }
         enforceMinimumSize(on: window)
 
         for type: NSWindow.ButtonType in [.closeButton, .miniaturizeButton, .zoomButton] {
@@ -77,8 +83,8 @@ struct WindowChromeConfigurer: NSViewRepresentable {
     /// SwiftUI `.frame(minWidth:minHeight:)` does not clamp `NSWindow`. Set both mins and grow a frame that is already smaller.
     private static func enforceMinimumSize(on window: NSWindow) {
         let minimum = NSSize(width: LyriaTheme.windowMinimum.width, height: LyriaTheme.windowMinimum.height)
-        window.minSize = minimum
-        window.contentMinSize = minimum
+        if window.minSize != minimum { window.minSize = minimum }
+        if window.contentMinSize != minimum { window.contentMinSize = minimum }
         let frame = window.frame
         guard frame.width < minimum.width || frame.height < minimum.height else { return }
         let width = max(frame.width, minimum.width)

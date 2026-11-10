@@ -110,6 +110,7 @@ struct ContentView: View {
                 page
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding(.horizontal, 4)
+                    .animation(nil, value: store.queueVisible)
                 if store.queueVisible {
                     QueuePanel()
                         .frame(width: 280)
@@ -126,13 +127,15 @@ struct ContentView: View {
         .padding(.trailing, 16)
         .padding(.bottom, 12)
         .overlay(alignment: .bottom) {
-            if let toast = store.toast {
-                ToastPill(text: toast)
-                    .padding(.bottom, 106)
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            ZStack {
+                if let toast = store.toast {
+                    ToastPill(text: toast)
+                        .padding(.bottom, 106)
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
             }
+            .animation(.easeOut(duration: 0.18), value: store.toast)
         }
-        .animation(.easeOut(duration: 0.18), value: store.toast)
     }
 
     private var pageHead: some View {
@@ -176,6 +179,7 @@ struct ContentView: View {
                         }
                         .layoutPriority(2)
                         .transition(.opacity)
+                        .animation(.easeOut(duration: 0.18), value: store.showsBatchBar)
                 }
 
                 SearchField(
@@ -186,7 +190,10 @@ struct ContentView: View {
                 .frame(width: searchLayoutWidth(rowWidth: geo.size.width, resting: restingSearchWidth))
                 .layoutPriority(1)
             }
-            .onPreferenceChange(BatchCapsuleWidthKey.self) { batchCapsuleWidth = $0 }
+            .onPreferenceChange(BatchCapsuleWidthKey.self) { width in
+                guard width > 1, abs(width - batchCapsuleWidth) > 0.5 else { return }
+                batchCapsuleWidth = width
+            }
             .animation(.easeOut(duration: 0.18), value: store.showsBatchBar)
             .animation(.easeOut(duration: 0.18), value: searchFieldExpanded)
         }
