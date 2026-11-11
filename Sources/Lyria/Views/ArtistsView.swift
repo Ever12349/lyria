@@ -57,9 +57,9 @@ struct ArtistDetailView: View {
                     title: artist.name,
                     subtitle: "\(albums.count) 张专辑 · \(songs.count) 首曲目"
                 ) {
-                    // TODO(engine): play this artist's tracks.
-                    PillButton(title: "全部播放", systemImage: "play.fill", prominent: true) {}
-                        .disabled(true)
+                    PillButton(title: "全部播放", systemImage: "play.fill", prominent: true) {
+                        store.playAll(songs)
+                    }
                     PillButton(title: "随机播放", systemImage: "shuffle") {}
                         .disabled(true)
                 }

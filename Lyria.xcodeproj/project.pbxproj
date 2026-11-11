@@ -44,6 +44,7 @@
 		A1C00000000000000000002B /* AlbumFacts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C00000000000000000001B /* AlbumFacts.swift */; };
 		A1C00000000000000000002C /* ArtworkThumbnails.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C00000000000000000001C /* ArtworkThumbnails.swift */; };
 		A1C00000000000000000002D /* RevealInFinder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C00000000000000000001D /* RevealInFinder.swift */; };
+		A1C00000000000000000002E /* PlaybackQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C00000000000000000001E /* PlaybackQueue.swift */; };
 		A1C000000000000000000054 /* ScanSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000044 /* ScanSessionTests.swift */; };
 		A1C000000000000000000055 /* TrackSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000045 /* TrackSelectionTests.swift */; };
 		A1C000000000000000000057 /* LibraryRemovalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000047 /* LibraryRemovalTests.swift */; };
@@ -51,8 +52,12 @@
 		A1C000000000000000000059 /* AlbumFactsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000049 /* AlbumFactsTests.swift */; };
 		A1C00000000000000000005A /* ArtworkThumbnailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C00000000000000000004A /* ArtworkThumbnailTests.swift */; };
 		A1C00000000000000000005B /* RevealInFinderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C00000000000000000004B /* RevealInFinderTests.swift */; };
+		A1C00000000000000000005C /* PlaybackQueueTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C00000000000000000004C /* PlaybackQueueTests.swift */; };
 		A1C100000000000000000109 /* ScanProgressBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C100000000000000000009 /* ScanProgressBar.swift */; };
 		A1C10000000000000000010A /* BatchActionBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C10000000000000000000A /* BatchActionBar.swift */; };
+		E1E000000000000000000011 /* PlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E000000000000000000001 /* PlaybackEngine.swift */; };
+		E1E000000000000000000012 /* TransportState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E000000000000000000002 /* TransportState.swift */; };
+		E1E000000000000000000013 /* Queue.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E000000000000000000003 /* Queue.swift */; };
 		A1C000000000000000000051 /* CrockfordTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000041 /* CrockfordTests.swift */; };
 		A1C000000000000000000052 /* NormalizeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000042 /* NormalizeTests.swift */; };
 		A1C000000000000000000053 /* FingerprintTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000043 /* FingerprintTests.swift */; };
@@ -99,6 +104,7 @@
 		A1C00000000000000000001B /* AlbumFacts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumFacts.swift; sourceTree = "<group>"; };
 		A1C00000000000000000001C /* ArtworkThumbnails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtworkThumbnails.swift; sourceTree = "<group>"; };
 		A1C00000000000000000001D /* RevealInFinder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RevealInFinder.swift; sourceTree = "<group>"; };
+		A1C00000000000000000001E /* PlaybackQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackQueue.swift; sourceTree = "<group>"; };
 		A1C000000000000000000044 /* ScanSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanSessionTests.swift; sourceTree = "<group>"; };
 		A1C000000000000000000045 /* TrackSelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackSelectionTests.swift; sourceTree = "<group>"; };
 		A1C000000000000000000047 /* LibraryRemovalTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryRemovalTests.swift; sourceTree = "<group>"; };
@@ -106,8 +112,12 @@
 		A1C000000000000000000049 /* AlbumFactsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumFactsTests.swift; sourceTree = "<group>"; };
 		A1C00000000000000000004A /* ArtworkThumbnailTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtworkThumbnailTests.swift; sourceTree = "<group>"; };
 		A1C00000000000000000004B /* RevealInFinderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RevealInFinderTests.swift; sourceTree = "<group>"; };
+		A1C00000000000000000004C /* PlaybackQueueTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackQueueTests.swift; sourceTree = "<group>"; };
 		A1C100000000000000000009 /* ScanProgressBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanProgressBar.swift; sourceTree = "<group>"; };
 		A1C10000000000000000000A /* BatchActionBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchActionBar.swift; sourceTree = "<group>"; };
+		E1E000000000000000000001 /* PlaybackEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackEngine.swift; sourceTree = "<group>"; };
+		E1E000000000000000000002 /* TransportState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransportState.swift; sourceTree = "<group>"; };
+		E1E000000000000000000003 /* Queue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Queue.swift; sourceTree = "<group>"; };
 		A1C000000000000000000041 /* CrockfordTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrockfordTests.swift; sourceTree = "<group>"; };
 		A1C000000000000000000042 /* NormalizeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NormalizeTests.swift; sourceTree = "<group>"; };
 		A1C000000000000000000043 /* FingerprintTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FingerprintTests.swift; sourceTree = "<group>"; };
@@ -168,6 +178,7 @@
 				6BE1E5DAEF8B4284804BB7E1 /* LyriaApp.swift */,
 				C877B0A580E645F6B4E0D2F0 /* ContentView.swift */,
 				A1C100000000000000000001 /* AppSession.swift */,
+				E1E000000000000000000004 /* Engine */,
 				7169993B0B13474890E1FE55 /* Theme.swift */,
 				0D8C0413CC2849248C9A3855 /* Models.swift */,
 				A1C100000000000000000002 /* Library */,
@@ -199,6 +210,16 @@
 			sourceTree = "<group>";
 		};
 
+		E1E000000000000000000004 /* Engine */ = {
+			isa = PBXGroup;
+			children = (
+				E1E000000000000000000001 /* PlaybackEngine.swift */,
+				E1E000000000000000000002 /* TransportState.swift */,
+				E1E000000000000000000003 /* Queue.swift */,
+			);
+			path = Engine;
+			sourceTree = "<group>";
+		};
 		A1C100000000000000000002 /* Library */ = {
 			isa = PBXGroup;
 			children = (
@@ -227,6 +248,7 @@
 				A1C00000000000000000001B /* AlbumFacts.swift */,
 				A1C00000000000000000001C /* ArtworkThumbnails.swift */,
 				A1C00000000000000000001D /* RevealInFinder.swift */,
+				A1C00000000000000000001E /* PlaybackQueue.swift */,
 			);
 			path = Sources/LyriaCore;
 			sourceTree = "<group>";
@@ -244,6 +266,7 @@
 				A1C000000000000000000049 /* AlbumFactsTests.swift */,
 				A1C00000000000000000004A /* ArtworkThumbnailTests.swift */,
 				A1C00000000000000000004B /* RevealInFinderTests.swift */,
+				A1C00000000000000000004C /* PlaybackQueueTests.swift */,
 			);
 			path = Tests/LyriaTests;
 			sourceTree = "<group>";
@@ -364,6 +387,9 @@
 				A1C100000000000000000106 /* LibraryDatabase.swift in Sources */,
 				A1C100000000000000000107 /* LibraryScanner.swift in Sources */,
 				A1C100000000000000000108 /* LibraryStore.swift in Sources */,
+				E1E000000000000000000011 /* PlaybackEngine.swift in Sources */,
+				E1E000000000000000000012 /* TransportState.swift in Sources */,
+				E1E000000000000000000013 /* Queue.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -384,6 +410,7 @@
 				A1C00000000000000000002B /* AlbumFacts.swift in Sources */,
 				A1C00000000000000000002C /* ArtworkThumbnails.swift in Sources */,
 				A1C00000000000000000002D /* RevealInFinder.swift in Sources */,
+				A1C00000000000000000002E /* PlaybackQueue.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -401,6 +428,7 @@
 				A1C000000000000000000059 /* AlbumFactsTests.swift in Sources */,
 				A1C00000000000000000005A /* ArtworkThumbnailTests.swift in Sources */,
 				A1C00000000000000000005B /* RevealInFinderTests.swift in Sources */,
+				A1C00000000000000000005C /* PlaybackQueueTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

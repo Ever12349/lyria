@@ -5,14 +5,15 @@ import SwiftUI
 enum TrackMenu {
     @MainActor
     @ViewBuilder
-    static func items(track: Track, playlistID: String?) -> some View {
-        TrackMenuItems(track: track, playlistID: playlistID)
+    static func items(track: Track, playlistID: String?, list: [Track]) -> some View {
+        TrackMenuItems(track: track, playlistID: playlistID, list: list)
     }
 }
 
 private struct TrackMenuItems: View {
     let track: Track
     var playlistID: String?
+    let list: [Track]
     @EnvironmentObject private var store: AppSession
 
     var body: some View {
@@ -24,13 +25,9 @@ private struct TrackMenuItems: View {
         let artistID = sharedID(in: targets, keyPath: \.artistId)
         let albumID = sharedID(in: targets, keyPath: \.albumId)
 
-        // TODO(engine): play, queue, and play-next.
-        Button("播放") {}
-            .disabled(true)
-        Button("下一首播放") {}
-            .disabled(true)
-        Button("加入队列") {}
-            .disabled(true)
+        Button("播放") { store.menuPlay(track, in: list) }
+        Button("下一首播放") { store.playNext(targets) }
+        Button("加入队列") { store.enqueue(targets) }
         Menu("加入播放列表") {
             if store.playlists.isEmpty {
                 Button("没有播放列表") {}
@@ -131,6 +128,7 @@ struct TrackTable: View {
                     TrackRow(
                         track: track,
                         playlistID: playlistID,
+                        list: tracks,
                         nextIsSelected: nextIsSelected
                     )
                 }
@@ -186,12 +184,15 @@ struct TrackTable: View {
 private struct TrackRow: View {
     let track: Track
     var playlistID: String? = nil
+    let list: [Track]
     /// The next row is selected, so this bottom rule is that row's top edge.
     var nextIsSelected = false
     @EnvironmentObject private var store: AppSession
+    @Environment(TransportState.self) private var transport
     @State private var hovering = false
 
-    private var isCurrent: Bool { false }
+    private var isCurrent: Bool { transport.current?.id == track.id }
+    private var transportPlaying: Bool { transport.playing }
     private var isSelected: Bool { store.selectedTrackIds.contains(track.id) }
     /// One 1px rule. Bright when this row or the next is selected, so a block's top and bottom match.
     private var hairlineOpacity: Double { (isSelected || nextIsSelected) ? 0.2 : 0.08 }
@@ -201,9 +202,10 @@ private struct TrackRow: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
             .background {
-                RowClickCatcher { flags in
-                    select(flags: flags)
-                }
+                RowClickCatcher(
+                    onClick: { flags in select(flags: flags) },
+                    onDoubleClick: { store.doubleClicked(track, in: list) }
+                )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .background {
@@ -213,7 +215,7 @@ private struct TrackRow: View {
                 Color.clear
                     .contentShape(Rectangle())
                     .contextMenu {
-                        TrackMenu.items(track: track, playlistID: playlistID)
+                        TrackMenu.items(track: track, playlistID: playlistID, list: list)
                     }
             }
             .background {
@@ -238,7 +240,7 @@ private struct TrackRow: View {
             }
             .contentShape(Rectangle())
             .contextMenu {
-                TrackMenu.items(track: track, playlistID: playlistID)
+                TrackMenu.items(track: track, playlistID: playlistID, list: list)
             }
             .onHover { hovering = $0 }
             .accessibilityElement(children: .contain)
@@ -273,18 +275,26 @@ private struct TrackRow: View {
 
     private var coverButton: some View {
         // TODO(engine): cover button plays or pauses.
-        Button {} label: {
+        Button { store.coverPressed(track, in: list) } label: {
             CoverArt(seed: track.albumId ?? track.id, artworkPath: track.artworkPath, cornerRadius: 8)
                 .frame(width: 36, height: 36)
+                .overlay {
+                    if isCurrent {
+                        Image(systemName: hovering ? (transportPlaying ? "pause.fill" : "play.fill") : "waveform")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(.white)
+                            .shadow(color: .black.opacity(0.45), radius: 2, y: 1)
+                            .symbolEffect(.variableColor.iterative, isActive: transportPlaying && !hovering)
+                    }
+                }
         }
         .buttonStyle(.plain)
-        .disabled(true)
         .accessibilityLabel(track.title)
     }
 
     private var moreMenu: some View {
         Menu {
-            TrackMenu.items(track: track, playlistID: playlistID)
+            TrackMenu.items(track: track, playlistID: playlistID, list: list)
         } label: {
             Image(systemName: "ellipsis")
                 .font(.system(size: 13, weight: .semibold))
@@ -334,20 +344,24 @@ private let trackMetaColumnMax: CGFloat = 120
 /// Left clicks report modifier flags. Right-clicks pass upward so the row context menu can open.
 private struct RowClickCatcher: NSViewRepresentable {
     var onClick: (NSEvent.ModifierFlags) -> Void
+    var onDoubleClick: () -> Void
 
     func makeNSView(context: Context) -> RowClickCatcherView {
         let view = RowClickCatcherView()
         view.onClick = onClick
+        view.onDoubleClick = onDoubleClick
         return view
     }
 
     func updateNSView(_ nsView: RowClickCatcherView, context: Context) {
         nsView.onClick = onClick
+        nsView.onDoubleClick = onDoubleClick
     }
 }
 
 private final class RowClickCatcherView: NSView {
     var onClick: ((NSEvent.ModifierFlags) -> Void)?
+    var onDoubleClick: (() -> Void)?
 
     private static let liveViews = NSHashTable<RowClickCatcherView>.weakObjects()
     private static var modifierMonitor: Any?
@@ -385,6 +399,10 @@ private final class RowClickCatcherView: NSView {
         // Keyboard state covers a click SwiftUI rewrote without modifier bits.
         let flags = event.modifierFlags.union(NSEvent.modifierFlags)
         if flags.contains(.control) { return }
+        if event.clickCount >= 2 {
+            onDoubleClick?()
+            return
+        }
         onClick?(flags)
     }
 

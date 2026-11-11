@@ -2,7 +2,11 @@ import AppKit
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var store = AppSession()
+    @StateObject private var store: AppSession
+
+    init(store: AppSession) {
+        _store = StateObject(wrappedValue: store)
+    }
     @State private var sidebarWidth: CGFloat = 228
     @State private var keyMonitor: Any?
     @State private var searchFieldExpanded = false
@@ -315,32 +319,51 @@ private struct BatchCapsuleWidthKey: PreferenceKey {
     }
 }
 
-/// ⌘A selects the focused track table. A focused text field keeps the system select-all.
-/// Esc clears the selection and leaves the search string alone.
+/// Local to this app. Space and arrows play without table focus. Esc closes the queue first.
 @MainActor
 private enum KeyMonitor {
     static weak var session: AppSession?
 
     static func handle(_ event: NSEvent) -> NSEvent? {
         guard let session else { return event }
+        if session.libraryRemovalPrompt != nil { return event }
+        if textInputIsFocused || menuOrSheetIsOpen { return event }
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        let isEscape = event.keyCode == 53
+        let plain = !flags.contains(.command) && !flags.contains(.shift)
+            && !flags.contains(.option) && !flags.contains(.control)
+        if event.keyCode == 53 {
+            if session.queueVisible {
+                session.queueVisible = false
+                return nil
+            }
+            guard session.trackTableFocused, !session.selectedTrackIds.isEmpty else { return event }
+            session.clearSelection()
+            return nil
+        }
         let selectAll = flags.contains(.command)
             && !flags.contains(.shift)
             && !flags.contains(.option)
             && !flags.contains(.control)
             && event.charactersIgnoringModifiers?.lowercased() == "a"
-        guard isEscape || selectAll else { return event }
-        if session.libraryRemovalPrompt != nil { return event }
-        if textInputIsFocused || menuOrSheetIsOpen { return event }
-        guard session.trackTableFocused else { return event }
-        if isEscape {
-            guard !session.selectedTrackIds.isEmpty else { return event }
-            session.clearSelection()
+        if selectAll {
+            guard session.trackTableFocused else { return event }
+            session.selectAllInScope()
             return nil
         }
-        session.selectAllInScope()
-        return nil
+        guard plain else { return event }
+        switch event.keyCode {
+        case 49:
+            session.transportToggle()
+            return nil
+        case 123:
+            session.transportPrevious()
+            return nil
+        case 124:
+            session.transportNext()
+            return nil
+        default:
+            return event
+        }
     }
 
     private static var textInputIsFocused: Bool {
@@ -356,6 +379,9 @@ private enum KeyMonitor {
 }
 
 #Preview {
-    ContentView()
+    let root = PlaybackRoot()
+    ContentView(store: root.session)
+        .environment(root.transport)
+        .environment(root.queue)
         .frame(width: 1180, height: 760)
 }

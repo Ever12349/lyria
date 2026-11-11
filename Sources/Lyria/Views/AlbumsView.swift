@@ -32,13 +32,14 @@ struct AlbumDetailView: View {
                     title: album.name,
                     subtitle: albumSubtitle(album, count: songs.count)
                 ) {
-                    // TODO(engine): play or enqueue this album.
-                    PillButton(title: "全部播放", systemImage: "play.fill", prominent: true) {}
-                        .disabled(true)
+                    PillButton(title: "全部播放", systemImage: "play.fill", prominent: true) {
+                        store.playAll(songs)
+                    }
                     PillButton(title: "随机", systemImage: "shuffle") {}
                         .disabled(true)
-                    PillButton(title: "加入队列", systemImage: "plus") {}
-                        .disabled(true)
+                    PillButton(title: "加入队列", systemImage: "plus") {
+                        store.enqueueAll(songs)
+                    }
                 }
 
                 if songs.isEmpty {

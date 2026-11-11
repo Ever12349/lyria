@@ -31,10 +31,23 @@ final class AppSession: ObservableObject {
     private var didBootstrap = false
     private var liveTrackIDs: Set<String> = []
     private var cancellables = Set<AnyCancellable>()
+    private let engine: PlaybackEngine
+    let transport: TransportState
+    let queueState: PlaybackQueueState
+    private var engineMirror: Task<Void, Never>?
 
-    init() {
+    init(engine: PlaybackEngine, transport: TransportState, queueState: PlaybackQueueState) {
+        self.engine = engine
+        self.transport = transport
+        self.queueState = queueState
         let library = LibraryStore()
         self.library = library
+        let events = engine.events
+        engineMirror = Task { [weak self] in
+            for await event in events {
+                self?.applyEngine(event)
+            }
+        }
         library.objectWillChange.sink { [weak self] _ in
             self?.objectWillChange.send()
         }.store(in: &cancellables)
@@ -291,6 +304,7 @@ final class AppSession: ObservableObject {
                 return
             }
             showToast(LibraryRemovalCopy.libraryOnlyToast(count: ids.count, singleTitle: singleTitle))
+            await engine.removeFromQueue(Set(ids))
         }
     }
 
@@ -306,6 +320,7 @@ final class AppSession: ObservableObject {
                 return
             }
             showToast(LibraryRemovalCopy.trashToast(outcomes: outcomes, singleTitle: singleTitle))
+            await engine.removeFromQueue(Set(ids))
         }
     }
 
@@ -413,6 +428,71 @@ final class AppSession: ObservableObject {
         }
     }
 
+    func menuPlay(_ track: Track, in list: [Track]) {
+        let snapshot = list.map(ResolvedTrack.init)
+        Task { await engine.play(list: snapshot, startID: track.id, intent: .menuPlay) }
+    }
+
+    func coverPressed(_ track: Track, in list: [Track]) {
+        let snapshot = list.map(ResolvedTrack.init)
+        Task { await engine.play(list: snapshot, startID: track.id, intent: .cover) }
+    }
+
+    func doubleClicked(_ track: Track, in list: [Track]) {
+        let snapshot = list.map(ResolvedTrack.init)
+        Task { await engine.play(list: snapshot, startID: track.id, intent: .doubleClick) }
+    }
+
+    func playAll(_ list: [Track]) {
+        let snapshot = list.map(ResolvedTrack.init)
+        Task { await engine.playAll(snapshot) }
+    }
+
+    func enqueueAll(_ list: [Track]) {
+        let snapshot = list.map(ResolvedTrack.init)
+        Task { await engine.enqueue(snapshot) }
+    }
+
+    func playNext(_ ids: [String]) {
+        let snapshot = resolved(ids)
+        guard !snapshot.isEmpty else { return }
+        Task { await engine.playNext(snapshot) }
+    }
+
+    func enqueue(_ ids: [String]) {
+        let snapshot = resolved(ids)
+        guard !snapshot.isEmpty else { return }
+        Task { await engine.enqueue(snapshot) }
+    }
+
+    func playQueueRow(_ index: Int) {
+        Task { await engine.playQueueIndex(index) }
+    }
+
+    func transportToggle() {
+        Task { await engine.toggleTransport() }
+    }
+
+    func transportNext() {
+        Task { await engine.next() }
+    }
+
+    func transportPrevious() {
+        Task { await engine.previous() }
+    }
+
+    func transportSeek(ms: Int) {
+        Task { await engine.seek(to: ms) }
+    }
+
+    func transportSetVolume(_ value: Double) {
+        Task { await engine.setVolume(value) }
+    }
+
+    func transportToggleSpeaker() {
+        Task { await engine.toggleSpeaker() }
+    }
+
     func showToast(_ message: String) {
         toastToken += 1
         let token = toastToken
@@ -420,6 +500,24 @@ final class AppSession: ObservableObject {
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 2_200_000_000)
             if toastToken == token { toast = nil }
+        }
+    }
+
+    private func resolved(_ ids: [String]) -> [ResolvedTrack] {
+        ids.compactMap { id in
+            track(id).map(ResolvedTrack.init)
+        }
+    }
+
+    private func applyEngine(_ event: EngineEvent) {
+        switch event {
+        case .toast(let message):
+            showToast(message)
+        case .showQueue:
+            queueVisible = true
+        case .state(let snapshot):
+            transport.apply(snapshot)
+            queueState.apply(snapshot)
         }
     }
 
