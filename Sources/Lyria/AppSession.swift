@@ -485,6 +485,10 @@ final class AppSession: ObservableObject {
         Task { await engine.seek(to: ms) }
     }
 
+    func transportSeek(by deltaMs: Int) {
+        Task { await engine.seek(by: deltaMs) }
+    }
+
     func transportSetVolume(_ value: Double) {
         Task { await engine.setVolume(value) }
     }

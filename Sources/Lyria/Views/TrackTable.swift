@@ -274,7 +274,6 @@ private struct TrackRow: View {
     }
 
     private var coverButton: some View {
-        // TODO(engine): cover button plays or pauses.
         Button { store.coverPressed(track, in: list) } label: {
             CoverArt(seed: track.albumId ?? track.id, artworkPath: track.artworkPath, cornerRadius: 8)
                 .frame(width: 36, height: 36)
@@ -285,6 +284,11 @@ private struct TrackRow: View {
                             .foregroundStyle(.white)
                             .shadow(color: .black.opacity(0.45), radius: 2, y: 1)
                             .symbolEffect(.variableColor.iterative, isActive: transportPlaying && !hovering)
+                    } else if hovering {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(.white)
+                            .shadow(color: .black.opacity(0.45), radius: 2, y: 1)
                     }
                 }
         }

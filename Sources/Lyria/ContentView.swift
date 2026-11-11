@@ -319,7 +319,7 @@ private struct BatchCapsuleWidthKey: PreferenceKey {
     }
 }
 
-/// Local to this app. Space and arrows play without table focus. Esc closes the queue first.
+/// Local to this app. Space plays and arrows seek ±5s without table focus. Esc closes the queue first.
 @MainActor
 private enum KeyMonitor {
     static weak var session: AppSession?
@@ -356,10 +356,10 @@ private enum KeyMonitor {
             session.transportToggle()
             return nil
         case 123:
-            session.transportPrevious()
+            session.transportSeek(by: -5_000)
             return nil
         case 124:
-            session.transportNext()
+            session.transportSeek(by: 5_000)
             return nil
         default:
             return event

@@ -111,6 +111,11 @@ actor PlaybackEngine {
         await step(PlaybackQueueRules.previous(queue: queue, positionMs: positionMs, isPlayable: itemPlayable))
     }
 
+    func seek(by deltaMs: Int) async {
+        guard queue.current != nil else { return }
+        await seek(to: positionMs + deltaMs)
+    }
+
     func seek(to ms: Int) async {
         guard queue.current != nil else { return }
         let upper = max(durationMs, 0)
