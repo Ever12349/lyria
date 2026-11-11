@@ -229,6 +229,7 @@ struct ContentView: View {
             }
             if store.isSearching {
                 SearchResultsView()
+                    .environment(\.trackTableIsVisible, true)
             }
         }
     }
@@ -239,6 +240,7 @@ struct ContentView: View {
         return ZStack {
             ForEach(routes, id: \.stackKey) { route in
                 routePage(route)
+                    .environment(\.trackTableIsVisible, active && route == routes.last)
                     .id(store.pageIdentity(item, route))
                     .opacity(active && route == routes.last ? 1 : 0)
                     .allowsHitTesting(active && route == routes.last)

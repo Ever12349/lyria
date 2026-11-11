@@ -23,7 +23,6 @@ struct AlbumDetailView: View {
     var body: some View {
         if let album = store.album(albumID) {
             let songs = store.tracks(albumID: album.id)
-            ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 DetailHero(
                     seed: album.id,
@@ -48,9 +47,10 @@ struct AlbumDetailView: View {
                         .foregroundStyle(LyriaTheme.text2)
                         .frame(maxWidth: .infinity, minHeight: 120)
                 } else {
-                    TrackTable(tracks: songs, scrolls: false)
+                    TrackTable(tracks: songs, fillsVertically: true)
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
         } else {
             EmptyState(systemImage: "opticaldisc", title: "找不到这张专辑") { EmptyView() }

@@ -88,401 +88,157 @@ private struct TrackMenuItems: View {
     }
 }
 
-struct TrackTable: View {
-    let tracks: [Track]
-    var playlistID: String? = nil
-    var scrolls = true
-    @EnvironmentObject private var store: AppSession
-    @State private var scopeActive = false
+/// Only the table the user can see may publish `selectionScopeIDs`.
+private struct TrackTableVisibleKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    var trackTableIsVisible: Bool {
+        get { self[TrackTableVisibleKey.self] }
+        set { self[TrackTableVisibleKey.self] = newValue }
+    }
+}
+
+/// Shared column geometry for the header and every row.
+enum TrackTableMetrics {
+    static let paddingH: CGFloat = 8
+    static let paddingV: CGFloat = 6
+    static let coverSize: CGFloat = 36
+    static let coverGap: CGFloat = 10
+    static let columnGap: CGFloat = 8
+    static let metaMax: CGFloat = 120
+    static let durationColumn: CGFloat = 96
+    static let durationWidth: CGFloat = 44
+    static let missingWidth: CGFloat = 56
+    static let menuSize: CGFloat = 28
+    static let menuGap: CGFloat = 2
+    static let rowHeight: CGFloat = paddingV * 2 + coverSize
+    static let headerHeight: CGFloat = 32
+
+    struct Frames {
+        var cover: CGRect
+        var title: CGRect
+        var artist: CGRect
+        var album: CGRect
+        var duration: CGRect
+        var menu: CGRect
+        var headerTitle: CGRect
+        var headerArtist: CGRect
+        var headerAlbum: CGRect
+        var headerDuration: CGRect
+    }
+
+    static func frames(width: CGFloat, missing: Bool) -> Frames {
+        let textH: CGFloat = 16
+        let midY = (rowHeight - textH) / 2
+        let menu = CGRect(
+            x: max(paddingH, width - paddingH - menuSize),
+            y: (rowHeight - menuSize) / 2,
+            width: menuSize,
+            height: menuSize
+        )
+        let durationW = missing ? missingWidth : durationWidth
+        let duration = CGRect(
+            x: menu.minX - menuGap - durationW,
+            y: midY,
+            width: durationW,
+            height: textH
+        )
+        let rightLimit = width - paddingH - durationColumn - columnGap
+        var artistW = metaMax
+        var albumW = metaMax
+        func titleWidth() -> CGFloat {
+            rightLimit - paddingH - (coverSize + coverGap + columnGap + artistW + columnGap + albumW)
+        }
+        var titleW = titleWidth()
+        if titleW < 0 {
+            let overflow = -titleW
+            artistW = max(0, metaMax - overflow / 2)
+            albumW = max(0, metaMax - (overflow - (metaMax - artistW)))
+            titleW = max(0, titleWidth())
+        }
+        let cover = CGRect(x: paddingH, y: paddingV, width: coverSize, height: coverSize)
+        let title = CGRect(x: cover.maxX + coverGap, y: midY, width: titleW, height: textH)
+        let artist = CGRect(x: title.maxX + columnGap, y: midY, width: artistW, height: textH)
+        let album = CGRect(x: artist.maxX + columnGap, y: midY, width: albumW, height: textH)
+        let headerY: CGFloat = 6
+        return Frames(
+            cover: cover,
+            title: title,
+            artist: artist,
+            album: album,
+            duration: duration,
+            menu: menu,
+            headerTitle: CGRect(x: title.minX, y: headerY, width: titleW, height: textH),
+            headerArtist: CGRect(x: artist.minX, y: headerY, width: artistW, height: textH),
+            headerAlbum: CGRect(x: album.minX, y: headerY, width: albumW, height: textH),
+            headerDuration: CGRect(x: duration.minX, y: headerY, width: duration.width, height: textH)
+        )
+    }
+}
+
+struct TrackTableColumnHeader: View {
+    var firstIsSelected: Bool
 
     var body: some View {
-        Group {
-            if scrolls {
-                ScrollView { rows }
-            } else {
-                rows
+        GeometryReader { geo in
+            let frames = TrackTableMetrics.frames(width: geo.size.width, missing: false)
+            ZStack(alignment: .topLeading) {
+                headerText("标题", frame: frames.headerTitle)
+                headerText("艺人", frame: frames.headerArtist)
+                headerText("专辑", frame: frames.headerAlbum)
+                headerText("时长", frame: frames.headerDuration, trailing: true)
             }
         }
-        .onAppear {
-            scopeActive = true
-            store.noteSelectionScope(trackIDs)
-        }
-        .onChange(of: trackIDs) { _, ids in
-            guard scopeActive else { return }
-            store.noteSelectionScope(ids)
-        }
-        .onDisappear {
-            scopeActive = false
-            store.trackTableFocused = false
-        }
-    }
-
-    private var trackIDs: [String] { tracks.map(\.id) }
-
-    private var rows: some View {
-        LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
-            Section {
-                ForEach(Array(tracks.enumerated()), id: \.element.id) { index, track in
-                    let nextIsSelected = tracks.indices.contains(index + 1)
-                        && store.selectedTrackIds.contains(tracks[index + 1].id)
-                    TrackRow(
-                        track: track,
-                        playlistID: playlistID,
-                        list: tracks,
-                        nextIsSelected: nextIsSelected
-                    )
-                }
-            } header: {
-                header
-                    .background(LyriaTheme.background)
-            }
-        }
-    }
-
-    private var header: some View {
-        HStack(spacing: 8) {
-            HStack(spacing: 10) {
-                Color.clear.frame(width: 36, height: 1)
-                Text("标题")
-                    .lineLimit(1)
-                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-            }
-            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-            Text("艺人")
-                .lineLimit(1)
-                .frame(minWidth: 0, idealWidth: trackMetaColumnMax, maxWidth: trackMetaColumnMax, alignment: .leading)
-            Text("专辑")
-                .lineLimit(1)
-                .frame(minWidth: 0, idealWidth: trackMetaColumnMax, maxWidth: trackMetaColumnMax, alignment: .leading)
-            HStack(spacing: 2) {
-                Text("时长")
-                    .frame(width: 44, alignment: .trailing)
-                Color.clear.frame(width: 28, height: 1)
-            }
-            .frame(width: 96, alignment: .trailing)
-        }
-        .font(.system(size: 12, weight: .semibold))
-        .foregroundStyle(LyriaTheme.text3)
-        .padding(.horizontal, 8)
-        .padding(.top, 6)
-        .padding(.bottom, 10)
+        .frame(height: TrackTableMetrics.headerHeight)
+        .background(LyriaTheme.background)
         .overlay(alignment: .bottom) {
             Rectangle()
-                .fill(Color.white.opacity(headerHairlineOpacity))
+                .fill(Color.white.opacity(firstIsSelected ? 0.2 : 0.12))
                 .frame(height: 1)
                 .allowsHitTesting(false)
         }
     }
 
-    /// The header rule is the first row's top edge, so a selected first track uses the selected weight.
-    private var headerHairlineOpacity: Double {
-        guard let first = tracks.first, store.selectedTrackIds.contains(first.id) else { return 0.12 }
-        return 0.2
+    private func headerText(_ title: String, frame: CGRect, trailing: Bool = false) -> some View {
+        Text(title)
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(LyriaTheme.text3)
+            .lineLimit(1)
+            .frame(width: frame.width, height: frame.height, alignment: trailing ? .trailing : .leading)
+            .offset(x: frame.minX, y: frame.minY)
     }
 }
 
-private struct TrackRow: View {
-    let track: Track
+/// Shared track list. `fillsVertically` scrolls inside the page; otherwise the table is only as tall as its rows.
+struct TrackTable: View {
+    let tracks: [Track]
     var playlistID: String? = nil
-    let list: [Track]
-    /// The next row is selected, so this bottom rule is that row's top edge.
-    var nextIsSelected = false
+    var fillsVertically = true
     @EnvironmentObject private var store: AppSession
     @Environment(TransportState.self) private var transport
-    @State private var hovering = false
-
-    private var isCurrent: Bool { transport.current?.id == track.id }
-    private var transportPlaying: Bool { transport.playing }
-    private var isSelected: Bool { store.selectedTrackIds.contains(track.id) }
-    /// One 1px rule. Bright when this row or the next is selected, so a block's top and bottom match.
-    private var hairlineOpacity: Double { (isSelected || nextIsSelected) ? 0.2 : 0.08 }
+    @Environment(\.trackTableIsVisible) private var isVisible
 
     var body: some View {
-        rowContent
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .background {
-                RowClickCatcher(
-                    onClick: { flags in select(flags: flags) },
-                    onDoubleClick: { store.doubleClicked(track, in: list) }
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-            .background {
-                // Title, artist, album, and duration do not hit-test, and the catcher
-                // passes Control-clicks and right-clicks through. This shape is what
-                // those clicks land on, so the menu opens on the first click.
-                Color.clear
-                    .contentShape(Rectangle())
-                    .contextMenu {
-                        TrackMenu.items(track: track, playlistID: playlistID, list: list)
-                    }
-            }
-            .background {
-                Group {
-                    if isCurrent {
-                        LyriaTheme.softAccentGradient
-                    } else if isSelected {
-                        LyriaTheme.selectedRowFill
-                    } else if hovering {
-                        Color.white.opacity(0.04)
-                    }
-                }
-                .allowsHitTesting(false)
-            }
-            .overlay(alignment: .bottom) {
-                if !isCurrent {
-                    Rectangle()
-                        .fill(Color.white.opacity(hairlineOpacity))
-                        .frame(height: 1)
-                        .allowsHitTesting(false)
-                }
-            }
-            .contentShape(Rectangle())
-            .contextMenu {
-                TrackMenu.items(track: track, playlistID: playlistID, list: list)
-            }
-            .onHover { hovering = $0 }
-            .accessibilityElement(children: .contain)
-            .accessibilityAddTraits(isSelected ? .isSelected : [])
-    }
-
-    private var rowContent: some View {
-        HStack(spacing: 8) {
-            HStack(spacing: 10) {
-                coverButton
-                Text(track.title)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(LyriaTheme.foreground)
-                    .lineLimit(1)
-                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-                    .allowsHitTesting(false)
-            }
-            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-            metaLabel(track.artistLabel)
-            metaLabel(track.albumLabel)
-            HStack(spacing: 2) {
-                Text(track.missing ? "文件缺失" : track.durationLabel)
-                    .font(.system(size: 12, weight: .medium).monospacedDigit())
-                    .foregroundStyle(track.missing ? LyriaTheme.danger : LyriaTheme.text3)
-                    .frame(width: track.missing ? 56 : 44, alignment: .trailing)
-                    .allowsHitTesting(false)
-                moreMenu
-            }
-            .frame(width: 96, alignment: .trailing)
-        }
-    }
-
-    private var coverButton: some View {
-        Button { store.coverPressed(track, in: list) } label: {
-            CoverArt(seed: track.albumId ?? track.id, artworkPath: track.artworkPath, cornerRadius: 8)
-                .frame(width: 36, height: 36)
-                .overlay {
-                    if isCurrent {
-                        Image(systemName: hovering ? (transportPlaying ? "pause.fill" : "play.fill") : "waveform")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(.white)
-                            .shadow(color: .black.opacity(0.45), radius: 2, y: 1)
-                            .symbolEffect(.variableColor.iterative, isActive: transportPlaying && !hovering)
-                    } else if hovering {
-                        Image(systemName: "play.fill")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(.white)
-                            .shadow(color: .black.opacity(0.45), radius: 2, y: 1)
-                    }
-                }
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(track.title)
-    }
-
-    private var moreMenu: some View {
-        Menu {
-            TrackMenu.items(track: track, playlistID: playlistID, list: list)
-        } label: {
-            Image(systemName: "ellipsis")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(hovering ? Color.white : LyriaTheme.text3)
-                .frame(width: 28, height: 28)
-                .opacity(hovering ? 1 : 0.45)
-                .contentShape(Rectangle())
-        }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .frame(width: 28, height: 28)
-        .accessibilityLabel("更多操作")
-    }
-
-    private func metaLabel(_ title: String) -> some View {
-        Text(title)
-            .font(.system(size: 12, weight: .medium))
-            .foregroundStyle(LyriaTheme.text2)
-            .lineLimit(1)
-            .frame(minWidth: 0, idealWidth: trackMetaColumnMax, maxWidth: trackMetaColumnMax, alignment: .leading)
-            .allowsHitTesting(false)
-    }
-
-    private func select(flags: NSEvent.ModifierFlags) {
-        let modifiers = flags.intersection(.deviceIndependentFlagsMask)
-        if modifiers.contains(.control) { return }
-        resignTextInput()
-        store.clickTrack(
-            track.id,
-            command: modifiers.contains(.command),
-            shift: modifiers.contains(.shift)
+        TrackTableRepresentable(
+            tracks: tracks,
+            playlistID: playlistID,
+            fillsVertically: fillsVertically,
+            selectedIDs: store.selectedTrackIds,
+            currentID: transport.current?.id,
+            playing: transport.playing,
+            store: store
         )
+        .frame(maxWidth: .infinity, maxHeight: fillsVertically ? .infinity : nil)
+        .frame(height: fillsVertically ? nil : TrackTableMetrics.rowHeight * CGFloat(tracks.count))
+        .onAppear(perform: publishScope)
+        .onChange(of: isVisible) { _, _ in publishScope() }
+        .onChange(of: tracks.map(\.id)) { _, _ in publishScope() }
     }
 
-    private func resignTextInput() {
-        guard let window = NSApp.keyWindow ?? NSApp.mainWindow else { return }
-        let responder = window.firstResponder
-        if responder is NSTextView || responder is NSTextField {
-            window.makeFirstResponder(nil)
-        }
-    }
-}
-
-/// Artist and album cap. Wide windows stop here; tighter windows still shrink to zero.
-private let trackMetaColumnMax: CGFloat = 120
-
-/// Left clicks report modifier flags. Right-clicks pass upward so the row context menu can open.
-private struct RowClickCatcher: NSViewRepresentable {
-    var onClick: (NSEvent.ModifierFlags) -> Void
-    var onDoubleClick: () -> Void
-
-    func makeNSView(context: Context) -> RowClickCatcherView {
-        let view = RowClickCatcherView()
-        view.onClick = onClick
-        view.onDoubleClick = onDoubleClick
-        return view
-    }
-
-    func updateNSView(_ nsView: RowClickCatcherView, context: Context) {
-        nsView.onClick = onClick
-        nsView.onDoubleClick = onDoubleClick
-    }
-}
-
-private final class RowClickCatcherView: NSView {
-    var onClick: ((NSEvent.ModifierFlags) -> Void)?
-    var onDoubleClick: (() -> Void)?
-
-    private static let liveViews = NSHashTable<RowClickCatcherView>.weakObjects()
-    private static var modifierMonitor: Any?
-    private static var suppressPlainUntil: TimeInterval = 0
-    private static var suppressPlainRow: ObjectIdentifier?
-
-    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
-
-    /// Pass Control-clicks and right-clicks through. Do not turn them into a synthetic
-    /// rightMouseDown: that tracking loop swallowed mouseUp and later clicks could not select.
-    /// The clear shape behind this view owns the context menu and receives the real event.
-    override func hitTest(_ point: NSPoint) -> NSView? {
-        let local = convert(point, from: superview)
-        guard bounds.contains(local), !isHiddenOrHasHiddenAncestor else { return nil }
-        if Self.isContextClick(NSApp.currentEvent) { return nil }
-        return self
-    }
-
-    override func viewDidMoveToWindow() {
-        super.viewDidMoveToWindow()
-        if window == nil {
-            Self.liveViews.remove(self)
-        } else {
-            Self.liveViews.add(self)
-            Self.installModifierMonitorIfNeeded()
-        }
-    }
-
-    override func mouseDown(with event: NSEvent) {
-        // A ⌘/⇧ click is handled from the original event. Ignore the plain rewrite that follows it.
-        if Self.suppressPlainRow == ObjectIdentifier(self),
-           ProcessInfo.processInfo.systemUptime < Self.suppressPlainUntil {
-            return
-        }
-        // Keyboard state covers a click SwiftUI rewrote without modifier bits.
-        let flags = event.modifierFlags.union(NSEvent.modifierFlags)
-        if flags.contains(.control) { return }
-        if event.clickCount >= 2 {
-            onDoubleClick?()
-            return
-        }
-        onClick?(flags)
-    }
-
-    /// Hosting views drop ⌘/⇧ clicks before `mouseDown`, or deliver them as a plain click.
-    /// This sees the original event and consumes it so that plain path cannot replace the range.
-    private static func isContextClick(_ event: NSEvent?) -> Bool {
-        guard let event else { return false }
-        switch event.type {
-        case .rightMouseDown, .rightMouseUp, .rightMouseDragged:
-            return true
-        case .leftMouseDown, .leftMouseUp, .leftMouseDragged:
-            return event.modifierFlags.contains(.control)
-        default:
-            return false
-        }
-    }
-
-    private static func installModifierMonitorIfNeeded() {
-        guard modifierMonitor == nil else { return }
-        modifierMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { event in
-            deliverModifierClick(event)
-        }
-    }
-
-    private static func deliverModifierClick(_ event: NSEvent) -> NSEvent? {
-        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        guard flags.contains(.command) || flags.contains(.shift), !flags.contains(.control) else {
-            return event
-        }
-        guard let catcher = catcher(containing: event), let onClick = catcher.onClick else {
-            return event
-        }
-        if controlOwns(event) {
-            return event
-        }
-        let callback = onClick
-        suppressPlainRow = ObjectIdentifier(catcher)
-        suppressPlainUntil = ProcessInfo.processInfo.systemUptime + 0.05
-        // Same synchronous hop as the key monitor: the closure updates AppSession.
-        MainActor.assumeIsolated {
-            callback(event.modifierFlags)
-        }
-        return nil
-    }
-
-    private static func controlOwns(_ event: NSEvent) -> Bool {
-        guard let hit = event.window?.contentView?.hitTest(event.locationInWindow) else { return false }
-        var view: NSView? = hit
-        while let current = view {
-            if current is RowClickCatcherView { return false }
-            if current is NSControl { return true }
-            view = current.superview
-        }
-        return false
-    }
-
-    private static func catcher(containing event: NSEvent) -> RowClickCatcherView? {
-        guard let window = event.window else { return nil }
-        let point = event.locationInWindow
-        var best: RowClickCatcherView?
-        var bestArea = CGFloat.greatestFiniteMagnitude
-        for view in liveViews.allObjects {
-            guard view.window === window, view.containsWindowPoint(point) else { continue }
-            let area = view.bounds.width * view.bounds.height
-            if area > 0, area < bestArea {
-                best = view
-                bestArea = area
-            }
-        }
-        return best
-    }
-
-    private func containsWindowPoint(_ point: NSPoint) -> Bool {
-        guard window != nil, !isHiddenOrHasHiddenAncestor, bounds.width > 0, bounds.height > 0 else {
-            return false
-        }
-        return bounds.contains(convert(point, from: nil))
+    private func publishScope() {
+        guard isVisible else { return }
+        store.noteSelectionScope(tracks.map(\.id))
     }
 }
