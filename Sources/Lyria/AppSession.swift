@@ -203,22 +203,26 @@ final class AppSession: ObservableObject {
 
     func goBack() {
         dismissSelectionForNavigation()
-        if isSearching {
+        if navigation.isSearching {
             updateQuery("")
             return
         }
-        navigation.goBack()
+        if let query = navigation.goBack() {
+            searchText = query
+        }
     }
 
     func openArtist(_ id: String) {
         dismissSelectionForNavigation()
+        let query = navigation.isSearching ? trimmedQuery : nil
+        navigation.openArtist(id, resumeQuery: query)
         searchText = ""
-        navigation.openArtist(id)
     }
 
     func openAlbum(_ id: String) {
         dismissSelectionForNavigation()
-        navigation.openAlbum(id)
+        let query = navigation.isSearching ? trimmedQuery : nil
+        navigation.openAlbum(id, resumeQuery: query)
         searchText = ""
     }
 

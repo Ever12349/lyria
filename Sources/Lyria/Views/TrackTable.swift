@@ -206,13 +206,18 @@ private struct TrackRow: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .background {
-                if isCurrent {
-                    LyriaTheme.softAccentGradient
-                } else if isSelected {
-                    LyriaTheme.selectedRowFill
-                } else if hovering {
-                    Color.white.opacity(0.04)
+                // Decorative only. A hit-testing fill sits behind the click catcher and
+                // swallows the first Control-click / right-click on a selected row.
+                Group {
+                    if isCurrent {
+                        LyriaTheme.softAccentGradient
+                    } else if isSelected {
+                        LyriaTheme.selectedRowFill
+                    } else if hovering {
+                        Color.white.opacity(0.04)
+                    }
                 }
+                .allowsHitTesting(false)
             }
             .overlay(alignment: .bottom) {
                 if !isCurrent {

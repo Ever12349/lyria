@@ -42,18 +42,33 @@ public enum LibraryPage: Equatable, Hashable, Sendable {
     }
 }
 
+/// Search hidden because a page was pushed from its results. Back to `page` shows it again.
+public struct PausedSearch: Equatable, Sendable {
+    public var query: String
+    public var section: LibrarySection
+    public var page: LibraryPage
+
+    public init(query: String, section: LibrarySection, page: LibraryPage) {
+        self.query = query
+        self.section = section
+        self.page = page
+    }
+}
+
 /// One stack per sidebar section. Not persisted.
 public struct SectionNavigation: Equatable, Sendable {
     public private(set) var section: LibrarySection
     public private(set) var stacks: [LibrarySection: [LibraryPage]]
     public private(set) var rootGeneration: [LibrarySection: Int]
     public private(set) var isSearching: Bool
+    public private(set) var pausedSearch: PausedSearch?
 
     public init() {
         section = .library
         stacks = Dictionary(uniqueKeysWithValues: LibrarySection.allCases.map { ($0, [$0.root]) })
         rootGeneration = Dictionary(uniqueKeysWithValues: LibrarySection.allCases.map { ($0, 0) })
         isSearching = false
+        pausedSearch = nil
     }
 
     public var page: LibraryPage {
@@ -66,6 +81,7 @@ public struct SectionNavigation: Equatable, Sendable {
 
     public mutating func select(_ section: LibrarySection) {
         endSearch()
+        discardPausedSearch()
         if self.section == section {
             resetRoot(section)
         } else {
@@ -76,19 +92,32 @@ public struct SectionNavigation: Equatable, Sendable {
     /// Logo. Other sections keep their stacks. Already on library resets that list.
     public mutating func showLibraryHome() {
         endSearch()
+        discardPausedSearch()
         resetRoot(.library)
         section = .library
     }
 
-    public mutating func goBack() {
+    /// Clears a visible search without popping. Otherwise pops, then resumes a search
+    /// whose results were showing this page. The returned query is that resumed search.
+    @discardableResult
+    public mutating func goBack() -> String? {
         if isSearching {
             isSearching = false
-            return
+            return nil
+        }
+        if let query = takePausedQuery() {
+            isSearching = true
+            return query
         }
         var stack = stack(for: section)
-        guard stack.count > 1 else { return }
+        guard stack.count > 1 else { return nil }
         stack.removeLast()
         stacks[section] = stack
+        if let query = takePausedQuery() {
+            isSearching = true
+            return query
+        }
+        return nil
     }
 
     public mutating func beginSearch() {
@@ -99,33 +128,45 @@ public struct SectionNavigation: Equatable, Sendable {
         isSearching = false
     }
 
-    public mutating func openArtist(_ id: String) {
-        endSearch()
-        section = .artists
-        stacks[.artists] = [.artists, .artist(id)]
+    /// Pushes onto the current section. Does not switch sidebar section.
+    /// Already-top is a no-op. `resumeQuery` is shown again when back returns to this page.
+    public mutating func openArtist(_ id: String, resumeQuery: String? = nil) {
+        push(.artist(id), resumeQuery: resumeQuery)
     }
 
-    /// From the artists section, push onto that stack. Search and every other section jump to albums.
-    public mutating func openAlbum(_ id: String) {
-        let pushOnArtists = !isSearching && section == .artists
-        endSearch()
-        if pushOnArtists {
-            var stack = stack(for: .artists)
-            if stack.last != .album(id) {
-                stack.append(.album(id))
-            }
-            stacks[.artists] = stack
-            section = .artists
-        } else {
-            section = .albums
-            stacks[.albums] = [.albums, .album(id)]
-        }
+    /// Pushes onto the current section. Does not switch sidebar section.
+    public mutating func openAlbum(_ id: String, resumeQuery: String? = nil) {
+        push(.album(id), resumeQuery: resumeQuery)
     }
 
     public mutating func openPlaylist(_ id: String) {
         endSearch()
+        discardPausedSearch()
         section = .playlists
         stacks[.playlists] = [.playlists, .playlist(id)]
+    }
+
+    public mutating func discardPausedSearch() {
+        pausedSearch = nil
+    }
+
+    private mutating func push(_ page: LibraryPage, resumeQuery: String?) {
+        if isSearching {
+            if let resumeQuery, !resumeQuery.isEmpty {
+                pausedSearch = PausedSearch(query: resumeQuery, section: section, page: self.page)
+            }
+            isSearching = false
+        }
+        guard self.page != page else { return }
+        var stack = stack(for: section)
+        stack.append(page)
+        stacks[section] = stack
+    }
+
+    private mutating func takePausedQuery() -> String? {
+        guard let paused = pausedSearch, paused.section == section, paused.page == page else { return nil }
+        pausedSearch = nil
+        return paused.query
     }
 
     public mutating func deletedOpenPlaylist(_ id: String) {
