@@ -1,4 +1,5 @@
 import Foundation
+import LyriaCore
 
 struct Track: Identifiable, Hashable {
     let id: String
@@ -123,6 +124,32 @@ enum AppRoute: Hashable {
         default: return false
         }
     }
+
+    var stackKey: String {
+        switch self {
+        case .library: return "library"
+        case .artists: return "artists"
+        case .artist(let id): return "artist:\(id)"
+        case .albums: return "albums"
+        case .album(let id): return "album:\(id)"
+        case .playlists: return "playlists"
+        case .playlist(let id): return "playlist:\(id)"
+        case .settings: return "settings"
+        }
+    }
+
+    init(_ page: LibraryPage) {
+        switch page {
+        case .library: self = .library
+        case .artists: self = .artists
+        case .artist(let id): self = .artist(id)
+        case .albums: self = .albums
+        case .album(let id): self = .album(id)
+        case .playlists: self = .playlists
+        case .playlist(let id): self = .playlist(id)
+        case .settings: self = .settings
+        }
+    }
 }
 
 enum NavItem: String, CaseIterable, Identifiable {
@@ -155,6 +182,26 @@ enum NavItem: String, CaseIterable, Identifiable {
     }
 
     static var primaryItems: [NavItem] { [.library, .artists, .albums, .playlists] }
+
+    var section: LibrarySection {
+        switch self {
+        case .library: return .library
+        case .artists: return .artists
+        case .albums: return .albums
+        case .playlists: return .playlists
+        case .settings: return .settings
+        }
+    }
+
+    init(_ section: LibrarySection) {
+        switch section {
+        case .library: self = .library
+        case .artists: self = .artists
+        case .albums: self = .albums
+        case .playlists: self = .playlists
+        case .settings: self = .settings
+        }
+    }
 }
 
 enum TimeFormat {

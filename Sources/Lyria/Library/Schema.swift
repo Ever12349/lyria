@@ -19,6 +19,7 @@ enum Schema {
       artist_id TEXT,
       album_id TEXT,
       duration_ms INTEGER NOT NULL,
+      year INTEGER NOT NULL DEFAULT 0,
       size INTEGER NOT NULL,
       mtime INTEGER NOT NULL,
       missing INTEGER NOT NULL DEFAULT 0,

@@ -41,10 +41,10 @@ final class NormalizeTests: XCTestCase {
         XCTAssertEqual(NameNormalizer.sortName("  Sigur   Rós "), "Sigur Rós")
     }
 
-    func testEmptyArtistAndAlbumMintNoIDs() {
+    func testEmptyArtistStillMintsAlbumFromName() {
         let decision = EntityID.decide(title: "Song", artist: "   ", album: "Greatest Hits")
         XCTAssertNil(decision.artistID)
-        XCTAssertNil(decision.albumID)
+        XCTAssertEqual(decision.albumID, EntityID.album(normalizedName: "Greatest Hits"))
         XCTAssertEqual(decision.normalizedArtist, "")
         XCTAssertEqual(decision.sortName, "")
         XCTAssertFalse(decision.encodingSuspect)
@@ -57,21 +57,29 @@ final class NormalizeTests: XCTestCase {
         XCTAssertTrue(decision.artistID?.hasPrefix("art_") == true)
     }
 
-    func testSuspectTitleSuppressesArtistAndAlbumIDs() {
+    func testSuspectTitleBlocksArtistButNotAlbum() {
         let decision = EntityID.decide(title: "坏\u{FFFD}题", artist: "周杰伦", album: "叶惠美")
         XCTAssertTrue(decision.encodingSuspect)
         XCTAssertNil(decision.artistID)
-        XCTAssertNil(decision.albumID)
+        XCTAssertEqual(decision.albumID, EntityID.album(normalizedName: "叶惠美"))
         XCTAssertEqual(decision.normalizedArtist, "周杰伦")
     }
 
-    func testSameAlbumNameDifferentArtists() {
-        let left = EntityID.album(normalizedArtist: "Ada", normalizedAlbum: "Greatest Hits")
-        let right = EntityID.album(normalizedArtist: "Bea", normalizedAlbum: "Greatest Hits")
+    func testSuspectAlbumNameMintsNothing() {
+        XCTAssertNil(EntityID.album(normalizedName: ""))
+        XCTAssertNil(EntityID.album(normalizedName: "叶\u{FFFD}美"))
+        let decision = EntityID.decide(title: "Song", artist: "Ada", album: "叶\u{FFFD}美")
+        XCTAssertNil(decision.albumID)
+        XCTAssertNil(decision.artistID)
+    }
+
+    func testSameAlbumNameSharesOneID() {
+        let left = EntityID.decide(title: "One", artist: "Ada", album: "Greatest Hits").albumID
+        let right = EntityID.decide(title: "Two", artist: "Bea", album: "Greatest Hits").albumID
         XCTAssertNotNil(left)
-        XCTAssertNotNil(right)
-        XCTAssertNotEqual(left, right)
+        XCTAssertEqual(left, right)
         XCTAssertTrue(left?.hasPrefix("alb_") == true)
+        XCTAssertEqual(left, EntityID.album(normalizedName: "Greatest Hits"))
     }
 
     func testArtistIDStable() {

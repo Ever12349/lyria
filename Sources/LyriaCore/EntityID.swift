@@ -23,16 +23,10 @@ public enum EntityID {
         return "art_" + Crockford.encode(Data(digest.prefix(16)))
     }
 
-    /// `alb_` hashes `normalize(artist) + NUL + normalize(album)`. Empty or suspect sides mint nothing.
-    public static func album(normalizedArtist: String, normalizedAlbum: String) -> String? {
-        guard !normalizedArtist.isEmpty, !normalizedAlbum.isEmpty else { return nil }
-        if normalizedArtist.contains("\u{FFFD}") || normalizedAlbum.contains("\u{FFFD}") {
-            return nil
-        }
-        var payload = Data(normalizedArtist.utf8)
-        payload.append(0)
-        payload.append(Data(normalizedAlbum.utf8))
-        let digest = SHA256.hash(payload)
+    /// `alb_` hashes the normalized album name only. Empty or U+FFFD album names mint nothing.
+    public static func album(normalizedName: String) -> String? {
+        guard !normalizedName.isEmpty, !normalizedName.contains("\u{FFFD}") else { return nil }
+        let digest = SHA256.hash(Data(normalizedName.utf8))
         return "alb_" + Crockford.encode(Data(digest.prefix(16)))
     }
 
@@ -44,7 +38,8 @@ public enum EntityID {
         return "pls_" + Crockford.encode(Data(bytes))
     }
 
-    /// Suspect if any of title / artist / album contains U+FFFD. Suspect or empty names do not mint ids.
+    /// Suspect if any of title / artist / album contains U+FFFD.
+    /// Title or artist U+FFFD blocks `art_`. A usable album name still mints `alb_`.
     public static func decide(title: String, artist artistRaw: String, album albumRaw: String) -> IdentityDecision {
         let titleName = NameNormalizer.normalize(title)
         let artistName = NameNormalizer.normalize(artistRaw)
@@ -57,7 +52,7 @@ public enum EntityID {
             sortName: artistName.text,
             encodingSuspect: suspect,
             artistID: suspect ? nil : artist(normalizedName: artistName.text),
-            albumID: suspect ? nil : album(normalizedArtist: artistName.text, normalizedAlbum: albumName.text)
+            albumID: album(normalizedName: albumName.text)
         )
     }
 }

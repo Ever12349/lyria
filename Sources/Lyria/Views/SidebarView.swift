@@ -5,7 +5,7 @@ struct SidebarView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Button { store.select(.library) } label: {
+            Button { store.showLibraryHome() } label: {
                 Text("Lyria")
                     .font(.system(size: 28, weight: .medium, design: .serif))
                     .foregroundStyle(LyriaTheme.foreground)
@@ -42,7 +42,7 @@ struct SidebarView: View {
     }
 
     private func navRow(_ item: NavItem) -> some View {
-        let selected = store.currentNav == item
+        let selected = store.currentSection == item
         return Button {
             store.select(item)
         } label: {

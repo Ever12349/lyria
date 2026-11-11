@@ -218,33 +218,57 @@ struct ContentView: View {
         Binding(get: { store.searchText }, set: { store.updateQuery($0) })
     }
 
-    @ViewBuilder
     private var page: some View {
-        if store.isSearching {
-            SearchResultsView()
-        } else {
-            switch store.route {
-            case .library:
-                if store.visibleTracks.isEmpty {
-                    LibraryEmptyView()
-                } else {
-                    LibraryView()
-                }
-            case .artists:
-                ArtistsView()
-            case .artist(let id):
-                ArtistDetailView(artistID: id)
-            case .albums:
-                AlbumsView()
-            case .album(let id):
-                AlbumDetailView(albumID: id)
-            case .playlists:
-                PlaylistsView()
-            case .playlist(let id):
-                PlaylistDetailView(playlistID: id)
-            case .settings:
-                SettingsView()
+        ZStack {
+            ForEach(NavItem.allCases) { item in
+                mountedSection(item)
             }
+            if store.isSearching {
+                SearchResultsView()
+            }
+        }
+    }
+
+    private func mountedSection(_ item: NavItem) -> some View {
+        let routes = store.routes(in: item)
+        let active = store.currentSection == item && !store.isSearching
+        return ZStack {
+            ForEach(routes, id: \.stackKey) { route in
+                routePage(route)
+                    .id(store.pageIdentity(item, route))
+                    .opacity(active && route == routes.last ? 1 : 0)
+                    .allowsHitTesting(active && route == routes.last)
+                    .accessibilityHidden(!active || route != routes.last)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .allowsHitTesting(active)
+        .accessibilityHidden(!active)
+    }
+
+    @ViewBuilder
+    private func routePage(_ route: AppRoute) -> some View {
+        switch route {
+        case .library:
+            if store.visibleTracks.isEmpty {
+                LibraryEmptyView()
+            } else {
+                LibraryView()
+            }
+        case .artists:
+            ArtistsView()
+        case .artist(let id):
+            ArtistDetailView(artistID: id)
+        case .albums:
+            AlbumsView()
+        case .album(let id):
+            AlbumDetailView(albumID: id)
+        case .playlists:
+            PlaylistsView()
+        case .playlist(let id):
+            PlaylistDetailView(playlistID: id)
+        case .settings:
+            SettingsView()
         }
     }
 

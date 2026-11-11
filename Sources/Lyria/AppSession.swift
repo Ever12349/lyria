@@ -13,9 +13,8 @@ struct LibraryRemovalPrompt: Equatable {
 final class AppSession: ObservableObject {
     let library: LibraryStore
 
-    @Published var stack: [AppRoute] = [.library]
+    @Published private(set) var navigation = SectionNavigation()
     @Published var searchText = ""
-    private var returnStack: [AppRoute]?
     @Published private(set) var selectedTrackIds: Set<String> = []
     private(set) var selectionAnchor: String?
     private(set) var selectionScopeIDs: [String] = []
@@ -53,8 +52,22 @@ final class AppSession: ObservableObject {
         await library.open()
     }
 
-    var route: AppRoute { stack.last ?? .library }
-    var currentNav: NavItem { route.nav }
+    var route: AppRoute { AppRoute(navigation.page) }
+    var currentSection: NavItem { NavItem(navigation.section) }
+    /// Page-head title follows the top route. Sidebar highlight uses `currentSection`.
+    var currentNav: NavItem { currentSection }
+
+    func routes(in item: NavItem) -> [AppRoute] {
+        navigation.stack(for: item.section).map(AppRoute.init)
+    }
+
+    func pageIdentity(_ item: NavItem, _ route: AppRoute) -> String {
+        let section = item.section
+        if route == item.route {
+            return "\(section.rawValue)-root-\(navigation.rootGeneration[section, default: 0])"
+        }
+        return "\(section.rawValue)-\(route.stackKey)"
+    }
     var showsBatchBar: Bool { selectedTrackIds.count >= 2 }
 
     var trimmedQuery: String {
@@ -101,7 +114,11 @@ final class AppSession: ObservableObject {
     }
 
     func albums(artistID: String) -> [Album] {
-        albums.filter { $0.artistId == artistID }
+        let ids = AlbumFacts.albumIDs(
+            forArtist: artistID,
+            tracks: tracks.map { ($0.albumId, $0.artistId) }
+        )
+        return albums.filter { ids.contains($0.id) }
     }
 
     func tracks(in playlist: Playlist) -> [Track] {
@@ -159,24 +176,28 @@ final class AppSession: ObservableObject {
     func updateQuery(_ raw: String) {
         let previous = trimmedQuery
         let nowEmpty = raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        if !nowEmpty && previous.isEmpty {
-            returnStack = stack
-        }
         if raw.trimmingCharacters(in: .whitespacesAndNewlines) != previous {
             dismissSelectionForNavigation()
         }
         searchText = raw
-        if nowEmpty, let saved = returnStack {
-            stack = saved
-            returnStack = nil
+        if nowEmpty {
+            navigation.endSearch()
+        } else if previous.isEmpty {
+            navigation.beginSearch()
         }
     }
 
     func select(_ item: NavItem) {
         dismissSelectionForNavigation()
-        returnStack = nil
         searchText = ""
-        stack = [item.route]
+        navigation.select(item.section)
+    }
+
+    /// Logo. Restores the library list from the top and leaves other sections alone.
+    func showLibraryHome() {
+        dismissSelectionForNavigation()
+        searchText = ""
+        navigation.showLibraryHome()
     }
 
     func goBack() {
@@ -185,29 +206,25 @@ final class AppSession: ObservableObject {
             updateQuery("")
             return
         }
-        guard stack.count > 1 else { return }
-        stack.removeLast()
+        navigation.goBack()
     }
 
     func openArtist(_ id: String) {
         dismissSelectionForNavigation()
-        returnStack = nil
         searchText = ""
-        stack = [.artists, .artist(id)]
+        navigation.openArtist(id)
     }
 
     func openAlbum(_ id: String) {
         dismissSelectionForNavigation()
-        returnStack = nil
+        navigation.openAlbum(id)
         searchText = ""
-        stack = [.albums, .album(id)]
     }
 
     func openPlaylist(_ id: String) {
         dismissSelectionForNavigation()
-        returnStack = nil
         searchText = ""
-        stack = [.playlists, .playlist(id)]
+        navigation.openPlaylist(id)
     }
 
     func scanTracks() {
@@ -303,9 +320,11 @@ final class AppSession: ObservableObject {
                 showToast("删除播放列表失败")
                 return
             }
-            if case .playlist(let current) = route, current == id {
-                dismissSelectionForNavigation()
-                stack = [.playlists]
+            if navigation.stack(for: .playlists).last == .playlist(id) {
+                if navigation.section == .playlists {
+                    dismissSelectionForNavigation()
+                }
+                navigation.deletedOpenPlaylist(id)
             }
             showToast("已删除「\(playlist.name)」")
         }

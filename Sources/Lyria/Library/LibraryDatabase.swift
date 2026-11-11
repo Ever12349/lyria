@@ -61,13 +61,29 @@ actor LibraryDatabase {
         if isOpen { return }
         try connection.open(path: path)
         try connection.migrate()
+        try ensureTrackYearColumn()
+        try migrateAlbumsToNameIDsIfNeeded()
         isOpen = true
     }
 
     func snapshot() throws -> LibrarySnapshot {
         let tracks = try loadTracks()
         let artists = try loadArtists()
-        let albums = try loadAlbums()
+        let albums = try loadAlbums().map { album in
+            let participants = tracks.filter { $0.albumId == album.id }.compactMap(\.artistId)
+            let line = AlbumFacts.creditLine(
+                participatingArtistIDs: participants,
+                catalog: artists.map { CreditArtist(id: $0.id, name: $0.name, sortName: $0.sortName) }
+            )
+            return Album(
+                id: album.id,
+                name: album.name,
+                artistId: nil,
+                artistName: line == AlbumFacts.unknownArtist ? "" : line,
+                year: album.year,
+                artworkPath: album.artworkPath
+            )
+        }
         let playlists = try loadPlaylists()
         return LibrarySnapshot(tracks: tracks, artists: artists, albums: albums, playlists: playlists)
     }
@@ -131,6 +147,10 @@ actor LibraryDatabase {
                 [.text(record.fingerprintHex)]
             )
             let trackID = mapped ?? record.proposedTrackID
+            let previousAlbumID = try optionalText(
+                "SELECT album_id FROM tracks WHERE id = ?",
+                [.text(trackID)]
+            )
             if mapped == nil {
                 try connection.run(
                     "INSERT INTO fingerprints (fingerprint, track_id, method, created_at) VALUES (?, ?, ?, ?)",
@@ -169,7 +189,7 @@ actor LibraryDatabase {
                     """
                     UPDATE tracks SET
                       path = ?, aliases_json = ?, title = ?, artist_name = ?, album_name = ?,
-                      artist_id = ?, album_id = ?, duration_ms = ?, size = ?, mtime = ?,
+                      artist_id = ?, album_id = ?, duration_ms = ?, year = ?, size = ?, mtime = ?,
                       missing = 0, encoding_suspect = ?, icloud_offline = ?, updated_at = ?
                     WHERE id = ?
                     """,
@@ -182,6 +202,7 @@ actor LibraryDatabase {
                         record.artistID.map(SQLValue.text) ?? .null,
                         record.albumID.map(SQLValue.text) ?? .null,
                         .int(Int64(record.durationMs)),
+                        .int(Int64(record.year)),
                         .int(size),
                         .int(mtime),
                         .int(record.encodingSuspect ? 1 : 0),
@@ -195,8 +216,8 @@ actor LibraryDatabase {
                     """
                     INSERT INTO tracks (
                       id, path, aliases_json, title, artist_name, album_name, artist_id, album_id,
-                      duration_ms, size, mtime, missing, encoding_suspect, icloud_offline, updated_at
-                    ) VALUES (?, ?, '[]', ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
+                      duration_ms, year, size, mtime, missing, encoding_suspect, icloud_offline, updated_at
+                    ) VALUES (?, ?, '[]', ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
                     """,
                     [
                         .text(trackID),
@@ -207,6 +228,7 @@ actor LibraryDatabase {
                         record.artistID.map(SQLValue.text) ?? .null,
                         record.albumID.map(SQLValue.text) ?? .null,
                         .int(Int64(record.durationMs)),
+                        .int(Int64(record.year)),
                         .int(record.size),
                         .int(record.mtime),
                         .int(record.encodingSuspect ? 1 : 0),
@@ -225,25 +247,11 @@ actor LibraryDatabase {
                     [.text(artistID), .text(record.artistName), .text(record.sortName)]
                 )
             }
-            if let albumID = record.albumID, !record.albumName.isEmpty {
-                try connection.run(
-                    """
-                    INSERT INTO albums (id, name, artist_id, year, track_count, artwork_path)
-                    VALUES (?, ?, ?, ?, 0, ?)
-                    ON CONFLICT(id) DO UPDATE SET
-                      name = excluded.name,
-                      artist_id = excluded.artist_id,
-                      year = CASE WHEN excluded.year != 0 THEN excluded.year ELSE albums.year END,
-                      artwork_path = COALESCE(excluded.artwork_path, albums.artwork_path)
-                    """,
-                    [
-                        .text(albumID),
-                        .text(record.albumName),
-                        record.artistID.map(SQLValue.text) ?? .null,
-                        .int(Int64(record.year)),
-                        record.artworkPath.map(SQLValue.text) ?? .null,
-                    ]
-                )
+            if let previousAlbumID, previousAlbumID != record.albumID {
+                try refreshAlbum(previousAlbumID)
+            }
+            if let albumID = record.albumID {
+                try refreshAlbum(albumID)
             }
             return trackID
         }
@@ -335,9 +343,18 @@ actor LibraryDatabase {
         let unique = Self.uniquePreservingOrder(ids)
         guard !unique.isEmpty else { return }
         try connection.transaction {
+            var albumIDs: [String] = []
             for id in unique {
+                let albumID = try optionalText(
+                    "SELECT album_id FROM tracks WHERE id = ?",
+                    [.text(id)]
+                )
+                if let albumID, !albumID.isEmpty { albumIDs.append(albumID) }
                 try connection.run("DELETE FROM playlist_tracks WHERE track_id = ?", [.text(id)])
                 try connection.run("DELETE FROM tracks WHERE id = ?", [.text(id)])
+            }
+            for albumID in Set(albumIDs) {
+                try refreshAlbum(albumID)
             }
             try recomputeCounts()
         }
@@ -547,6 +564,103 @@ actor LibraryDatabase {
                 [.text(edit.1), .text(edit.0)]
             )
         }
+    }
+
+    private func ensureTrackYearColumn() throws {
+        var names: [String] = []
+        try connection.run("PRAGMA table_info(tracks)") { statement in
+            names.append(SQLiteConnection.text(statement, 1))
+        }
+        if !names.contains("year") {
+            try connection.run("ALTER TABLE tracks ADD COLUMN year INTEGER NOT NULL DEFAULT 0")
+        }
+    }
+
+    /// One-shot. Later opens see the settings flag and leave ids alone.
+    private func migrateAlbumsToNameIDsIfNeeded() throws {
+        let flag = try optionalText(
+            "SELECT value FROM settings WHERE key = ?",
+            [.text("album_by_name")]
+        )
+        if flag == "1" { return }
+        try connection.transaction {
+            try connection.run(
+                """
+                UPDATE tracks SET year = COALESCE((
+                  SELECT albums.year FROM albums WHERE albums.id = tracks.album_id
+                ), 0)
+                WHERE year = 0
+                """
+            )
+            var rows: [(id: String, albumName: String)] = []
+            try connection.run("SELECT id, album_name FROM tracks") { statement in
+                rows.append((
+                    SQLiteConnection.text(statement, 0),
+                    SQLiteConnection.text(statement, 1)
+                ))
+            }
+            for row in rows {
+                let normalized = NameNormalizer.normalize(row.albumName).text
+                let albumID = EntityID.album(normalizedName: normalized)
+                try connection.run(
+                    "UPDATE tracks SET album_id = ? WHERE id = ?",
+                    [albumID.map(SQLValue.text) ?? .null, .text(row.id)]
+                )
+            }
+            var albumIDs: [String] = []
+            try connection.run(
+                "SELECT DISTINCT album_id FROM tracks WHERE album_id IS NOT NULL"
+            ) { statement in
+                albumIDs.append(SQLiteConnection.text(statement, 0))
+            }
+            try connection.run("DELETE FROM albums")
+            for albumID in albumIDs where !albumID.isEmpty {
+                try refreshAlbum(albumID)
+            }
+            try recomputeCounts()
+            try connection.run(
+                "INSERT INTO settings (key, value) VALUES ('album_by_name', '1')"
+            )
+        }
+    }
+
+    /// Name, year, and artwork from member tracks so a later scan does not reshuffle them.
+    private func refreshAlbum(_ albumID: String) throws {
+        var members: [AlbumMember] = []
+        try connection.run(
+            "SELECT id, album_name, year FROM tracks WHERE album_id = ? ORDER BY id",
+            [.text(albumID)]
+        ) { statement in
+            let trackID = SQLiteConnection.text(statement, 0)
+            members.append(AlbumMember(
+                trackID: trackID,
+                albumName: SQLiteConnection.text(statement, 1),
+                year: Int(sqlite3_column_int64(statement, 2)),
+                artworkPath: SupportPaths.existingArtwork(trackID: trackID)
+            ))
+        }
+        guard !members.isEmpty else {
+            try connection.run("DELETE FROM albums WHERE id = ?", [.text(albumID)])
+            return
+        }
+        let artwork = AlbumFacts.artworkPath(members: members)
+        try connection.run(
+            """
+            INSERT INTO albums (id, name, artist_id, year, track_count, artwork_path)
+            VALUES (?, ?, NULL, ?, 0, ?)
+            ON CONFLICT(id) DO UPDATE SET
+              name = excluded.name,
+              artist_id = NULL,
+              year = excluded.year,
+              artwork_path = excluded.artwork_path
+            """,
+            [
+                .text(albumID),
+                .text(AlbumFacts.displayName(members: members)),
+                .int(Int64(AlbumFacts.year(members: members))),
+                artwork.map(SQLValue.text) ?? .null,
+            ]
+        )
     }
 
     private func recomputeCounts() throws {
