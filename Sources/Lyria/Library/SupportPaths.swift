@@ -1,4 +1,5 @@
 import Foundation
+import LyriaCore
 
 enum SupportPaths {
     static func directory() throws -> URL {
@@ -21,6 +22,16 @@ enum SupportPaths {
         try directory().appendingPathComponent("library.sqlite")
     }
 
+    /// Display thumbnails. Originals stay in Application Support `Lyria/Artwork`.
+    static func thumbnailCacheDirectory() -> URL {
+        let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        return caches
+            .appendingPathComponent("Lyria", isDirectory: true)
+            .appendingPathComponent("ArtworkThumbs", isDirectory: true)
+    }
+
+    static let thumbnails = ArtworkThumbnailCache(directory: thumbnailCacheDirectory())
+
     static func artworkFile(trackID: String) throws -> URL {
         try directory()
             .appendingPathComponent("Artwork", isDirectory: true)
@@ -30,12 +41,17 @@ enum SupportPaths {
     static func writeArtwork(_ data: Data, trackID: String) throws -> String {
         let url = try artworkFile(trackID: trackID)
         try data.write(to: url, options: .atomic)
+        thumbnails.invalidate(sourcePath: url.path)
         return url.path
     }
 
     static func moveArtwork(from sourceID: String, to destinationID: String) throws {
         let source = try artworkFile(trackID: sourceID)
         let destination = try artworkFile(trackID: destinationID)
+        defer {
+            thumbnails.invalidate(sourcePath: source.path)
+            thumbnails.invalidate(sourcePath: destination.path)
+        }
         guard FileManager.default.fileExists(atPath: source.path) else { return }
         if FileManager.default.fileExists(atPath: destination.path) {
             try FileManager.default.removeItem(at: destination)
@@ -46,9 +62,11 @@ enum SupportPaths {
     static func deleteArtwork(trackID: String) {
         guard let url = try? artworkFile(trackID: trackID) else { return }
         try? FileManager.default.removeItem(at: url)
+        thumbnails.invalidate(sourcePath: url.path)
     }
 
     static func deleteAllArtwork() {
+        defer { thumbnails.invalidateAll() }
         guard let directory = try? directory().appendingPathComponent("Artwork", isDirectory: true),
               let files = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
         else { return }

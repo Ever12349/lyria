@@ -42,11 +42,13 @@
 		A1C000000000000000000029 /* LibraryRemoval.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000019 /* LibraryRemoval.swift */; };
 		A1C00000000000000000002A /* SectionNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C00000000000000000001A /* SectionNavigation.swift */; };
 		A1C00000000000000000002B /* AlbumFacts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C00000000000000000001B /* AlbumFacts.swift */; };
+		A1C00000000000000000002C /* ArtworkThumbnails.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C00000000000000000001C /* ArtworkThumbnails.swift */; };
 		A1C000000000000000000054 /* ScanSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000044 /* ScanSessionTests.swift */; };
 		A1C000000000000000000055 /* TrackSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000045 /* TrackSelectionTests.swift */; };
 		A1C000000000000000000057 /* LibraryRemovalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000047 /* LibraryRemovalTests.swift */; };
 		A1C000000000000000000058 /* SectionNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000048 /* SectionNavigationTests.swift */; };
 		A1C000000000000000000059 /* AlbumFactsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000049 /* AlbumFactsTests.swift */; };
+		A1C00000000000000000005A /* ArtworkThumbnailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C00000000000000000004A /* ArtworkThumbnailTests.swift */; };
 		A1C100000000000000000109 /* ScanProgressBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C100000000000000000009 /* ScanProgressBar.swift */; };
 		A1C10000000000000000010A /* BatchActionBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C10000000000000000000A /* BatchActionBar.swift */; };
 		A1C000000000000000000051 /* CrockfordTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000041 /* CrockfordTests.swift */; };
@@ -93,11 +95,13 @@
 		A1C000000000000000000019 /* LibraryRemoval.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryRemoval.swift; sourceTree = "<group>"; };
 		A1C00000000000000000001A /* SectionNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SectionNavigation.swift; sourceTree = "<group>"; };
 		A1C00000000000000000001B /* AlbumFacts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumFacts.swift; sourceTree = "<group>"; };
+		A1C00000000000000000001C /* ArtworkThumbnails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtworkThumbnails.swift; sourceTree = "<group>"; };
 		A1C000000000000000000044 /* ScanSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanSessionTests.swift; sourceTree = "<group>"; };
 		A1C000000000000000000045 /* TrackSelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackSelectionTests.swift; sourceTree = "<group>"; };
 		A1C000000000000000000047 /* LibraryRemovalTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryRemovalTests.swift; sourceTree = "<group>"; };
 		A1C000000000000000000048 /* SectionNavigationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SectionNavigationTests.swift; sourceTree = "<group>"; };
 		A1C000000000000000000049 /* AlbumFactsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumFactsTests.swift; sourceTree = "<group>"; };
+		A1C00000000000000000004A /* ArtworkThumbnailTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtworkThumbnailTests.swift; sourceTree = "<group>"; };
 		A1C100000000000000000009 /* ScanProgressBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanProgressBar.swift; sourceTree = "<group>"; };
 		A1C10000000000000000000A /* BatchActionBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchActionBar.swift; sourceTree = "<group>"; };
 		A1C000000000000000000041 /* CrockfordTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrockfordTests.swift; sourceTree = "<group>"; };
@@ -217,6 +221,7 @@
 				A1C000000000000000000019 /* LibraryRemoval.swift */,
 				A1C00000000000000000001A /* SectionNavigation.swift */,
 				A1C00000000000000000001B /* AlbumFacts.swift */,
+				A1C00000000000000000001C /* ArtworkThumbnails.swift */,
 			);
 			path = Sources/LyriaCore;
 			sourceTree = "<group>";
@@ -232,6 +237,7 @@
 				A1C000000000000000000047 /* LibraryRemovalTests.swift */,
 				A1C000000000000000000048 /* SectionNavigationTests.swift */,
 				A1C000000000000000000049 /* AlbumFactsTests.swift */,
+				A1C00000000000000000004A /* ArtworkThumbnailTests.swift */,
 			);
 			path = Tests/LyriaTests;
 			sourceTree = "<group>";
@@ -370,6 +376,7 @@
 				A1C000000000000000000029 /* LibraryRemoval.swift in Sources */,
 				A1C00000000000000000002A /* SectionNavigation.swift in Sources */,
 				A1C00000000000000000002B /* AlbumFacts.swift in Sources */,
+				A1C00000000000000000002C /* ArtworkThumbnails.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -385,6 +392,7 @@
 				A1C000000000000000000057 /* LibraryRemovalTests.swift in Sources */,
 				A1C000000000000000000058 /* SectionNavigationTests.swift in Sources */,
 				A1C000000000000000000059 /* AlbumFactsTests.swift in Sources */,
+				A1C00000000000000000005A /* ArtworkThumbnailTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

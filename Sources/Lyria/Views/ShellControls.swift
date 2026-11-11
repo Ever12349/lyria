@@ -1,4 +1,5 @@
 import AppKit
+import LyriaCore
 import SwiftUI
 
 struct CoverArt: View {
@@ -8,7 +9,7 @@ struct CoverArt: View {
     var cornerRadius: CGFloat = 8
     var circle = false
     var elevated = false
-    @State private var artwork: NSImage?
+    @Environment(\.displayScale) private var displayScale
 
     var body: some View {
         let shape = circle
@@ -17,28 +18,78 @@ struct CoverArt: View {
         shape
             .fill(LyriaTheme.coverGradient(seed: seed))
             .overlay {
-                if let artwork {
-                    Image(nsImage: artwork)
-                        .resizable()
-                        .scaledToFill()
-                } else {
-                    GeometryReader { geo in
-                        Image(systemName: systemImage)
-                            .font(.system(size: max(11, geo.size.width * 0.28), weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.92))
-                            .frame(width: geo.size.width, height: geo.size.height)
-                    }
+                GeometryReader { geo in
+                    CoverArtImage(
+                        artworkPath: artworkPath,
+                        systemImage: systemImage,
+                        width: geo.size.width,
+                        height: geo.size.height,
+                        displayScale: displayScale
+                    )
                 }
             }
             .clipShape(shape)
             .shadow(color: elevated ? LyriaTheme.primaryDeep.opacity(0.35) : .clear, radius: elevated ? 18 : 0, y: elevated ? 8 : 0)
-            .task(id: artworkPath) {
-                guard let artworkPath else {
-                    artwork = nil
-                    return
-                }
-                artwork = NSImage(contentsOfFile: artworkPath)
+    }
+}
+
+/// Measures itself and asks the thumbnail cache for that bucket. A memory hit is drawn in this body.
+private struct CoverArtImage: View {
+    var artworkPath: String?
+    var systemImage: String
+    var width: CGFloat
+    var height: CGFloat
+    var displayScale: CGFloat
+    @State private var artwork: NSImage?
+    @State private var artworkID = ""
+
+    var body: some View {
+        let request = ArtworkThumbnails.request(
+            sourcePath: artworkPath,
+            edgePoints: Double(max(width, height)),
+            displayScale: Double(displayScale)
+        )
+        let taskID = request?.key.token ?? ""
+        let shown = image(request: request, taskID: taskID)
+        ZStack {
+            if let shown {
+                Image(nsImage: shown)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Image(systemName: systemImage)
+                    .font(.system(size: max(11, width * 0.28), weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.92))
             }
+        }
+        .frame(width: width, height: height)
+        .task(id: taskID) {
+            await load(request, taskID: taskID)
+        }
+    }
+
+    private func image(request: ArtworkThumbRequest?, taskID: String) -> NSImage? {
+        guard let request else { return nil }
+        if artworkID == taskID { return artwork }
+        guard let data = SupportPaths.thumbnails.memoryData(for: request.key) else { return nil }
+        return NSImage(data: data)
+    }
+
+    private func load(_ request: ArtworkThumbRequest?, taskID: String) async {
+        guard let request else {
+            artwork = nil
+            artworkID = ""
+            return
+        }
+        if let data = SupportPaths.thumbnails.memoryData(for: request.key) {
+            artwork = NSImage(data: data)
+            artworkID = taskID
+            return
+        }
+        let data = await SupportPaths.thumbnails.thumbnailJPEG(key: request.key)
+        guard !Task.isCancelled else { return }
+        artwork = data.flatMap { NSImage(data: $0) }
+        artworkID = taskID
     }
 }
 

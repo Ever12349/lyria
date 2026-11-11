@@ -12,6 +12,7 @@
 > 5. 沙盒保持关闭；`scan_roots.bookmark` 从第一天写入。Bundle id 保持 `local.lyria.sample`。系统 SQLite3，不用 GRDB。单根。  
 > 6. **多选与批量（2026-11-10）：** 单击替换选中；⌘ 单击切换；⇧ 单击从锚点选区间（锚点＝最近一次非 ⇧ 单击，⇧ 不移动锚点）。Esc 只清选中，不清搜索；不点空白清选中。`selectedTrackIds` 是唯一选中真相。曲库、艺人、专辑、播放列表、搜索的 `TrackTable` 共用。⌘A /「全选」只选当前表；搜索框或改名框聚焦时 ⌘A 留给系统选文字。换页、后退、打开详情、侧栏、搜索词变化都清选中。批量条只在选中 ≥ 2 时以胶囊出现在标题行里（标题与搜索之间），顺序是标题行（含批量胶囊若 N≥2）→ 扫描条（若在扫）→ 页面。窗口最小 980×640。动作：加入播放列表（按当前表从上到下；toast「已加入 N 首到「X」」，有跳过再加「跳过 M 首（已在列表）」，全部已在则「已在「X」中」；成功后保留选中）、播放列表内「从列表移除」、从曲库移除（多首一次确认，其余只 toast）。播放 / 下一首 / 加入队列仍禁用。右键和行内 ⋯：行已在选中里则作用于整组，否则先改成只选该行。`deleteTracks` / `addTracks` / `removeTracksFromPlaylist` 各一次事务、一次刷新；硬删除仍保留指纹并删封面、清零艺人/专辑行。  
 > 7. **专辑按名合并 + 侧栏分栈（2026-11-11）：** `alb_` 只哈希规范化专辑名。专辑名为空或含 U+FFFD 不铸 `alb_`。标题或艺人 U+FFFD 仍不铸 `art_`，但不因此取消可用专辑名的 `alb_`。空艺人可以有专辑。打开曲库时一次性把已有 `tracks.album_id` 改成按名 id（`settings.album_by_name`），并按成员曲目重算专辑名（最多的 `album_name`，平局取最小 track id）、年份（非 0 的最大）、封面（按 track id 第一张仍在磁盘上的图）。艺人页专辑来自该艺人的曲目，不看 `albums.artist_id`。多艺人署名用「、」连接，顺序同艺人列表。侧栏五项各有自己的栈，离开后保留（含滚动，不卸载）；再点当前项回到该分区根列表并从头；Lyria 标志只回曲库根。艺人分区里打开专辑压在艺人栈上，侧栏仍高亮艺人，后退回到该艺人。从曲库、搜索、播放列表「前往专辑」切到专辑栈 `[专辑列表, 专辑]`。
+> 8. **封面显示缩略图（2026-11-11）：** Application Support `Lyria/Artwork/trk_….jpg` 是扫描写入的原图，不改音乐文件。屏幕封面按 `ceil(边长 × displayScale)` 取 128 / 512 / 1024 里够用的一档（超过 1024 仍用 1024，原图更小则不放大），JPEG 0.85，存在 Caches `Lyria/ArtworkThumbs`。同一把钥匙还有内存缓存。第一次出现在屏幕上才生成。写入、移动、删除原图时清掉对应缩略图；删全部原图时清掉整个缩略图目录。没有「清除缩略图」设置项。
 > 设计资产仍在 `.design/`。交互式规格见 [Canvas](https://cursor.com/canvas/store-669ca32f-ae0c-4bc0-be04-6e46150cff28/37c89944-4d8d-4256-b8f6-e516d782a9f4)。
 
 
@@ -259,7 +260,7 @@ trk_0000000000000000000000
 
 ## 持久化 schema
 
-根目录：经 `FileManager` Application Support API 解析的 `…/Lyria/`（同目录放 MCP socket `mcp.sock`；开沙盒时为容器内路径）。主库 `library.sqlite`；封面缓存 `Artwork/trk_….jpg`（或按 hash 分片）。设置也落在同一 SQLite 的 `settings` 表，避免散落 plist 双源。
+根目录：经 `FileManager` Application Support API 解析的 `…/Lyria/`（同目录放 MCP socket `mcp.sock`；开沙盒时为容器内路径）。主库 `library.sqlite`；封面原图 `Artwork/trk_….jpg`（扫描写入的原始 JPEG，不是屏幕缩略图）。显示用缩略图在 Caches 目录 `Lyria/ArtworkThumbs`（128 / 512 / 1024，JPEG 0.85）。设置也落在同一 SQLite 的 `settings` 表，避免散落 plist 双源。
 
 **SQLite 选型（已锁）：** 使用 **系统 SQLite3** + 薄封装 `Persistence/Database.swift`（`user_version` 整数迁移）。**不上 GRDB** 或其它 ORM。
 
@@ -439,7 +440,7 @@ struct NowPlaying {
 - 行容器：选中；双击：播放；封面：独立按钮；菜单：右键与「更多」共用一份定义，避免 SwiftUI hover / 单击 / 双击 / `contextMenu` 互抢时行为分裂。多选规则以文首第 6 条为准（`TrackSelection` + `BatchActionBar`）。
 - 播放列表拖拽排序：提交时 **一次事务** 重写该歌单全部 `playlist_tracks.position`（0..n−1），禁止逐行改 position。
 
-更多菜单：播放 · 下一首播放 · 加入队列 · 加入播放列表（展开现有歌单）· 前往艺人 · 前往专辑（**`encoding_suspect=1`、艺人/专辑为空，或 `artist_id`/`album_id` 为 NULL 时禁用后两项**；空名显示「未知艺人」「未知专辑」）。播放列表详情里再加「从播放列表移除」。曲库及相关列表里是「从曲库移除」：先确认。「仅从曲库移除」**硬删除** `tracks` 行，**不删音频文件**；「移到废纸篓」先把已记录路径移入废纸篓再同样硬删除。两种都**保留** `fingerprints`；级联删 `playlist_tracks`；删封面缓存；艺人/专辑没有剩余曲目则删该行。本切片播放 / 下一首 / 加入队列置灰。
+更多菜单：播放 · 下一首播放 · 加入队列 · 加入播放列表（展开现有歌单）· 前往艺人 · 前往专辑（**`encoding_suspect=1`、艺人/专辑为空，或 `artist_id`/`album_id` 为 NULL 时禁用后两项**；空名显示「未知艺人」「未知专辑」）。播放列表详情里再加「从播放列表移除」。曲库及相关列表里是「从曲库移除」：先确认。「仅从曲库移除」**硬删除** `tracks` 行，**不删音频文件**；「移到废纸篓」先把已记录路径移入废纸篓再同样硬删除。两种都**保留** `fingerprints`；级联删 `playlist_tracks`；删封面原图 `Artwork/trk_….jpg`，并清掉 Caches 里对应的显示缩略图；艺人/专辑没有剩余曲目则删该行。本切片播放 / 下一首 / 加入队列置灰。
 
 ### 传输条
 
