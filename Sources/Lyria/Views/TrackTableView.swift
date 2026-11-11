@@ -319,7 +319,7 @@ final class LyriaTableView: NSTableView {
         var current = view
         while let view = current, view !== root {
             if view is PassThroughLabel { current = view.superview; continue }
-            if view is NSControl || view is NSHostingView { return view }
+            if view is NSControl || view is NSHostingView<AnyView> { return view }
             current = view.superview
         }
         return nil
@@ -400,7 +400,7 @@ final class LyriaTrackCell: NSView {
     private let album = LyriaTrackCell.passThroughLabel(font: .systemFont(ofSize: 12, weight: .medium), color: TrackChrome.meta)
     private let duration = LyriaTrackCell.passThroughLabel(font: .monospacedDigitSystemFont(ofSize: 12, weight: .medium), color: TrackChrome.duration)
     private let cover = NSHostingView(rootView: AnyView(EmptyView()))
-    private let menu = NSHostingView(rootView: AnyView(EmptyView()))
+    private let menuHost = NSHostingView(rootView: AnyView(EmptyView()))
     private var hovering = false
     private var snapshot: Snapshot?
 
@@ -410,12 +410,12 @@ final class LyriaTrackCell: NSView {
         hairline.wantsLayer = true
         duration.alignment = .right
         cover.translatesAutoresizingMaskIntoConstraints = true
-        menu.translatesAutoresizingMaskIntoConstraints = true
+        menuHost.translatesAutoresizingMaskIntoConstraints = true
         if #available(macOS 13.0, *) {
             cover.sizingOptions = []
-            menu.sizingOptions = []
+            menuHost.sizingOptions = []
         }
-        for view in [fill, title, artist, album, duration, cover, menu, hairline] {
+        for view in [fill, title, artist, album, duration, cover, menuHost, hairline] {
             addSubview(view)
         }
         let area = NSTrackingArea(rect: .zero, options: [.activeInKeyWindow, .inVisibleRect, .mouseEnteredAndExited], owner: self)
@@ -476,7 +476,7 @@ final class LyriaTrackCell: NSView {
         artist.frame = frames.artist
         album.frame = frames.album
         duration.frame = frames.duration
-        menu.frame = frames.menu
+        menuHost.frame = frames.menu
         hairline.frame = CGRect(x: 0, y: bounds.height - 1, width: bounds.width, height: 1)
         if let gradient = fill.layer as? CAGradientLayer {
             gradient.frame = fill.bounds
@@ -505,7 +505,7 @@ final class LyriaTrackCell: NSView {
             hovering: hovering,
             store: snapshot.store
         ))
-        menu.rootView = AnyView(RowMenuChrome(
+        menuHost.rootView = AnyView(RowMenuChrome(
             track: snapshot.track,
             list: snapshot.list,
             playlistID: snapshot.playlistID,
@@ -686,6 +686,7 @@ enum TrackContextMenu {
         return menu
     }
 
+    @MainActor
     private static func sharedID(
         in ids: [String],
         keyPath: KeyPath<Track, String?>,

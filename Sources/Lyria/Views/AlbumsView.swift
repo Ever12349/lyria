@@ -51,7 +51,6 @@ struct AlbumDetailView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            }
         } else {
             EmptyState(systemImage: "opticaldisc", title: "找不到这张专辑") { EmptyView() }
         }
