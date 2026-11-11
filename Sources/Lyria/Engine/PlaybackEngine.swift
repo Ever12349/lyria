@@ -333,7 +333,8 @@ actor PlaybackEngine {
         guard !audioPrepared else { return }
         audioPrepared = true
         if let flac = UTType(filenameExtension: "flac") {
-            flacPlayable = AVURLAsset.audiovisualContentTypes.contains(flac)
+            let flacType = AVFileType(flac.identifier)
+            flacPlayable = AVURLAsset.audiovisualTypes().contains(flacType)
         }
     }
 

@@ -111,7 +111,7 @@ struct TransportBar: View {
     }
 
     private var playButton: some View {
-        Button(action: store.transportToggle) label: {
+        Button(action: store.transportToggle) {
             ZStack {
                 Circle()
                     .fill(LyriaTheme.accentGradient)
@@ -139,7 +139,7 @@ struct TransportBar: View {
             .accessibilityLabel("队列")
             .opacity(store.queueVisible ? 1 : 0.85)
 
-            Button(action: store.transportToggleSpeaker) label: {
+            Button(action: store.transportToggleSpeaker) {
                 Image(systemName: transport.volume > 0 ? "speaker.wave.2.fill" : "speaker.slash.fill")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(LyriaTheme.text2)
@@ -162,7 +162,7 @@ struct TransportBar: View {
     }
 
     private func iconButton(_ systemName: String, label: String, action: @escaping () -> Void, enabled: Bool = true) -> some View {
-        Button(action: action) label: {
+        Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(LyriaTheme.text2)

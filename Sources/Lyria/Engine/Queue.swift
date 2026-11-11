@@ -10,12 +10,23 @@ struct ResolvedTrack: Sendable, Equatable {
     var artist: String
     var artworkPath: String?
 
+    init(id: String, path: String, missing: Bool, title: String, artist: String, artworkPath: String?) {
+        self.id = id
+        self.path = path
+        self.missing = missing
+        self.title = title
+        self.artist = artist
+        self.artworkPath = artworkPath
+    }
+
     init(track: Track) {
-        id = track.id
-        path = track.path
-        missing = track.missing
-        title = track.title
-        artist = track.artistLabel
-        artworkPath = track.artworkPath
+        self.init(
+            id: track.id,
+            path: track.path,
+            missing: track.missing,
+            title: track.title,
+            artist: track.artistLabel,
+            artworkPath: track.artworkPath
+        )
     }
 }
