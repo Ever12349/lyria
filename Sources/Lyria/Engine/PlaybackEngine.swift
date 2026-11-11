@@ -303,21 +303,20 @@ actor PlaybackEngine {
             refuse(block)
             return false
         }
-        let asset = AVURLAsset(url: URL(fileURLWithPath: track.path))
-        let playable = (try? await asset.load(.isPlayable)) ?? false
-        guard token == generation else { return false }
-        guard playable else {
-            refuse(.unsupportedFormat)
-            return false
-        }
-        let item = AVPlayerItem(asset: asset)
-        let ready = await host.waitUntilReady(item)
-        guard token == generation else { return false }
-        guard ready else {
-            refuse(.failed)
-            return false
-        }
+        let item = AVPlayerItem(url: URL(fileURLWithPath: track.path))
         host.player.replaceCurrentItem(with: item)
+        let ready = await host.waitUntilReady(item)
+        let owns = token == generation
+        guard owns, ready else {
+            if host.player.currentItem === item {
+                host.player.replaceCurrentItem(with: nil)
+            }
+            if owns {
+                let unsupported = item.status == .failed && Self.isUnsupportedFormat(item.error)
+                refuse(unsupported ? .unsupportedFormat : .failed)
+            }
+            return false
+        }
         host.observeEnd(of: item, owner: self, token: token)
         let seconds = item.duration.seconds
         durationMs = seconds.isFinite && seconds > 0 ? Int((seconds * 1000).rounded()) : 0
@@ -423,6 +422,31 @@ actor PlaybackEngine {
 
     private func emit(_ event: EngineEvent) {
         continuation.yield(event)
+    }
+
+    /// Format failures only. Permission and I/O errors stay `.failed`.
+    private static func isUnsupportedFormat(_ error: Error?) -> Bool {
+        guard let error = error as NSError? else { return false }
+        if error.domain == AVFoundationErrorDomain {
+            switch AVError.Code(rawValue: error.code) {
+            case .fileFormatNotRecognized, .decoderNotFound, .undecodableMediaData:
+                return true
+            default:
+                break
+            }
+        }
+        if error.domain == NSOSStatusErrorDomain {
+            switch error.code {
+            case 1_954_115_647, 1_718_449_215:
+                return true
+            default:
+                break
+            }
+        }
+        if let underlying = error.userInfo[NSUnderlyingErrorKey] as? Error {
+            return isUnsupportedFormat(underlying)
+        }
+        return false
     }
 
     private static func ubiquitousNotDownloaded(_ path: String) -> Bool {

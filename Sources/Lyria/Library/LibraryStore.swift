@@ -14,6 +14,7 @@ final class LibraryStore: ObservableObject {
     var onToast: ((String) -> Void)?
 
     private let database = LibraryDatabase()
+    private let securityScope = SecurityScope()
     private var rootPath: String?
     private var didOpen = false
     private var scanCancellation = ScanCancellation()
@@ -28,6 +29,9 @@ final class LibraryStore: ObservableObject {
             try await reload()
             if let stored = try await database.scanRoot() {
                 let resolved = stored.bookmark.flatMap { BookmarkData.resolve($0) }
+                if let resolved {
+                    securityScope.replace(with: resolved)
+                }
                 let path = resolved.map { PathUtil.standardize($0) } ?? stored.path
                 if let resolved, path != stored.path {
                     let bookmark = BookmarkData.make(for: resolved) ?? stored.bookmark
@@ -54,6 +58,7 @@ final class LibraryStore: ObservableObject {
             panel.directoryURL = URL(fileURLWithPath: rootPath, isDirectory: true)
         }
         guard panel.runModal() == .OK, let url = panel.url else { return }
+        securityScope.replace(with: url)
         let path = PathUtil.standardize(url)
         let bookmark = BookmarkData.make(for: url)
         Task {
@@ -305,6 +310,24 @@ extension LibraryStore {
         } catch {
             return .failed
         }
+    }
+}
+
+/// Holds the scan-root security scope for the life of the store.
+private final class SecurityScope: @unchecked Sendable {
+    private var url: URL?
+
+    func replace(with url: URL) {
+        if self.url == url { return }
+        self.url?.stopAccessingSecurityScopedResource()
+        self.url = nil
+        if url.startAccessingSecurityScopedResource() {
+            self.url = url
+        }
+    }
+
+    deinit {
+        url?.stopAccessingSecurityScopedResource()
     }
 }
 
