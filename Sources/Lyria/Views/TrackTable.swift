@@ -172,6 +172,7 @@ struct TrackTable: View {
             Rectangle()
                 .fill(Color.white.opacity(headerHairlineOpacity))
                 .frame(height: 1)
+                .allowsHitTesting(false)
         }
     }
 
@@ -206,8 +207,16 @@ private struct TrackRow: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .background {
-                // Decorative only. A hit-testing fill sits behind the click catcher and
-                // swallows the first Control-click / right-click on a selected row.
+                // Title, artist, album, and duration do not hit-test, and the catcher
+                // passes Control-clicks and right-clicks through. This shape is what
+                // those clicks land on, so the menu opens on the first click.
+                Color.clear
+                    .contentShape(Rectangle())
+                    .contextMenu {
+                        TrackMenu.items(track: track, playlistID: playlistID)
+                    }
+            }
+            .background {
                 Group {
                     if isCurrent {
                         LyriaTheme.softAccentGradient
@@ -224,12 +233,14 @@ private struct TrackRow: View {
                     Rectangle()
                         .fill(Color.white.opacity(hairlineOpacity))
                         .frame(height: 1)
+                        .allowsHitTesting(false)
                 }
             }
-            .onHover { hovering = $0 }
+            .contentShape(Rectangle())
             .contextMenu {
                 TrackMenu.items(track: track, playlistID: playlistID)
             }
+            .onHover { hovering = $0 }
             .accessibilityElement(children: .contain)
             .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
@@ -345,8 +356,9 @@ private final class RowClickCatcherView: NSView {
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
-    /// Control-click and right-click belong to the row context menu. Handling them here
-    /// swallowed mouseUp and left later clicks unable to select.
+    /// Pass Control-clicks and right-clicks through. Do not turn them into a synthetic
+    /// rightMouseDown: that tracking loop swallowed mouseUp and later clicks could not select.
+    /// The clear shape behind this view owns the context menu and receives the real event.
     override func hitTest(_ point: NSPoint) -> NSView? {
         let local = convert(point, from: superview)
         guard bounds.contains(local), !isHiddenOrHasHiddenAncestor else { return nil }
