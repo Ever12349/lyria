@@ -52,6 +52,11 @@ private struct TrackMenuItems: View {
             if let albumID { store.openAlbum(albumID) }
         }
         .disabled(albumID == nil)
+        if let revealTargets = revealTargets(in: targets), RevealInFinder.canShow(revealTargets) {
+            Button("在访达中显示") {
+                store.revealInFinder(targets)
+            }
+        }
         if let playlistID {
             Divider()
             Button("从播放列表移除") {
@@ -62,6 +67,16 @@ private struct TrackMenuItems: View {
             store.requestLibraryRemoval(targets)
         }
         .onAppear { store.prepareMenu(for: track.id) }
+    }
+
+    private func revealTargets(in ids: [String]) -> [RevealTarget]? {
+        var rows: [RevealTarget] = []
+        rows.reserveCapacity(ids.count)
+        for id in ids {
+            guard let row = store.track(id) ?? (id == track.id ? track : nil) else { return nil }
+            rows.append(RevealTarget(missing: row.missing, path: row.path))
+        }
+        return rows
     }
 
     private func sharedID(in ids: [String], keyPath: KeyPath<Track, String?>) -> String? {

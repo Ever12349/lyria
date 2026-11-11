@@ -1,3 +1,4 @@
+import AppKit
 import Combine
 import Foundation
 import LyriaCore
@@ -219,6 +220,23 @@ final class AppSession: ObservableObject {
         dismissSelectionForNavigation()
         navigation.openAlbum(id)
         searchText = ""
+    }
+
+    func revealInFinder(_ ids: [String]) {
+        var targets: [RevealTarget] = []
+        targets.reserveCapacity(ids.count)
+        for id in ids {
+            guard let row = track(id) else { return }
+            targets.append(RevealTarget(missing: row.missing, path: row.path))
+        }
+        switch RevealInFinder.click(targets, fileExists: { FileManager.default.fileExists(atPath: $0) }) {
+        case .unavailable:
+            return
+        case .notFound:
+            showToast("找不到文件")
+        case .reveal(let path):
+            NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+        }
     }
 
     func openPlaylist(_ id: String) {
