@@ -102,19 +102,19 @@ extension EnvironmentValues {
 
 /// Shared column geometry for the header and every row.
 enum TrackTableMetrics {
-    static let paddingH: CGFloat = 8
-    static let paddingV: CGFloat = 6
-    static let coverSize: CGFloat = 36
-    static let coverGap: CGFloat = 10
-    static let columnGap: CGFloat = 8
-    static let metaMax: CGFloat = 120
-    static let durationColumn: CGFloat = 96
-    static let durationWidth: CGFloat = 44
-    static let missingWidth: CGFloat = 56
-    static let menuSize: CGFloat = 28
-    static let menuGap: CGFloat = 2
-    static let rowHeight: CGFloat = paddingV * 2 + coverSize
-    static let headerHeight: CGFloat = 32
+    static let paddingH = CGFloat(TrackTableLayout.paddingH)
+    static let paddingV = CGFloat(TrackTableLayout.paddingV)
+    static let coverSize = CGFloat(TrackTableLayout.coverSize)
+    static let coverGap = CGFloat(TrackTableLayout.coverGap)
+    static let columnGap = CGFloat(TrackTableLayout.columnGap)
+    static let metaMax = CGFloat(TrackTableLayout.metaMax)
+    static let durationColumn = CGFloat(TrackTableLayout.durationColumn)
+    static let durationWidth = CGFloat(TrackTableLayout.durationWidth)
+    static let missingWidth = CGFloat(TrackTableLayout.missingWidth)
+    static let menuSize = CGFloat(TrackTableLayout.menuSize)
+    static let menuGap = CGFloat(TrackTableLayout.menuGap)
+    static let rowHeight = CGFloat(TrackTableLayout.rowHeight)
+    static let headerHeight = CGFloat(TrackTableLayout.headerHeight)
 
     struct Frames {
         var cover: CGRect
@@ -130,50 +130,27 @@ enum TrackTableMetrics {
     }
 
     static func frames(width: CGFloat, missing: Bool) -> Frames {
-        let textH: CGFloat = 16
-        let midY = (rowHeight - textH) / 2
-        let menu = CGRect(
-            x: max(paddingH, width - paddingH - menuSize),
-            y: (rowHeight - menuSize) / 2,
-            width: menuSize,
-            height: menuSize
-        )
-        let durationW = missing ? missingWidth : durationWidth
-        let duration = CGRect(
-            x: menu.minX - menuGap - durationW,
-            y: midY,
-            width: durationW,
-            height: textH
-        )
-        let rightLimit = width - paddingH - durationColumn - columnGap
-        var artistW = metaMax
-        var albumW = metaMax
-        func titleWidth() -> CGFloat {
-            rightLimit - paddingH - (coverSize + coverGap + columnGap + artistW + columnGap + albumW)
-        }
-        var titleW = titleWidth()
-        if titleW < 0 {
-            let overflow = -titleW
-            artistW = max(0, metaMax - overflow / 2)
-            albumW = max(0, metaMax - (overflow - (metaMax - artistW)))
-            titleW = max(0, titleWidth())
-        }
-        let cover = CGRect(x: paddingH, y: paddingV, width: coverSize, height: coverSize)
-        let title = CGRect(x: cover.maxX + coverGap, y: midY, width: titleW, height: textH)
-        let artist = CGRect(x: title.maxX + columnGap, y: midY, width: artistW, height: textH)
-        let album = CGRect(x: artist.maxX + columnGap, y: midY, width: albumW, height: textH)
-        let headerY: CGFloat = 6
+        let laidOut = TrackTableLayout.frames(width: Double(width), missing: missing)
         return Frames(
-            cover: cover,
-            title: title,
-            artist: artist,
-            album: album,
-            duration: duration,
-            menu: menu,
-            headerTitle: CGRect(x: title.minX, y: headerY, width: titleW, height: textH),
-            headerArtist: CGRect(x: artist.minX, y: headerY, width: artistW, height: textH),
-            headerAlbum: CGRect(x: album.minX, y: headerY, width: albumW, height: textH),
-            headerDuration: CGRect(x: duration.minX, y: headerY, width: duration.width, height: textH)
+            cover: rect(laidOut.cover),
+            title: rect(laidOut.title),
+            artist: rect(laidOut.artist),
+            album: rect(laidOut.album),
+            duration: rect(laidOut.duration),
+            menu: rect(laidOut.menu),
+            headerTitle: rect(laidOut.headerTitle),
+            headerArtist: rect(laidOut.headerArtist),
+            headerAlbum: rect(laidOut.headerAlbum),
+            headerDuration: rect(laidOut.headerDuration)
+        )
+    }
+
+    private static func rect(_ source: TrackTableLayout.Rect) -> CGRect {
+        CGRect(
+            x: CGFloat(source.x),
+            y: CGFloat(source.y),
+            width: CGFloat(source.width),
+            height: CGFloat(source.height)
         )
     }
 }

@@ -189,13 +189,18 @@ final class TrackTableContainer: NSView {
             scroll.hasVerticalScroller = true
             scroll.hasHorizontalScroller = false
             scroll.autohidesScrollers = true
+            scroll.autoresizingMask = [.width, .height]
             scroll.documentView = table
             scroll.contentView.drawsBackground = false
             scroll.automaticallyAdjustsContentInsets = false
+            table.autoresizingMask = [.width]
             addSubview(scroll)
+            scroll.frame = bounds
         } else {
             table.headerView = nil
+            table.autoresizingMask = [.width, .height]
             addSubview(table)
+            table.frame = bounds
         }
     }
 
@@ -208,9 +213,14 @@ final class TrackTableContainer: NSView {
         needsLayout = true
     }
 
+    private var layingOut = false
+
     override func layout() {
-        super.layout()
-        let width = bounds.width
+        guard !layingOut else { return }
+        layingOut = true
+        defer { layingOut = false }
+        // Size the table before it tiles. The old order laid it out first, then
+        // wrote a column width that never reached the cells.
         if fillsVertically {
             scroll.frame = bounds
             let insets = NSEdgeInsets(top: max(0, chromeTop), left: 0, bottom: 0, right: 0)
@@ -220,19 +230,18 @@ final class TrackTableContainer: NSView {
             if !edgeInsetsEqual(scroll.scrollerInsets, insets) {
                 scroll.scrollerInsets = insets
             }
-            fitColumn(to: scroll.contentView.bounds.width)
+            // The clip view is often still its previous width here. Widen the
+            // document view to the container, which is the width the header used.
+            if bounds.width > 1, table.bounds.width + 0.5 < bounds.width {
+                var frame = table.frame
+                frame.size.width = bounds.width
+                table.frame = frame
+            }
         } else {
             table.frame = bounds
-            fitColumn(to: width)
         }
-    }
-
-    private func fitColumn(to width: CGFloat) {
-        guard let column = table.tableColumns.first else { return }
-        let fitted = max(width, 1)
-        column.minWidth = fitted
-        column.maxWidth = fitted
-        column.width = fitted
+        super.layout()
+        table.fitColumnToTableWidth()
     }
 }
 
@@ -242,9 +251,15 @@ final class LyriaTableView: NSTableView {
     func configureChrome() {
         if tableColumns.isEmpty {
             let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("tracks"))
-            column.resizingMask = []
             column.isEditable = false
             addTableColumn(column)
+        }
+        if let column = tableColumns.first {
+            // Dragging stays off (`allowsColumnResizing`). Autoresizing is what
+            // lets tile stretch this column when the table resizes. An empty mask
+            // leaves it at NSTableColumn's 100pt default.
+            column.resizingMask = .autoresizingMask
+            column.minWidth = 1
         }
         headerView = nil
         cornerView = nil
@@ -266,6 +281,45 @@ final class LyriaTableView: NSTableView {
         if #available(macOS 11.0, *) {
             style = .plain
         }
+    }
+
+    private var fittingColumn = false
+    private var tiledForWidth: CGFloat = 0
+
+    /// Cell bounds are the column width, and the header uses the same
+    /// `frames(width:)`. A width assigned during the container's layout does
+    /// not retile existing cells, and pinning min/max to a clip-view width
+    /// freezes whatever size that view had before it was laid out.
+    func fitColumnToTableWidth() {
+        guard !fittingColumn, let column = tableColumns.first else { return }
+        let fitted = bounds.width
+        guard fitted > 1 else { return }
+        let widthChanged = abs(column.width - fitted) > 0.5
+        let cellsStale = cellsAreNarrower(than: fitted)
+        guard widthChanged || cellsStale else { return }
+        if !widthChanged, abs(tiledForWidth - fitted) <= 0.5 { return }
+
+        fittingColumn = true
+        defer { fittingColumn = false }
+        if column.minWidth > fitted { column.minWidth = 1 }
+        if column.maxWidth < fitted { column.maxWidth = fitted }
+        if abs(column.width - fitted) > 0.5 {
+            column.width = fitted
+        }
+        guard abs(column.width - fitted) <= 0.5 else { return }
+        tiledForWidth = fitted
+        tile()
+    }
+
+    private func cellsAreNarrower(than fitted: CGFloat) -> Bool {
+        guard numberOfRows > 0,
+              let cell = view(atColumn: 0, row: 0, makeIfNecessary: false) else { return false }
+        return abs(cell.bounds.width - fitted) > 0.5
+    }
+
+    override func layout() {
+        super.layout()
+        fitColumnToTableWidth()
     }
 
     override var acceptsFirstResponder: Bool { false }
