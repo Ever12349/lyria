@@ -18,20 +18,15 @@ struct TransportBar: View {
             }
         }
         .frame(height: 72)
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 20)
         .padding(.top, 12)
         .padding(.bottom, 14)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(LyriaTheme.panel.opacity(0.9))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(LyriaTheme.border, lineWidth: 1)
-        )
-        .padding(.horizontal, 4)
-        .padding(.top, 8)
-        .opacity(transport.current == nil ? 0.55 : 1)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(LyriaTheme.border)
+                .frame(height: 1)
+                .allowsHitTesting(false)
+        }
     }
 
     private var nowPlayingColumn: some View {

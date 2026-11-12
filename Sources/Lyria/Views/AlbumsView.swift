@@ -23,34 +23,38 @@ struct AlbumDetailView: View {
     var body: some View {
         if let album = store.album(albumID) {
             let songs = store.tracks(albumID: album.id)
-            VStack(alignment: .leading, spacing: 16) {
-                DetailHero(
-                    seed: album.id,
-                    artworkPath: album.artworkPath,
-                    eyebrow: "专辑",
-                    title: album.name,
-                    subtitle: albumSubtitle(album, count: songs.count)
-                ) {
-                    PillButton(title: "全部播放", systemImage: "play.fill", prominent: true) {
-                        store.playAll(songs)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    DetailHero(
+                        seed: album.id,
+                        artworkPath: album.artworkPath,
+                        eyebrow: "专辑",
+                        title: album.name,
+                        subtitle: albumSubtitle(album, count: songs.count)
+                    ) {
+                        PillButton(title: "全部播放", systemImage: "play.fill", prominent: true) {
+                            store.playAll(songs)
+                        }
+                        PillButton(title: "随机", systemImage: "shuffle") {}
+                            .disabled(true)
+                        PillButton(title: "加入队列", systemImage: "plus") {
+                            store.enqueueAll(songs)
+                        }
                     }
-                    PillButton(title: "随机", systemImage: "shuffle") {}
-                        .disabled(true)
-                    PillButton(title: "加入队列", systemImage: "plus") {
-                        store.enqueueAll(songs)
-                    }
-                }
 
-                if songs.isEmpty {
-                    Text("这张专辑还没有曲目")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(LyriaTheme.text2)
-                        .frame(maxWidth: .infinity, minHeight: 120)
-                } else {
-                    TrackTable(tracks: songs, fillsVertically: true)
+                    if songs.isEmpty {
+                        Text("这张专辑还没有曲目")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(LyriaTheme.text2)
+                            .frame(maxWidth: .infinity, minHeight: 120)
+                    } else {
+                        TrackTableColumnHeader(
+                            firstIsSelected: songs.first.map { store.selectedTrackIds.contains($0.id) } ?? false
+                        )
+                        TrackTable(tracks: songs, fillsVertically: false)
+                    }
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         } else {
             EmptyState(systemImage: "opticaldisc", title: "找不到这张专辑") { EmptyView() }
         }

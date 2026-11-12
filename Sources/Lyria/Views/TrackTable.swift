@@ -180,6 +180,8 @@ enum TrackTableMetrics {
 
 struct TrackTableColumnHeader: View {
     var firstIsSelected: Bool
+    var showsHairline = true
+    var fillsBackground = true
 
     var body: some View {
         GeometryReader { geo in
@@ -192,12 +194,14 @@ struct TrackTableColumnHeader: View {
             }
         }
         .frame(height: TrackTableMetrics.headerHeight)
-        .background(LyriaTheme.background)
+        .background(fillsBackground ? LyriaTheme.background : Color.clear)
         .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(Color.white.opacity(firstIsSelected ? 0.2 : 0.12))
-                .frame(height: 1)
-                .allowsHitTesting(false)
+            if showsHairline {
+                Rectangle()
+                    .fill(Color.white.opacity(firstIsSelected ? 0.2 : 0.12))
+                    .frame(height: 1)
+                    .allowsHitTesting(false)
+            }
         }
     }
 

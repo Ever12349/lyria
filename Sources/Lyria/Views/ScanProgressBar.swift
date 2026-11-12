@@ -33,17 +33,8 @@ struct ScanProgressBar: View {
                 .background(Capsule().fill(LyriaTheme.searchFill))
                 .overlay(Capsule().strokeBorder(LyriaTheme.border, lineWidth: 1))
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: LyriaTheme.radiusSM, style: .continuous)
-                .fill(LyriaTheme.card)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: LyriaTheme.radiusSM, style: .continuous)
-                .strokeBorder(LyriaTheme.border, lineWidth: 1)
-        )
-        .padding(.horizontal, 4)
-        .padding(.bottom, 8)
+        .padding(.horizontal, 16)
+        .padding(.top, 4)
+        .padding(.bottom, 10)
     }
 }

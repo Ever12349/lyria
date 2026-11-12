@@ -35,7 +35,6 @@ struct TrackTableRepresentable: NSViewRepresentable {
             currentID: currentID,
             playing: playing
         )
-        view.syncHeader(firstSelected: tracks.first.map { selectedIDs.contains($0.id) } ?? false)
     }
 }
 
@@ -165,7 +164,6 @@ final class Coordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate {
 final class TrackTableContainer: NSView {
     var fillsVertically: Bool
     let table = LyriaTableView()
-    let header = TrackHeaderView()
     private let scroll = NSScrollView()
     weak var coordinator: Coordinator?
 
@@ -181,7 +179,6 @@ final class TrackTableContainer: NSView {
     func install() {
         scroll.removeFromSuperview()
         table.removeFromSuperview()
-        header.removeFromSuperview()
         table.configureChrome()
         if fillsVertically {
             scroll.drawsBackground = false
@@ -192,7 +189,7 @@ final class TrackTableContainer: NSView {
             scroll.autohidesScrollers = true
             scroll.documentView = table
             scroll.contentView.drawsBackground = false
-            addSubview(header)
+            scroll.automaticallyAdjustsContentInsets = false
             addSubview(scroll)
         } else {
             table.headerView = nil
@@ -200,23 +197,16 @@ final class TrackTableContainer: NSView {
         }
     }
 
-    func syncHeader(firstSelected: Bool) {
-        header.firstSelected = firstSelected
-        header.needsLayout = true
-    }
-
     override func layout() {
         super.layout()
         let width = bounds.width
         if fillsVertically {
-            header.frame = CGRect(x: 0, y: bounds.height - TrackTableMetrics.headerHeight, width: width, height: TrackTableMetrics.headerHeight)
-            scroll.frame = CGRect(x: 0, y: 0, width: width, height: max(0, bounds.height - TrackTableMetrics.headerHeight))
+            scroll.frame = bounds
             fitColumn(to: scroll.contentView.bounds.width)
         } else {
             table.frame = bounds
             fitColumn(to: width)
         }
-        header.needsLayout = true
     }
 
     private func fitColumn(to width: CGFloat) {
@@ -334,59 +324,6 @@ final class PlainRowView: NSTableRowView {
     override var isEmphasized: Bool {
         get { false }
         set {}
-    }
-}
-
-final class TrackHeaderView: NSView {
-    var firstSelected = false {
-        didSet { if oldValue != firstSelected { needsDisplay = true; needsLayout = true } }
-    }
-
-    private let title = TrackHeaderView.label()
-    private let artist = TrackHeaderView.label()
-    private let album = TrackHeaderView.label()
-    private let duration = TrackHeaderView.label(trailing: true)
-    private let hairline = NSView()
-
-    override init(frame frameRect: NSRect) {
-        super.init(frame: frameRect)
-        title.stringValue = "标题"
-        artist.stringValue = "艺人"
-        album.stringValue = "专辑"
-        duration.stringValue = "时长"
-        for label in [title, artist, album, duration] { addSubview(label) }
-        hairline.wantsLayer = true
-        addSubview(hairline)
-        wantsLayer = true
-        layer?.backgroundColor = TrackChrome.background.cgColor
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { nil }
-
-    override var isFlipped: Bool { true }
-
-    override func layout() {
-        super.layout()
-        let frames = TrackTableMetrics.frames(width: bounds.width, missing: false)
-        title.frame = frames.headerTitle
-        artist.frame = frames.headerArtist
-        album.frame = frames.headerAlbum
-        duration.frame = frames.headerDuration
-        hairline.frame = CGRect(x: 0, y: bounds.height - 1, width: bounds.width, height: 1)
-        hairline.layer?.backgroundColor = NSColor.white.withAlphaComponent(firstSelected ? 0.2 : 0.12).cgColor
-    }
-
-    override func menu(for event: NSEvent) -> NSMenu? { nil }
-
-    private static func label(trailing: Bool = false) -> NSTextField {
-        let label = NSTextField(labelWithString: "")
-        label.font = .systemFont(ofSize: 12, weight: .semibold)
-        label.textColor = TrackChrome.header
-        label.alignment = trailing ? .right : .left
-        label.lineBreakMode = .byTruncatingTail
-        label.maximumNumberOfLines = 1
-        return label
     }
 }
 

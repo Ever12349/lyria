@@ -80,6 +80,7 @@ struct PlaylistDetailView: View {
     var body: some View {
         if let playlist = store.playlist(playlistID) {
             let songs = store.tracks(in: playlist)
+            ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 DetailHero(
                     seed: playlist.id,
@@ -115,10 +116,13 @@ struct PlaylistDetailView: View {
                     }
                     .frame(minHeight: 220)
                 } else {
-                    TrackTable(tracks: songs, playlistID: playlist.id, fillsVertically: true)
+                    TrackTableColumnHeader(
+                        firstIsSelected: songs.first.map { store.selectedTrackIds.contains($0.id) } ?? false
+                    )
+                    TrackTable(tracks: songs, playlistID: playlist.id, fillsVertically: false)
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            }
             .confirmationDialog("删除这个播放列表？", isPresented: $confirmDelete, titleVisibility: .visible) {
                 Button("删除「\(playlist.name)」", role: .destructive) {
                     store.deletePlaylist(playlist.id)

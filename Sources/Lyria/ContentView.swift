@@ -108,39 +108,59 @@ struct ContentView: View {
 
     private var detailColumn: some View {
         VStack(spacing: 0) {
-            pageHead
-            if showsScanProgress {
-                ScanProgressBar(percent: store.scanSession.percent, onCancel: store.cancelScan)
-            }
+            topChrome
             ZStack(alignment: .topTrailing) {
                 page
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(.horizontal, 4)
+                    .padding(.leading, 4)
+                    .padding(.trailing, 20)
                     .animation(nil, value: store.queueVisible)
                 if store.queueVisible {
                     QueuePanel()
                         .frame(width: 280)
                         .padding(.trailing, 16)
-                        .padding(.top, 8)
-                        .padding(.bottom, 8)
+                        .padding(.vertical, 8)
                         .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .animation(.easeOut(duration: 0.18), value: store.queueVisible)
-            TransportBar()
-        }
-        .padding(.top, 12)
-        .padding(.trailing, 16)
-        .padding(.bottom, 12)
-        .overlay(alignment: .bottom) {
-            ZStack {
+            .overlay(alignment: .bottom) {
                 if let toast = store.toast {
                     ToastPill(text: toast)
-                        .padding(.bottom, 106)
+                        .padding(.bottom, 12)
                         .transition(.opacity.combined(with: .move(edge: .bottom)))
+                        .allowsHitTesting(false)
                 }
             }
             .animation(.easeOut(duration: 0.18), value: store.toast)
+            TransportBar()
+        }
+    }
+
+    private var topChrome: some View {
+        VStack(spacing: 0) {
+            pageHead
+            if showsScanProgress {
+                ScanProgressBar(percent: store.scanSession.percent, onCancel: store.cancelScan)
+            }
+            if showsPinnedColumnHeader {
+                TrackTableColumnHeader(
+                    firstIsSelected: pinnedHeaderFirstSelected,
+                    showsHairline: false,
+                    fillsBackground: false
+                )
+                .padding(.leading, 4)
+                .padding(.trailing, 4)
+            }
+        }
+        .padding(.top, 12)
+        .padding(.trailing, 16)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(Color.white.opacity(pinnedHeaderFirstSelected && showsPinnedColumnHeader ? 0.2 : 0.12))
+                .frame(height: 1)
+                .allowsHitTesting(false)
         }
     }
 
@@ -276,6 +296,17 @@ struct ContentView: View {
         case .settings:
             SettingsView()
         }
+    }
+
+    private var showsPinnedColumnHeader: Bool {
+        if store.isSearching { return !store.searchTracks.isEmpty }
+        if case .library = store.route { return !store.visibleTracks.isEmpty }
+        return false
+    }
+
+    private var pinnedHeaderFirstSelected: Bool {
+        let tracks = store.isSearching ? store.searchTracks : store.visibleTracks
+        return tracks.first.map { store.selectedTrackIds.contains($0.id) } ?? false
     }
 
     private var showsScanProgress: Bool {

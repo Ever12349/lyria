@@ -89,15 +89,10 @@ struct ArtistDetailView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 12)
                 } else {
-                    LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
-                        Section {
-                            TrackTable(tracks: songs, fillsVertically: false)
-                        } header: {
-                            TrackTableColumnHeader(
-                                firstIsSelected: songs.first.map { store.selectedTrackIds.contains($0.id) } ?? false
-                            )
-                        }
-                    }
+                    TrackTableColumnHeader(
+                        firstIsSelected: songs.first.map { store.selectedTrackIds.contains($0.id) } ?? false
+                    )
+                    TrackTable(tracks: songs, fillsVertically: false)
                 }
             }
             }
