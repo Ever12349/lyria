@@ -427,9 +427,13 @@ struct LyriaFrostBar: View {
     }
 }
 
+private final class PassthroughVisualEffectView: NSVisualEffectView {
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+}
+
 private struct WithinWindowFrost: NSViewRepresentable {
     func makeNSView(context: Context) -> NSVisualEffectView {
-        let view = NSVisualEffectView()
+        let view = PassthroughVisualEffectView()
         view.material = .headerView
         view.blendingMode = .withinWindow
         view.state = .active

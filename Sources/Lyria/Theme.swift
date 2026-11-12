@@ -117,6 +117,13 @@ struct TitleRowHeightKey: PreferenceKey {
     }
 }
 
+struct TitleRowWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
 /// Height of the pinned title bar plus any scan bar and library column header.
 private enum LyriaChromeTopInsetKey: EnvironmentKey {
     static let defaultValue: CGFloat = 88

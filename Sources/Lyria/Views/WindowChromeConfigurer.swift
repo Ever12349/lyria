@@ -211,10 +211,6 @@ final class TitlebarPassthroughContentView: NSView {
         let band = layoutDelta > 1 ? layoutDelta : 28
         let fromTop = isFlipped ? local.y - bounds.minY : bounds.maxY - local.y
         let hit = hosted?.hitTest(local)
-
-        if TitlebarPassthroughLayout.isInteractive(hit) {
-            return hit
-        }
         if TitlebarPassthroughLayout.passesToSystem(
             x: local.x,
             fromTop: fromTop,
@@ -222,7 +218,18 @@ final class TitlebarPassthroughContentView: NSView {
             titleRowHeight: max(1, titleRowHeight),
             systemBandHeight: band
         ) {
-            return nil
+            // Sidebar band: always let the system drag, except traffic lights above.
+            if local.x < detailMinX {
+                return nil
+            }
+            // Title/search row: frost, the page scroll view under it, and
+            // scroll-edge pockets pass through so the system can drag and
+            // double-click zoom. A real hit (including the SwiftUI host that
+            // owns the back button) keeps the click.
+            if let hit, TitlebarPassthroughLayout.isDecoration(hit) {
+                return nil
+            }
+            return hit
         }
 
         return hit ?? super.hitTest(point)
@@ -244,20 +251,29 @@ enum TitlebarPassthroughLayout {
         return fromTop <= titleRowHeight
     }
 
-    static func isInteractive(_ view: NSView?) -> Bool {
-        var current = view
-        while let view = current {
-            if view is TitlebarPassthroughContentView { break }
-            let name = NSStringFromClass(type(of: view))
-            if name.contains("NSHostingView") || name.contains("ViewHost") { break }
-            if view is NSControl || view is NSTextView {
+    static func isDecoration(_ view: NSView) -> Bool {
+        var current: NSView? = view
+        while let v = current {
+            let name = NSStringFromClass(type(of: v))
+            if v is NSControl || v is NSTextView || name.contains("AppKitTextField") {
+                return false
+            }
+            if v is NSVisualEffectView || v is NSClipView || v is NSScrollView || v is NSScroller {
                 return true
             }
-            if name.contains("Button") || name.contains("TextField") || name.contains("TextView") {
+            if name.contains("NSScrollPocket") || name.contains("BackdropView") || name.contains("WithinWindowFrost") {
                 return true
             }
-            current = view.superview
+            if isHostingBoundary(v.superview) { return false }
+            current = v.superview
         }
         return false
+    }
+
+    private static func isHostingBoundary(_ view: NSView?) -> Bool {
+        guard let view else { return true }
+        if view is TitlebarPassthroughContentView { return true }
+        let name = NSStringFromClass(type(of: view))
+        return name.contains("AppKitWindowHostingView") || name.contains("NSHostingView")
     }
 }

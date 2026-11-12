@@ -13,6 +13,7 @@ struct ContentView: View {
     @State private var batchCapsuleWidth: CGFloat = 0
     @State private var chromeTop: CGFloat = 88
     @State private var titleRowHeight: CGFloat = 56
+    @State private var pageHeadWidth: CGFloat = 640
 
     private let sidebarMin: CGFloat = 168
     private let sidebarMax: CGFloat = 320
@@ -192,44 +193,50 @@ struct ContentView: View {
         pageHead
             .padding(.top, 8)
             .padding(.trailing, 16)
-            .background(LyriaFrostBar())
+            .background(LyriaFrostBar().allowsHitTesting(false))
             .background {
                 GeometryReader { geo in
-                    Color.clear.preference(key: TitleRowHeightKey.self, value: geo.size.height)
+                    Color.clear
+                        .preference(key: TitleRowHeightKey.self, value: geo.size.height)
+                        .allowsHitTesting(false)
                 }
             }
     }
 
     private var pageHead: some View {
-        GeometryReader { geo in
-            let restingSearchWidth = min(360, geo.size.width * 0.46)
-            HStack(alignment: .center, spacing: 16) {
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 2) {
-                        if showsBack {
-                            Button { store.goBack() } label: {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundStyle(LyriaTheme.text2)
-                                    .frame(width: 22, height: 22)
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("返回")
+        let restingSearchWidth = min(360, pageHeadWidth * 0.46)
+        return HStack(alignment: .center, spacing: 16) {
+                HStack(alignment: .center, spacing: 8) {
+                    if showsBack {
+                        Button { store.goBack() } label: {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(LyriaTheme.text3)
+                                .frame(width: 36, height: 36)
+                                .background(Capsule(style: .continuous).fill(LyriaTheme.searchFill))
+                                .overlay(Capsule(style: .continuous).strokeBorder(LyriaTheme.border, lineWidth: 1))
+                                .contentShape(Capsule())
                         }
+                        .buttonStyle(.plain)
+                        .contentShape(Capsule())
+                        .accessibilityLabel("返回")
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(headerTitle)
                             .font(.system(size: 20, weight: .semibold))
                             .tracking(-0.4)
                             .foregroundStyle(LyriaTheme.foreground)
                             .lineLimit(1)
+                            .allowsHitTesting(false)
+                        Text(headerMeta)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(LyriaTheme.text3)
+                            .lineLimit(1)
+                            .frame(maxWidth: .infinity, minHeight: 16, alignment: .leading)
+                            .allowsHitTesting(false)
                     }
-                    Text(headerMeta)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(LyriaTheme.text3)
-                        .lineLimit(1)
-                        .padding(.leading, showsBack ? 20 : 0)
-                        .frame(maxWidth: .infinity, minHeight: 16, alignment: .leading)
+                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                 }
-                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                 .layoutPriority(0)
 
                 if store.showsBatchBar {
@@ -249,15 +256,25 @@ struct ContentView: View {
                     allowsCompact: store.showsBatchBar,
                     expanded: $searchFieldExpanded
                 )
-                .frame(width: searchLayoutWidth(rowWidth: geo.size.width, resting: restingSearchWidth))
+                .frame(width: searchLayoutWidth(rowWidth: pageHeadWidth, resting: restingSearchWidth))
                 .layoutPriority(1)
+        }
+        .onPreferenceChange(BatchCapsuleWidthKey.self) { width in
+            guard width > 1, abs(width - batchCapsuleWidth) > 0.5 else { return }
+            batchCapsuleWidth = width
+        }
+        .animation(.easeOut(duration: 0.18), value: store.showsBatchBar)
+        .animation(.easeOut(duration: 0.18), value: searchFieldExpanded)
+        .background {
+            GeometryReader { geo in
+                Color.clear
+                    .preference(key: TitleRowWidthKey.self, value: geo.size.width)
+                    .allowsHitTesting(false)
             }
-            .onPreferenceChange(BatchCapsuleWidthKey.self) { width in
-                guard width > 1, abs(width - batchCapsuleWidth) > 0.5 else { return }
-                batchCapsuleWidth = width
-            }
-            .animation(.easeOut(duration: 0.18), value: store.showsBatchBar)
-            .animation(.easeOut(duration: 0.18), value: searchFieldExpanded)
+        }
+        .onPreferenceChange(TitleRowWidthKey.self) { width in
+            guard width > 1, abs(width - pageHeadWidth) > 0.5 else { return }
+            pageHeadWidth = width
         }
         .frame(height: 44)
         .padding(.horizontal, 4)
