@@ -31,6 +31,7 @@ struct PlaylistsView: View {
                 PlaylistCard(playlist: playlist)
             }
         }
+        .lyriaChromeContentPadding()
         }
     }
 }
@@ -122,6 +123,7 @@ struct PlaylistDetailView: View {
                     TrackTable(tracks: songs, playlistID: playlist.id, fillsVertically: false)
                 }
             }
+            .lyriaChromeContentPadding()
             }
             .confirmationDialog("删除这个播放列表？", isPresented: $confirmDelete, titleVisibility: .visible) {
                 Button("删除「\(playlist.name)」", role: .destructive) {
@@ -133,6 +135,7 @@ struct PlaylistDetailView: View {
             }
         } else {
             EmptyState(systemImage: "music.note.list", title: "找不到这个播放列表") { EmptyView() }
+                .lyriaChromeContentPadding()
         }
     }
 

@@ -10,6 +10,7 @@ struct SearchResultsView: View {
                 title: "无搜索结果",
                 message: "找不到与「\(store.trimmedQuery)」匹配的音乐、艺人或专辑。"
             ) { EmptyView() }
+            .lyriaChromeContentPadding()
         } else {
             TrackTable(tracks: store.searchTracks)
         }

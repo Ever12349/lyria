@@ -413,3 +413,29 @@ struct OffToggle: View {
         .accessibilityValue("关闭")
     }
 }
+
+/// Within-window frost plus a Deep Space wash. Does not use behind-window vibrancy.
+struct LyriaFrostBar: View {
+    var wash: CGFloat = 0.7
+
+    var body: some View {
+        ZStack {
+            WithinWindowFrost()
+            LyriaTheme.background.opacity(wash)
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+private struct WithinWindowFrost: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = .headerView
+        view.blendingMode = .withinWindow
+        view.state = .active
+        view.isEmphasized = true
+        return view
+    }
+
+    func updateNSView(_ view: NSVisualEffectView, context: Context) {}
+}

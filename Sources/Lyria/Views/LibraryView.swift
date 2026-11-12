@@ -23,5 +23,6 @@ struct LibraryEmptyView: View {
                 }
             }
         }
+        .lyriaChromeContentPadding()
     }
 }

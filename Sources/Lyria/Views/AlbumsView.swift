@@ -12,6 +12,7 @@ struct AlbumsView: View {
                     AlbumCard(album: album)
                 }
             }
+            .lyriaChromeContentPadding()
         }
     }
 }
@@ -54,9 +55,11 @@ struct AlbumDetailView: View {
                         TrackTable(tracks: songs, fillsVertically: false)
                     }
                 }
+                .lyriaChromeContentPadding()
             }
         } else {
             EmptyState(systemImage: "opticaldisc", title: "找不到这张专辑") { EmptyView() }
+                .lyriaChromeContentPadding()
         }
     }
 

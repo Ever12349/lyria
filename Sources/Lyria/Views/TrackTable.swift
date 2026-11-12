@@ -215,7 +215,7 @@ struct TrackTableColumnHeader: View {
     }
 }
 
-/// Shared track list. `fillsVertically` scrolls inside the page; otherwise the table is only as tall as its rows.
+/// Shared track list. `fillsVertically` scrolls inside the page with a top inset under the title bar; otherwise the table is only as tall as its rows.
 struct TrackTable: View {
     let tracks: [Track]
     var playlistID: String? = nil
@@ -223,12 +223,14 @@ struct TrackTable: View {
     @EnvironmentObject private var store: AppSession
     @Environment(TransportState.self) private var transport
     @Environment(\.trackTableIsVisible) private var isVisible
+    @Environment(\.lyriaChromeTopInset) private var chromeTop
 
     var body: some View {
         TrackTableRepresentable(
             tracks: tracks,
             playlistID: playlistID,
             fillsVertically: fillsVertically,
+            chromeTop: fillsVertically ? chromeTop : 0,
             selectedIDs: store.selectedTrackIds,
             currentID: transport.current?.id,
             playing: transport.playing,

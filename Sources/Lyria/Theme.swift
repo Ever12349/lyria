@@ -102,3 +102,37 @@ enum LyriaTheme {
         return Color(red: rgb.0 + m, green: rgb.1 + m, blue: rgb.2 + m)
     }
 }
+
+struct TopChromeHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+/// Height of the overlaid title bar. Defaults to the resting title row plus the library column header.
+private enum LyriaChromeTopInsetKey: EnvironmentKey {
+    static let defaultValue: CGFloat = 88
+}
+
+extension EnvironmentValues {
+    var lyriaChromeTopInset: CGFloat {
+        get { self[LyriaChromeTopInsetKey.self] }
+        set { self[LyriaChromeTopInsetKey.self] = newValue }
+    }
+}
+
+extension View {
+    /// Top padding so page content starts clear of the overlaid title bar.
+    func lyriaChromeContentPadding() -> some View {
+        modifier(LyriaChromeContentPadding())
+    }
+}
+
+private struct LyriaChromeContentPadding: ViewModifier {
+    @Environment(\.lyriaChromeTopInset) private var inset
+
+    func body(content: Content) -> some View {
+        content.padding(.top, inset)
+    }
+}

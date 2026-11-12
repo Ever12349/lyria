@@ -29,6 +29,7 @@ struct SettingsView: View {
                     .disabled(store.scanSession.isRunning)
                 }
             }
+            .lyriaChromeContentPadding()
         }
     }
 

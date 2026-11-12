@@ -35,6 +35,7 @@ struct ArtistsView: View {
                 .buttonStyle(.plain)
             }
         }
+        .lyriaChromeContentPadding()
         }
     }
 }
@@ -95,9 +96,11 @@ struct ArtistDetailView: View {
                     TrackTable(tracks: songs, fillsVertically: false)
                 }
             }
+            .lyriaChromeContentPadding()
             }
         } else {
             EmptyState(systemImage: "person", title: "找不到这位艺人") { EmptyView() }
+                .lyriaChromeContentPadding()
         }
     }
 }

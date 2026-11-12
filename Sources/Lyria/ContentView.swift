@@ -11,6 +11,7 @@ struct ContentView: View {
     @State private var keyMonitor: Any?
     @State private var searchFieldExpanded = false
     @State private var batchCapsuleWidth: CGFloat = 0
+    @State private var chromeTop: CGFloat = 88
 
     private let sidebarMin: CGFloat = 168
     private let sidebarMax: CGFloat = 320
@@ -108,7 +109,6 @@ struct ContentView: View {
 
     private var detailColumn: some View {
         VStack(spacing: 0) {
-            topChrome
             ZStack(alignment: .topTrailing) {
                 page
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -119,12 +119,14 @@ struct ContentView: View {
                     QueuePanel()
                         .frame(width: 280)
                         .padding(.trailing, 16)
-                        .padding(.vertical, 8)
+                        .padding(.top, chromeTop + 8)
+                        .padding(.bottom, 8)
                         .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .animation(.easeOut(duration: 0.18), value: store.queueVisible)
+            .overlay(alignment: .top) { topChrome }
             .overlay(alignment: .bottom) {
                 if let toast = store.toast {
                     ToastPill(text: toast)
@@ -135,6 +137,11 @@ struct ContentView: View {
             }
             .animation(.easeOut(duration: 0.18), value: store.toast)
             TransportBar()
+        }
+        .environment(\.lyriaChromeTopInset, chromeTop)
+        .onPreferenceChange(TopChromeHeightKey.self) { height in
+            guard height > 1, abs(height - chromeTop) > 0.5 else { return }
+            chromeTop = height
         }
     }
 
@@ -147,20 +154,25 @@ struct ContentView: View {
             if showsPinnedColumnHeader {
                 TrackTableColumnHeader(
                     firstIsSelected: pinnedHeaderFirstSelected,
-                    showsHairline: false,
-                    fillsBackground: false
+                    showsHairline: false
                 )
                 .padding(.leading, 4)
                 .padding(.trailing, 4)
             }
         }
-        .padding(.top, 12)
+        .padding(.top, 8)
         .padding(.trailing, 16)
+        .background(LyriaFrostBar())
         .overlay(alignment: .bottom) {
             Rectangle()
                 .fill(Color.white.opacity(pinnedHeaderFirstSelected && showsPinnedColumnHeader ? 0.2 : 0.12))
                 .frame(height: 1)
                 .allowsHitTesting(false)
+        }
+        .background {
+            GeometryReader { geo in
+                Color.clear.preference(key: TopChromeHeightKey.self, value: geo.size.height)
+            }
         }
     }
 
@@ -181,7 +193,7 @@ struct ContentView: View {
                             .accessibilityLabel("返回")
                         }
                         Text(headerTitle)
-                            .font(.system(size: 22, weight: .semibold))
+                            .font(.system(size: 20, weight: .semibold))
                             .tracking(-0.4)
                             .foregroundStyle(LyriaTheme.foreground)
                             .lineLimit(1)
@@ -223,9 +235,9 @@ struct ContentView: View {
             .animation(.easeOut(duration: 0.18), value: store.showsBatchBar)
             .animation(.easeOut(duration: 0.18), value: searchFieldExpanded)
         }
-        .frame(height: 52)
+        .frame(height: 44)
         .padding(.horizontal, 4)
-        .padding(.bottom, 10)
+        .padding(.bottom, 4)
     }
 
     /// Resting search keeps the 46% / 360 cap. With the capsule, an empty field is 36pt; otherwise it uses leftover space up to 360.

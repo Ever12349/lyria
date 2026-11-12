@@ -34,7 +34,7 @@ struct ScanProgressBar: View {
                 .overlay(Capsule().strokeBorder(LyriaTheme.border, lineWidth: 1))
         }
         .padding(.horizontal, 16)
-        .padding(.top, 4)
-        .padding(.bottom, 10)
+        .padding(.top, 2)
+        .padding(.bottom, 6)
     }
 }

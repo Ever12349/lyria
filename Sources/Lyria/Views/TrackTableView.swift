@@ -6,6 +6,7 @@ struct TrackTableRepresentable: NSViewRepresentable {
     var tracks: [Track]
     var playlistID: String?
     var fillsVertically: Bool
+    var chromeTop: CGFloat
     var selectedIDs: Set<String>
     var currentID: String?
     var playing: Bool
@@ -35,6 +36,7 @@ struct TrackTableRepresentable: NSViewRepresentable {
             currentID: currentID,
             playing: playing
         )
+        view.applyChromeTop(chromeTop)
     }
 }
 
@@ -197,11 +199,27 @@ final class TrackTableContainer: NSView {
         }
     }
 
+    var chromeTop: CGFloat = 0
+
+    func applyChromeTop(_ top: CGFloat) {
+        let top = max(0, top)
+        guard abs(chromeTop - top) > 0.5 else { return }
+        chromeTop = top
+        needsLayout = true
+    }
+
     override func layout() {
         super.layout()
         let width = bounds.width
         if fillsVertically {
             scroll.frame = bounds
+            let insets = NSEdgeInsets(top: max(0, chromeTop), left: 0, bottom: 0, right: 0)
+            if !edgeInsetsEqual(scroll.contentInsets, insets) {
+                scroll.contentInsets = insets
+            }
+            if !edgeInsetsEqual(scroll.scrollerInsets, insets) {
+                scroll.scrollerInsets = insets
+            }
             fitColumn(to: scroll.contentView.bounds.width)
         } else {
             table.frame = bounds
@@ -658,4 +676,11 @@ private final class MenuAction: NSObject {
     let run: () -> Void
     init(_ run: @escaping () -> Void) { self.run = run }
     @objc func fire() { run() }
+}
+
+private func edgeInsetsEqual(_ a: NSEdgeInsets, _ b: NSEdgeInsets) -> Bool {
+    abs(a.top - b.top) < 0.5
+        && abs(a.left - b.left) < 0.5
+        && abs(a.bottom - b.bottom) < 0.5
+        && abs(a.right - b.right) < 0.5
 }
