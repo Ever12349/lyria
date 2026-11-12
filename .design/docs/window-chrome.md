@@ -18,7 +18,7 @@
 2. `titlebarAppearsTransparent = true`、`titleVisibility = .hidden`
 3. 红绿灯仍是系统 `standardWindowButton`，布局后把原点移进 12px 内缩侧栏卡的顶部空白带（圆角 18）；不自绘假按钮。拖动 / 双击放大还原走系统 `NSThemeFrame`
 4. **不**自定义 `NSEvent` 监听双击，**不**手调 `performZoom`
-5. SwiftUI 内容会盖住标题栏命中区 → 穿透**仅限**系统标题栏拖动带（约为 `frame` 与 `contentLayoutRect` 的高度差，落空时约 28pt）。勿把整窗顶 52pt 一律 `hitTest → nil`。搜索与侧栏可点控件放在该带下方
+5. SwiftUI 内容会盖住标题栏命中区。侧栏穿透仍是系统标题栏拖动带（约为 `frame` 与 `contentLayoutRect` 的高度差，落空时约 28pt）；详情列标题行（标题、搜索等）的空白处同样穿透，点在搜索、返回、批量按钮上则不穿透。勿把整窗顶 52pt 一律 `hitTest → nil`。列头和扫描条不在标题栏内、不穿透。
 6. 侧栏可拖宽 **168–320**（默认 ~228）
 
 ## 设计交付

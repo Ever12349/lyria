@@ -12,6 +12,7 @@ struct ContentView: View {
     @State private var searchFieldExpanded = false
     @State private var batchCapsuleWidth: CGFloat = 0
     @State private var chromeTop: CGFloat = 88
+    @State private var titleRowHeight: CGFloat = 56
 
     private let sidebarMin: CGFloat = 168
     private let sidebarMax: CGFloat = 320
@@ -32,6 +33,7 @@ struct ContentView: View {
             )
             .frame(width: 12)
             .frame(maxHeight: .infinity)
+            .ignoresSafeArea(edges: .top)
 
             detailColumn
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -42,7 +44,12 @@ struct ContentView: View {
         .toolbarBackground(.hidden, for: .windowToolbar)
         .toolbarColorScheme(.dark, for: .windowToolbar)
         .preferredColorScheme(.dark)
-        .background(WindowChromeConfigurer())
+        .background(
+            WindowChromeConfigurer(
+                detailMinX: sidebarWidth + LyriaTheme.sidebarInset + 12,
+                titleRowHeight: titleRowHeight
+            )
+        )
         .task { await store.bootstrap() }
         .onAppear(perform: installKeyMonitor)
         .onDisappear(perform: removeKeyMonitor)
@@ -126,7 +133,7 @@ struct ContentView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .animation(.easeOut(duration: 0.18), value: store.queueVisible)
-            .overlay(alignment: .top) { topChrome }
+            .overlay(alignment: .top) { pinnedChrome }
             .overlay(alignment: .bottom) {
                 if let toast = store.toast {
                     ToastPill(text: toast)
@@ -136,6 +143,7 @@ struct ContentView: View {
                 }
             }
             .animation(.easeOut(duration: 0.18), value: store.toast)
+            .ignoresSafeArea(edges: .top)
             TransportBar()
         }
         .environment(\.lyriaChromeTopInset, chromeTop)
@@ -143,13 +151,19 @@ struct ContentView: View {
             guard height > 1, abs(height - chromeTop) > 0.5 else { return }
             chromeTop = height
         }
+        .onPreferenceChange(TitleRowHeightKey.self) { height in
+            guard height > 1, abs(height - titleRowHeight) > 0.5 else { return }
+            titleRowHeight = height
+        }
     }
 
-    private var topChrome: some View {
+    private var pinnedChrome: some View {
         VStack(spacing: 0) {
-            pageHead
+            titleBar
             if showsScanProgress {
                 ScanProgressBar(percent: store.scanSession.percent, onCancel: store.cancelScan)
+                    .padding(.trailing, 16)
+                    .background(LyriaTheme.background)
             }
             if showsPinnedColumnHeader {
                 TrackTableColumnHeader(
@@ -157,12 +171,10 @@ struct ContentView: View {
                     showsHairline: false
                 )
                 .padding(.leading, 4)
-                .padding(.trailing, 4)
+                .padding(.trailing, 20)
+                .background(LyriaTheme.background)
             }
         }
-        .padding(.top, 8)
-        .padding(.trailing, 16)
-        .background(LyriaFrostBar())
         .overlay(alignment: .bottom) {
             Rectangle()
                 .fill(Color.white.opacity(pinnedHeaderFirstSelected && showsPinnedColumnHeader ? 0.2 : 0.12))
@@ -174,6 +186,18 @@ struct ContentView: View {
                 Color.clear.preference(key: TopChromeHeightKey.self, value: geo.size.height)
             }
         }
+    }
+
+    private var titleBar: some View {
+        pageHead
+            .padding(.top, 8)
+            .padding(.trailing, 16)
+            .background(LyriaFrostBar())
+            .background {
+                GeometryReader { geo in
+                    Color.clear.preference(key: TitleRowHeightKey.self, value: geo.size.height)
+                }
+            }
     }
 
     private var pageHead: some View {

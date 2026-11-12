@@ -110,7 +110,14 @@ struct TopChromeHeightKey: PreferenceKey {
     }
 }
 
-/// Height of the overlaid title bar. Defaults to the resting title row plus the library column header.
+struct TitleRowHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+/// Height of the pinned title bar plus any scan bar and library column header.
 private enum LyriaChromeTopInsetKey: EnvironmentKey {
     static let defaultValue: CGFloat = 88
 }
