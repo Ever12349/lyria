@@ -448,6 +448,11 @@ final class AppSession: ObservableObject {
         Task { await engine.playAll(snapshot) }
     }
 
+    func playShuffled(_ list: [Track]) {
+        let snapshot = list.map(ResolvedTrack.init)
+        Task { await engine.playShuffled(snapshot) }
+    }
+
     func enqueueAll(_ list: [Track]) {
         let snapshot = list.map(ResolvedTrack.init)
         Task { await engine.enqueue(snapshot) }
@@ -479,6 +484,14 @@ final class AppSession: ObservableObject {
 
     func transportPrevious() {
         Task { await engine.previous() }
+    }
+
+    func transportToggleShuffle() {
+        Task { await engine.toggleShuffle() }
+    }
+
+    func transportToggleRepeat() {
+        Task { await engine.toggleRepeat() }
     }
 
     func transportSeek(ms: Int) {

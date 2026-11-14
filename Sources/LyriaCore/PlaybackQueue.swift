@@ -10,13 +10,64 @@ public enum QueueItem: Hashable, Sendable {
     }
 }
 
-public struct PlaybackQueue: Equatable, Sendable {
-    public var items: [QueueItem]
-    public var currentIndex: Int?
+public enum RepeatMode: String, CaseIterable, Sendable {
+    case off
+    case all
+    case one
 
-    public init(items: [QueueItem] = [], currentIndex: Int? = nil) {
+    public var label: String {
+        switch self {
+        case .off: return "关闭"
+        case .all: return "全部"
+        case .one: return "单曲"
+        }
+    }
+
+    public var systemImage: String {
+        switch self {
+        case .off, .all: return "repeat"
+        case .one: return "repeat.1"
+        }
+    }
+
+    public var tooltip: String {
+        switch self {
+        case .off: return "重复关闭"
+        case .all: return "重复全部"
+        case .one: return "单曲循环"
+        }
+    }
+
+    public var next: RepeatMode {
+        switch self {
+        case .off: return .all
+        case .all: return .one
+        case .one: return .off
+        }
+    }
+}
+
+public struct PlaybackQueue: Equatable, Sendable {
+    /// Playback order. Equals `source` while shuffle is off.
+    public var items: [QueueItem]
+    /// Unshuffled queue order. Shuffle never discards this.
+    public var source: [QueueItem]
+    public var currentIndex: Int?
+    public var shuffle: Bool
+    public var repeatMode: RepeatMode
+
+    public init(
+        items: [QueueItem] = [],
+        source: [QueueItem]? = nil,
+        currentIndex: Int? = nil,
+        shuffle: Bool = false,
+        repeatMode: RepeatMode = .off
+    ) {
         self.items = items
+        self.source = source ?? items
         self.currentIndex = currentIndex
+        self.shuffle = shuffle
+        self.repeatMode = repeatMode
     }
 
     public var current: QueueItem? {
@@ -180,8 +231,11 @@ public enum QueueRemoval: Equatable, Sendable {
 
 public enum PlaybackMove: Equatable, Sendable {
     case restart
-    case start(index: Int, skipped: Int)
+    /// `queue` is the order to adopt, including an updated `currentIndex`.
+    case start(PlaybackQueue, skipped: Int)
     case stay(fullCircle: Bool)
+    /// Natural end with nothing playable ahead. No toast.
+    case pauseAtEnd
     case none
 }
 
@@ -195,36 +249,108 @@ public enum PlaybackQueueRules {
         currentID: String?,
         block: PlaybackBlock?
     ) -> RowPlayPlan {
+        var rng = SystemRandomNumberGenerator()
+        return plan(
+            intent: intent,
+            trackID: trackID,
+            list: list,
+            currentID: currentID,
+            block: block,
+            shuffle: false,
+            repeatMode: .off,
+            rng: &rng
+        )
+    }
+
+    /// Cover-on-current toggles and double-click-on-current restarts before any shuffle.
+    /// A replace while shuffle is on keeps `list` as `source`, starts `trackID`, and shuffles the rest after it.
+    public static func plan<R: RandomNumberGenerator>(
+        intent: RowPlayIntent,
+        trackID: String,
+        list: [String],
+        currentID: String?,
+        block: PlaybackBlock?,
+        shuffle: Bool,
+        repeatMode: RepeatMode,
+        rng: inout R
+    ) -> RowPlayPlan {
         if let block { return .refuse(block) }
         if intent == .cover, trackID == currentID { return .toggle }
         if intent == .doubleClick, trackID == currentID { return .restart }
         guard let index = list.firstIndex(of: trackID) else { return .refuse(.failed) }
-        return .replace(PlaybackQueue(items: list.map { .track($0) }, currentIndex: index))
+        let source = list.map { QueueItem.track($0) }
+        if shuffle {
+            let current = source[index]
+            var rest = source
+            rest.remove(at: index)
+            let items = [current] + shuffled(rest, using: &rng)
+            return .replace(PlaybackQueue(
+                items: items,
+                source: source,
+                currentIndex: 0,
+                shuffle: true,
+                repeatMode: repeatMode
+            ))
+        }
+        return .replace(PlaybackQueue(
+            items: source,
+            source: source,
+            currentIndex: index,
+            shuffle: false,
+            repeatMode: repeatMode
+        ))
     }
 
     /// Nil when nothing is playable. `skipped` counts unplayable rows before the first playable one.
     public static func playAll(ids: [String], isPlayable: (String) -> Bool) -> (queue: PlaybackQueue, skipped: Int)? {
-        guard let start = ids.firstIndex(where: isPlayable) else { return nil }
-        return (PlaybackQueue(items: ids.map { .track($0) }, currentIndex: start), start)
+        var rng = SystemRandomNumberGenerator()
+        return playAll(ids: ids, isPlayable: isPlayable, shuffle: false, repeatMode: .off, rng: &rng)
+    }
+
+    /// Shuffle off keeps table order. Shuffle on shuffles the whole table, then starts the first playable in that order.
+    public static func playAll<R: RandomNumberGenerator>(
+        ids: [String],
+        isPlayable: (String) -> Bool,
+        shuffle: Bool,
+        repeatMode: RepeatMode,
+        rng: inout R
+    ) -> (queue: PlaybackQueue, skipped: Int)? {
+        let source = ids.map { QueueItem.track($0) }
+        let items = shuffle ? shuffled(source, using: &rng) : source
+        guard let start = items.firstIndex(where: { playableID($0, isPlayable) }) else { return nil }
+        return (PlaybackQueue(
+            items: items,
+            source: source,
+            currentIndex: start,
+            shuffle: shuffle,
+            repeatMode: repeatMode
+        ), start)
+    }
+
+    /// Page 「随机」/「随机播放」. Nil leaves the caller's queue and shuffle flag alone.
+    /// A hit always draws a new permutation and turns shuffle on.
+    public static func playShuffled<R: RandomNumberGenerator>(
+        ids: [String],
+        isPlayable: (String) -> Bool,
+        repeatMode: RepeatMode,
+        rng: inout R
+    ) -> (queue: PlaybackQueue, skipped: Int)? {
+        playAll(ids: ids, isPlayable: isPlayable, shuffle: true, repeatMode: repeatMode, rng: &rng)
     }
 
     public static func playNext(ids: [String], queue: PlaybackQueue) -> PlaybackQueue {
         let unique = uniqueIDs(ids)
         guard !unique.isEmpty else { return queue }
         let current = queue.current
-        var items = queue.items.filter { item in
-            guard let id = item.trackID else { return true }
-            return !unique.contains(id)
-        }
-        let insertAt: Int
-        if let current, let index = items.firstIndex(of: current) {
-            insertAt = index + 1
-        } else {
-            insertAt = 0
-        }
-        items.insert(contentsOf: unique.map { QueueItem.track($0) }, at: insertAt)
-        let currentIndex = current.flatMap { items.firstIndex(of: $0) }
-        return PlaybackQueue(items: items, currentIndex: currentIndex)
+        let items = insertingPlayNext(queue.items, current: current, ids: unique)
+        let source = insertingPlayNext(queue.source, current: current, ids: unique)
+        return PlaybackQueue(
+            items: items,
+            source: source,
+            currentIndex: current.flatMap { items.firstIndex(of: $0) },
+            shuffle: queue.shuffle,
+            repeatMode: queue.repeatMode
+        )
     }
 
     /// `alreadyAllPresent` is true only when every requested id was already queued.
@@ -232,16 +358,54 @@ public enum PlaybackQueueRules {
         let unique = uniqueIDs(ids)
         guard !unique.isEmpty else { return (queue, false) }
         var items = queue.items
+        var source = queue.source
         var added = 0
         for id in unique {
             let item = QueueItem.track(id)
             if items.contains(item) { continue }
             items.append(item)
+            source.append(item)
             added += 1
         }
-        let currentIndex = queue.current.flatMap { items.firstIndex(of: $0) }
-        let next = PlaybackQueue(items: items, currentIndex: currentIndex)
+        let next = PlaybackQueue(
+            items: items,
+            source: source,
+            currentIndex: queue.current.flatMap { items.firstIndex(of: $0) },
+            shuffle: queue.shuffle,
+            repeatMode: queue.repeatMode
+        )
         return (next, added == 0)
+    }
+
+    public static func toggleShuffle<R: RandomNumberGenerator>(
+        queue: PlaybackQueue,
+        rng: inout R
+    ) -> PlaybackQueue {
+        var next = queue
+        if queue.shuffle {
+            next.items = queue.source
+            next.currentIndex = queue.current.flatMap { queue.source.firstIndex(of: $0) }
+            next.shuffle = false
+            return next
+        }
+        next.shuffle = true
+        guard let index = queue.currentIndex, queue.items.indices.contains(index) else {
+            next.items = shuffled(queue.items, using: &rng)
+            next.currentIndex = nil
+            return next
+        }
+        let current = queue.items[index]
+        var rest = queue.items
+        rest.remove(at: index)
+        next.items = [current] + shuffled(rest, using: &rng)
+        next.currentIndex = 0
+        return next
+    }
+
+    public static func toggleRepeat(queue: PlaybackQueue) -> PlaybackQueue {
+        var next = queue
+        next.repeatMode = queue.repeatMode.next
+        return next
     }
 
     public static func previous(
@@ -251,36 +415,95 @@ public enum PlaybackQueueRules {
     ) -> PlaybackMove {
         guard let index = queue.currentIndex, queue.items.indices.contains(index) else { return .none }
         if positionMs > previousRestartThresholdMs { return .restart }
+        let wrap = queue.repeatMode == .all
         var skipped = 0
-        var cursor = index - 1
-        while cursor >= 0 {
+        var cursor = index
+        let limit = wrap ? max(queue.items.count - 1, 0) : index
+        var steps = 0
+        while steps < limit {
+            cursor -= 1
+            if cursor < 0 { cursor = queue.items.count - 1 }
+            steps += 1
             if isPlayable(queue.items[cursor]) {
-                return .start(index: cursor, skipped: skipped)
+                var next = queue
+                next.currentIndex = cursor
+                return .start(next, skipped: skipped)
             }
             skipped += 1
-            cursor -= 1
         }
         return .stay(fullCircle: onlyPlayableIsCurrent(queue: queue, isPlayable: isPlayable))
     }
 
+    public static func next<R: RandomNumberGenerator>(
+        queue: PlaybackQueue,
+        isPlayable: (QueueItem) -> Bool,
+        rng: inout R
+    ) -> PlaybackMove {
+        let wrap = queue.repeatMode == .all
+        return forward(
+            queue: queue,
+            isPlayable: isPlayable,
+            wrap: wrap,
+            reshuffleOnWrap: wrap && queue.shuffle,
+            end: .stay,
+            rng: &rng
+        )
+    }
+
     public static func next(queue: PlaybackQueue, isPlayable: (QueueItem) -> Bool) -> PlaybackMove {
-        guard let index = queue.currentIndex, queue.items.indices.contains(index) else { return .none }
-        if queue.items.count <= 1 {
-            return .stay(fullCircle: true)
+        var rng = SystemRandomNumberGenerator()
+        return next(queue: queue, isPlayable: isPlayable, rng: &rng)
+    }
+
+    public static func naturalEnd<R: RandomNumberGenerator>(
+        queue: PlaybackQueue,
+        isPlayable: (QueueItem) -> Bool,
+        rng: inout R
+    ) -> PlaybackMove {
+        guard queue.current != nil else { return .none }
+        switch queue.repeatMode {
+        case .one:
+            return .restart
+        case .off:
+            return forward(
+                queue: queue,
+                isPlayable: isPlayable,
+                wrap: false,
+                reshuffleOnWrap: false,
+                end: .pauseAtEnd,
+                rng: &rng
+            )
+        case .all:
+            return forward(
+                queue: queue,
+                isPlayable: isPlayable,
+                wrap: true,
+                reshuffleOnWrap: queue.shuffle,
+                end: .pauseAtEnd,
+                rng: &rng
+            )
         }
-        var skipped = 0
-        var cursor = index
-        var steps = 0
-        while steps < queue.items.count - 1 {
-            cursor += 1
-            if cursor == queue.items.count { cursor = 0 }
-            steps += 1
-            if isPlayable(queue.items[cursor]) {
-                return .start(index: cursor, skipped: skipped)
-            }
-            skipped += 1
-        }
-        return .stay(fullCircle: true)
+    }
+
+    public static func naturalEnd(queue: PlaybackQueue, isPlayable: (QueueItem) -> Bool) -> PlaybackMove {
+        var rng = SystemRandomNumberGenerator()
+        return naturalEnd(queue: queue, isPlayable: isPlayable, rng: &rng)
+    }
+
+    /// Mid-play failure: toast is the engine's job. Advance like repeat-off (no wrap, no new cycle, no repeat-one retry).
+    public static func advanceAfterFailure(
+        queue: PlaybackQueue,
+        isPlayable: (QueueItem) -> Bool
+    ) -> PlaybackMove {
+        var rng = SystemRandomNumberGenerator()
+        return forward(
+            queue: queue,
+            isPlayable: isPlayable,
+            wrap: false,
+            reshuffleOnWrap: false,
+            end: .stay,
+            rng: &rng
+        )
     }
 
     public static func remove(ids: Set<String>, from queue: PlaybackQueue, isPlayable: (QueueItem) -> Bool) -> QueueRemoval {
@@ -289,22 +512,29 @@ public enum PlaybackQueueRules {
             guard let id = current?.trackID else { return false }
             return ids.contains(id)
         }()
-        let items = queue.items.filter { item in
+        func keep(_ item: QueueItem) -> Bool {
             guard let id = item.trackID else { return true }
             return !ids.contains(id)
+        }
+        let items = queue.items.filter(keep)
+        let source = queue.source.filter(keep)
+        func rebuilt(_ index: Int?) -> PlaybackQueue {
+            PlaybackQueue(
+                items: items,
+                source: source,
+                currentIndex: index,
+                shuffle: queue.shuffle,
+                repeatMode: queue.repeatMode
+            )
         }
         if !currentRemoved {
-            let index = current.flatMap { items.firstIndex(of: $0) }
-            return .kept(PlaybackQueue(items: items, currentIndex: index))
+            return .kept(rebuilt(current.flatMap { items.firstIndex(of: $0) }))
         }
-        let after = queue.items.dropFirst((queue.currentIndex ?? -1) + 1).filter { item in
-            guard let id = item.trackID else { return true }
-            return !ids.contains(id)
-        }
+        let after = queue.items.dropFirst((queue.currentIndex ?? -1) + 1).filter(keep)
         if let next = after.first(where: isPlayable), let index = items.firstIndex(of: next) {
-            return .play(PlaybackQueue(items: items, currentIndex: index), index: index)
+            return .play(rebuilt(index), index: index)
         }
-        return .stopped(PlaybackQueue(items: items, currentIndex: nil))
+        return .stopped(rebuilt(nil))
     }
 
     public static func playPause(hasCurrent: Bool, playing: Bool, positionMs: Int, durationMs: Int) -> PlayPausePlan {
@@ -314,9 +544,142 @@ public enum PlaybackQueueRules {
         return .resume
     }
 
+    private enum ForwardEnd {
+        case stay
+        case pauseAtEnd
+    }
+
+    private static func forward<R: RandomNumberGenerator>(
+        queue: PlaybackQueue,
+        isPlayable: (QueueItem) -> Bool,
+        wrap: Bool,
+        reshuffleOnWrap: Bool,
+        end: ForwardEnd,
+        rng: inout R
+    ) -> PlaybackMove {
+        guard let index = queue.currentIndex, queue.items.indices.contains(index) else { return .none }
+        let count = queue.items.count
+        var skipped = 0
+        var cursor = index
+        let limit = wrap ? max(count - 1, 0) : max(0, count - index - 1)
+        var steps = 0
+        while steps < limit {
+            let nextCursor = cursor + 1
+            if nextCursor >= count {
+                if reshuffleOnWrap {
+                    return cycleOrRestart(queue: queue, isPlayable: isPlayable, end: end, rng: &rng)
+                }
+                cursor = 0
+            } else {
+                cursor = nextCursor
+            }
+            steps += 1
+            if isPlayable(queue.items[cursor]) {
+                var next = queue
+                next.currentIndex = cursor
+                return .start(next, skipped: skipped)
+            }
+            skipped += 1
+        }
+        if wrap {
+            if !hasOtherPlayable(queue: queue, isPlayable: isPlayable),
+               let current = queue.current, isPlayable(current) {
+                return .restart
+            }
+        }
+        switch end {
+        case .pauseAtEnd:
+            return .pauseAtEnd
+        case .stay:
+            return .stay(fullCircle: !hasOtherPlayable(queue: queue, isPlayable: isPlayable))
+        }
+    }
+
+    /// Forward wrap with shuffle on. Two or more playable items start a new cycle; one restarts.
+    private static func cycleOrRestart<R: RandomNumberGenerator>(
+        queue: PlaybackQueue,
+        isPlayable: (QueueItem) -> Bool,
+        end: ForwardEnd,
+        rng: inout R
+    ) -> PlaybackMove {
+        guard let index = queue.currentIndex, let current = queue.current else { return .none }
+        let playableIndices = queue.items.indices.filter { isPlayable(queue.items[$0]) }
+        let otherPlayable = playableIndices.filter { $0 != index }
+        if otherPlayable.isEmpty {
+            if playableIndices.contains(index) { return .restart }
+            switch end {
+            case .pauseAtEnd: return .pauseAtEnd
+            case .stay: return .stay(fullCircle: true)
+            }
+        }
+        if playableIndices.count >= 2 {
+            return reshuffleCycle(queue: queue, justLeft: current, justLeftIndex: index, isPlayable: isPlayable, rng: &rng)
+        }
+        var next = queue
+        next.currentIndex = otherPlayable[0]
+        return .start(next, skipped: 0)
+    }
+
+    private static func reshuffleCycle<R: RandomNumberGenerator>(
+        queue: PlaybackQueue,
+        justLeft: QueueItem,
+        justLeftIndex: Int,
+        isPlayable: (QueueItem) -> Bool,
+        rng: inout R
+    ) -> PlaybackMove {
+        var pool = queue.items
+        pool.remove(at: justLeftIndex)
+        let shuffledPool = shuffled(pool, using: &rng)
+        guard let firstPlayable = shuffledPool.firstIndex(where: isPlayable) else { return .restart }
+        let newFirst = shuffledPool[firstPlayable]
+        var middle = shuffledPool
+        middle.remove(at: firstPlayable)
+        var next = queue
+        next.items = [newFirst] + middle + [justLeft]
+        next.currentIndex = 0
+        return .start(next, skipped: 0)
+    }
+
+    /// Fisher–Yates. `rng.next() % (i + 1)` so tests can pin the permutation.
+    private static func shuffled<T, R: RandomNumberGenerator>(_ items: [T], using rng: inout R) -> [T] {
+        var copy = items
+        var index = copy.count - 1
+        while index > 0 {
+            let choice = Int(rng.next() % UInt64(index + 1))
+            if choice != index { copy.swapAt(index, choice) }
+            index -= 1
+        }
+        return copy
+    }
+
+    private static func insertingPlayNext(_ items: [QueueItem], current: QueueItem?, ids: [String]) -> [QueueItem] {
+        var items = items.filter { item in
+            guard let id = item.trackID else { return true }
+            return !ids.contains(id)
+        }
+        let insertAt: Int
+        if let current, let index = items.firstIndex(of: current) {
+            insertAt = index + 1
+        } else {
+            insertAt = 0
+        }
+        items.insert(contentsOf: ids.map { QueueItem.track($0) }, at: insertAt)
+        return items
+    }
+
+    private static func playableID(_ item: QueueItem, _ isPlayable: (String) -> Bool) -> Bool {
+        guard let id = item.trackID else { return true }
+        return isPlayable(id)
+    }
+
     private static func uniqueIDs(_ ids: [String]) -> [String] {
         var seen = Set<String>()
         return ids.filter { seen.insert($0).inserted }
+    }
+
+    private static func hasOtherPlayable(queue: PlaybackQueue, isPlayable: (QueueItem) -> Bool) -> Bool {
+        guard let index = queue.currentIndex else { return queue.items.contains(where: isPlayable) }
+        return queue.items.enumerated().contains { $0.offset != index && isPlayable($0.element) }
     }
 
     private static func onlyPlayableIsCurrent(queue: PlaybackQueue, isPlayable: (QueueItem) -> Bool) -> Bool {

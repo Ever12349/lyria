@@ -36,8 +36,9 @@ struct AlbumDetailView: View {
                         PillButton(title: "全部播放", systemImage: "play.fill", prominent: true) {
                             store.playAll(songs)
                         }
-                        PillButton(title: "随机", systemImage: "shuffle") {}
-                            .disabled(true)
+                        PillButton(title: "随机", systemImage: "shuffle") {
+                            store.playShuffled(songs)
+                        }
                         PillButton(title: "加入队列", systemImage: "plus") {
                             store.enqueueAll(songs)
                         }

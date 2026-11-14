@@ -1,4 +1,5 @@
 import SwiftUI
+import LyriaCore
 
 struct TransportBar: View {
     @EnvironmentObject private var store: AppSession
@@ -65,11 +66,16 @@ struct TransportBar: View {
             .foregroundStyle(LyriaTheme.text3)
 
             HStack(spacing: 16) {
-                iconButton("shuffle", label: "随机播放", action: {}, enabled: false)
+                iconButton("shuffle", label: "随机播放", action: store.transportToggleShuffle, active: transport.shuffle)
                 iconButton("backward.fill", label: "上一首", action: store.transportPrevious)
                 playButton
                 iconButton("forward.fill", label: "下一首", action: store.transportNext)
-                iconButton(RepeatMode.off.systemImage, label: RepeatMode.off.tooltip, action: {}, enabled: false)
+                iconButton(
+                    transport.repeatMode.systemImage,
+                    label: transport.repeatMode.tooltip,
+                    action: store.transportToggleRepeat,
+                    active: transport.repeatMode != .off
+                )
             }
         }
         .frame(maxWidth: 460)
@@ -156,11 +162,17 @@ struct TransportBar: View {
         }
     }
 
-    private func iconButton(_ systemName: String, label: String, action: @escaping () -> Void, enabled: Bool = true) -> some View {
+    private func iconButton(
+        _ systemName: String,
+        label: String,
+        action: @escaping () -> Void,
+        enabled: Bool = true,
+        active: Bool = false
+    ) -> some View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(LyriaTheme.text2)
+                .foregroundStyle(active ? LyriaTheme.primary : LyriaTheme.text2)
                 .frame(width: 28, height: 28)
                 .contentShape(Rectangle())
         }

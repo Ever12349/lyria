@@ -99,8 +99,9 @@ struct PlaylistDetailView: View {
                         PillButton(title: "全部播放", systemImage: "play.fill", prominent: true) {
                             store.playAll(songs)
                         }
-                        PillButton(title: "随机", systemImage: "shuffle") {}
-                            .disabled(true)
+                        PillButton(title: "随机", systemImage: "shuffle") {
+                            store.playShuffled(songs)
+                        }
                         AddSongsMenu(playlist: playlist)
                     }
                     PillButton(title: "编辑", systemImage: "pencil") {

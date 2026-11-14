@@ -9,6 +9,7 @@ actor PlaybackEngine {
     private let continuation: AsyncStream<EngineEvent>.Continuation
     private let host = PlayerHost()
     private var queue = PlaybackQueue()
+    private var rng = SystemRandomNumberGenerator()
     private var catalog: [String: ResolvedTrack] = [:]
     private var volume = VolumeSession()
     private var playing = false
@@ -37,7 +38,10 @@ actor PlaybackEngine {
             trackID: startID,
             list: list.map(\.id),
             currentID: queue.current?.trackID,
-            block: block
+            block: block,
+            shuffle: queue.shuffle,
+            repeatMode: queue.repeatMode,
+            rng: &rng
         ) {
         case .refuse(let reason):
             refuse(reason)
@@ -53,11 +57,35 @@ actor PlaybackEngine {
     func playAll(_ list: [ResolvedTrack]) async {
         prepareAudio()
         remember(list)
-        guard let result = PlaybackQueueRules.playAll(ids: list.map(\.id), isPlayable: { self.blocker(forID: $0) == nil }) else {
+        guard let result = PlaybackQueueRules.playAll(
+            ids: list.map(\.id),
+            isPlayable: { self.blocker(forID: $0) == nil },
+            shuffle: queue.shuffle,
+            repeatMode: queue.repeatMode,
+            rng: &rng
+        ) else {
             emit(.toast(PlaybackCopy.nothingPlayable))
             return
         }
-        await commitAndPlay(result.queue, tracks: list)
+        guard await commitAndPlay(result.queue, tracks: list) else { return }
+        if result.skipped > 0 {
+            emit(.toast(PlaybackCopy.skipped(result.skipped)))
+        }
+    }
+
+    func playShuffled(_ list: [ResolvedTrack]) async {
+        prepareAudio()
+        remember(list)
+        guard let result = PlaybackQueueRules.playShuffled(
+            ids: list.map(\.id),
+            isPlayable: { self.blocker(forID: $0) == nil },
+            repeatMode: queue.repeatMode,
+            rng: &rng
+        ) else {
+            emit(.toast(PlaybackCopy.nothingPlayable))
+            return
+        }
+        guard await commitAndPlay(result.queue, tracks: list) else { return }
         if result.skipped > 0 {
             emit(.toast(PlaybackCopy.skipped(result.skipped)))
         }
@@ -104,11 +132,21 @@ actor PlaybackEngine {
     }
 
     func next() async {
-        await step(PlaybackQueueRules.next(queue: queue, isPlayable: itemPlayable))
+        await step(PlaybackQueueRules.next(queue: queue, isPlayable: itemPlayable, rng: &rng))
     }
 
     func previous() async {
         await step(PlaybackQueueRules.previous(queue: queue, positionMs: positionMs, isPlayable: itemPlayable))
+    }
+
+    func toggleShuffle() {
+        queue = PlaybackQueueRules.toggleShuffle(queue: queue, rng: &rng)
+        publish()
+    }
+
+    func toggleRepeat() {
+        queue = PlaybackQueueRules.toggleRepeat(queue: queue)
+        publish()
     }
 
     func seek(by deltaMs: Int) async {
@@ -186,11 +224,17 @@ actor PlaybackEngine {
             return
         }
         catalog[track.id] = track
-        let proposed = PlaybackQueue(items: [.oneShot(uri.absoluteString)], currentIndex: 0)
+        let previous = queue
+        let proposed = PlaybackQueue(
+            items: [.oneShot(uri.absoluteString)],
+            currentIndex: 0,
+            shuffle: previous.shuffle,
+            repeatMode: previous.repeatMode
+        )
         queue = proposed
         let token = nextGeneration()
         if await start(track, token: token) == false {
-            queue = PlaybackQueue()
+            queue = previous
         }
         publish()
     }
@@ -201,12 +245,18 @@ actor PlaybackEngine {
         publish()
     }
 
-    func noteEnded(token: Int) {
+    func noteEnded(token: Int) async {
         guard token == generation else { return }
-        host.player.pause()
         playing = false
-        if durationMs > 0 { positionMs = durationMs }
-        publish()
+        let move = PlaybackQueueRules.naturalEnd(queue: queue, isPlayable: itemPlayable, rng: &rng)
+        switch move {
+        case .start, .restart:
+            await step(move)
+        case .pauseAtEnd, .stay, .none:
+            host.player.pause()
+            if durationMs > 0 { positionMs = durationMs }
+            publish()
+        }
     }
 
     func noteFailedMidPlay(token: Int) async {
@@ -215,23 +265,27 @@ actor PlaybackEngine {
         playing = false
         emit(.toast(PlaybackCopy.failed))
         lastError = PlaybackErrorCode.failed
-        await step(PlaybackQueueRules.next(queue: queue, isPlayable: itemPlayable))
+        await step(PlaybackQueueRules.advanceAfterFailure(queue: queue, isPlayable: itemPlayable))
+        publish()
     }
 
-    private func commitAndPlay(_ proposed: PlaybackQueue, tracks: [ResolvedTrack]) async {
+    /// Adopts `proposed` only after start succeeds, so a failure puts shuffle and repeat back too.
+    private func commitAndPlay(_ proposed: PlaybackQueue, tracks: [ResolvedTrack]) async -> Bool {
         guard let index = proposed.currentIndex,
               let id = proposed.items[safe: index]?.trackID,
               let track = tracks.first(where: { $0.id == id }) ?? catalog[id]
-        else { return }
+        else { return false }
         let token = nextGeneration()
         let previous = queue
         queue = proposed
         guard await start(track, token: token) else {
             queue = previous
+            if host.player.currentItem == nil { playing = false }
             publish()
-            return
+            return false
         }
         publish()
+        return true
     }
 
     private func step(_ move: PlaybackMove) async {
@@ -243,13 +297,24 @@ actor PlaybackEngine {
             await restartCurrent()
         case .stay(let fullCircle):
             if fullCircle { emit(.toast(PlaybackCopy.nothingMore)) }
-        case .start(let index, let skipped):
-            guard let track = currentTrack(at: index) else { return }
+        case .pauseAtEnd:
+            host.player.pause()
+            playing = false
+            if durationMs > 0 { positionMs = durationMs }
+            publish()
+        case .start(let nextQueue, let skipped):
+            guard let index = nextQueue.currentIndex else { return }
             let previous = queue
-            queue.currentIndex = index
+            queue = nextQueue
+            guard let track = currentTrack(at: index) else {
+                queue = previous
+                publish()
+                return
+            }
             let token = nextGeneration()
             guard await start(track, token: token) else {
                 queue = previous
+                if host.player.currentItem == nil { playing = false }
                 publish()
                 return
             }
@@ -416,6 +481,8 @@ actor PlaybackEngine {
             queueCount: queue.items.count,
             currentIndex: queue.currentIndex,
             rows: rows,
+            shuffle: queue.shuffle,
+            repeatMode: queue.repeatMode,
             lastError: lastError
         )))
     }

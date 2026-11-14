@@ -38,6 +38,8 @@ struct TransportSnapshot: Sendable {
     var queueCount: Int
     var currentIndex: Int?
     var rows: [QueueRowSnapshot]
+    var shuffle: Bool
+    var repeatMode: RepeatMode
     var lastError: String?
 }
 
@@ -91,8 +93,8 @@ final class TransportState {
         volume = snapshot.volume
         queueCount = snapshot.queueCount
         lastError = snapshot.lastError
-        shuffle = false
-        repeatMode = .off
+        shuffle = snapshot.shuffle
+        repeatMode = snapshot.repeatMode
     }
 }
 

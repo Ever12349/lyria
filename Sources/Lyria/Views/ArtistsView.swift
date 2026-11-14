@@ -61,8 +61,9 @@ struct ArtistDetailView: View {
                     PillButton(title: "全部播放", systemImage: "play.fill", prominent: true) {
                         store.playAll(songs)
                     }
-                    PillButton(title: "随机播放", systemImage: "shuffle") {}
-                        .disabled(true)
+                    PillButton(title: "随机播放", systemImage: "shuffle") {
+                        store.playShuffled(songs)
+                    }
                 }
 
                 SectionLabel(title: "专辑")

@@ -1,5 +1,4 @@
 import Foundation
-import LyriaCore
 
 struct Track: Identifiable, Hashable {
     let id: String
@@ -59,43 +58,6 @@ struct Playlist: Identifiable, Hashable {
     let id: String
     var name: String
     var trackIDs: [String]
-}
-
-enum RepeatMode: String, CaseIterable {
-    case off
-    case all
-    case one
-
-    var label: String {
-        switch self {
-        case .off: return "关闭"
-        case .all: return "全部"
-        case .one: return "单曲"
-        }
-    }
-
-    var systemImage: String {
-        switch self {
-        case .off, .all: return "repeat"
-        case .one: return "repeat.1"
-        }
-    }
-
-    var tooltip: String {
-        switch self {
-        case .off: return "重复关闭"
-        case .all: return "重复全部"
-        case .one: return "单曲循环"
-        }
-    }
-
-    var next: RepeatMode {
-        switch self {
-        case .off: return .all
-        case .all: return .one
-        case .one: return .off
-        }
-    }
 }
 
 enum AppRoute: Hashable {
