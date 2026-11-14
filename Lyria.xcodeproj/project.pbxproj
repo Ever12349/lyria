@@ -47,6 +47,8 @@
 		A1C00000000000000000002D /* RevealInFinder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C00000000000000000001D /* RevealInFinder.swift */; };
 		A1C00000000000000000002E /* PlaybackQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C00000000000000000001E /* PlaybackQueue.swift */; };
 		A1C00000000000000000002F /* TrackTableLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C00000000000000000001F /* TrackTableLayout.swift */; };
+		A1C000000000000000000030 /* LibraryAdditionCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000020 /* LibraryAdditionCopy.swift */; };
+		A1C000000000000000000090 /* PlaylistRecency.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000080 /* PlaylistRecency.swift */; };
 		A1C000000000000000000054 /* ScanSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000044 /* ScanSessionTests.swift */; };
 		A1C000000000000000000055 /* TrackSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000045 /* TrackSelectionTests.swift */; };
 		A1C000000000000000000057 /* LibraryRemovalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000047 /* LibraryRemovalTests.swift */; };
@@ -56,8 +58,12 @@
 		A1C00000000000000000005B /* RevealInFinderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C00000000000000000004B /* RevealInFinderTests.swift */; };
 		A1C00000000000000000005C /* PlaybackQueueTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C00000000000000000004C /* PlaybackQueueTests.swift */; };
 		A1C00000000000000000005D /* TrackTableLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C00000000000000000004D /* TrackTableLayoutTests.swift */; };
+		A1C00000000000000000005E /* LibraryAdditionCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C00000000000000000004E /* LibraryAdditionCopyTests.swift */; };
+		A1C00000000000000000005F /* PlaylistRecencyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C00000000000000000004F /* PlaylistRecencyTests.swift */; };
 		A1C100000000000000000109 /* ScanProgressBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C100000000000000000009 /* ScanProgressBar.swift */; };
 		A1C10000000000000000010A /* BatchActionBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C10000000000000000000A /* BatchActionBar.swift */; };
+		A1C10000000000000000010C /* AddToPlaylistMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C10000000000000000000C /* AddToPlaylistMenu.swift */; };
+		A1C10000000000000000010D /* PlaylistNameDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C10000000000000000000D /* PlaylistNameDialog.swift */; };
 		E1E000000000000000000011 /* PlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E000000000000000000001 /* PlaybackEngine.swift */; };
 		E1E000000000000000000012 /* TransportState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E000000000000000000002 /* TransportState.swift */; };
 		E1E000000000000000000013 /* Queue.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E000000000000000000003 /* Queue.swift */; };
@@ -110,6 +116,8 @@
 		A1C00000000000000000001D /* RevealInFinder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RevealInFinder.swift; sourceTree = "<group>"; };
 		A1C00000000000000000001E /* PlaybackQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackQueue.swift; sourceTree = "<group>"; };
 		A1C00000000000000000001F /* TrackTableLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackTableLayout.swift; sourceTree = "<group>"; };
+		A1C000000000000000000020 /* LibraryAdditionCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryAdditionCopy.swift; sourceTree = "<group>"; };
+		A1C000000000000000000080 /* PlaylistRecency.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistRecency.swift; sourceTree = "<group>"; };
 		A1C000000000000000000044 /* ScanSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanSessionTests.swift; sourceTree = "<group>"; };
 		A1C000000000000000000045 /* TrackSelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackSelectionTests.swift; sourceTree = "<group>"; };
 		A1C000000000000000000047 /* LibraryRemovalTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryRemovalTests.swift; sourceTree = "<group>"; };
@@ -119,8 +127,12 @@
 		A1C00000000000000000004B /* RevealInFinderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RevealInFinderTests.swift; sourceTree = "<group>"; };
 		A1C00000000000000000004C /* PlaybackQueueTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackQueueTests.swift; sourceTree = "<group>"; };
 		A1C00000000000000000004D /* TrackTableLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackTableLayoutTests.swift; sourceTree = "<group>"; };
+		A1C00000000000000000004E /* LibraryAdditionCopyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryAdditionCopyTests.swift; sourceTree = "<group>"; };
+		A1C00000000000000000004F /* PlaylistRecencyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistRecencyTests.swift; sourceTree = "<group>"; };
 		A1C100000000000000000009 /* ScanProgressBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanProgressBar.swift; sourceTree = "<group>"; };
 		A1C10000000000000000000A /* BatchActionBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchActionBar.swift; sourceTree = "<group>"; };
+		A1C10000000000000000000C /* AddToPlaylistMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddToPlaylistMenu.swift; sourceTree = "<group>"; };
+		A1C10000000000000000000D /* PlaylistNameDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistNameDialog.swift; sourceTree = "<group>"; };
 		E1E000000000000000000001 /* PlaybackEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackEngine.swift; sourceTree = "<group>"; };
 		E1E000000000000000000002 /* TransportState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransportState.swift; sourceTree = "<group>"; };
 		E1E000000000000000000003 /* Queue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Queue.swift; sourceTree = "<group>"; };
@@ -212,6 +224,8 @@
 				E5698C8C8CD948D283AE6A2A /* TransportBar.swift */,
 				A1C100000000000000000009 /* ScanProgressBar.swift */,
 				A1C10000000000000000000A /* BatchActionBar.swift */,
+				A1C10000000000000000000C /* AddToPlaylistMenu.swift */,
+				A1C10000000000000000000D /* PlaylistNameDialog.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -257,6 +271,8 @@
 				A1C00000000000000000001D /* RevealInFinder.swift */,
 				A1C00000000000000000001E /* PlaybackQueue.swift */,
 				A1C00000000000000000001F /* TrackTableLayout.swift */,
+				A1C000000000000000000020 /* LibraryAdditionCopy.swift */,
+				A1C000000000000000000080 /* PlaylistRecency.swift */,
 			);
 			path = Sources/LyriaCore;
 			sourceTree = "<group>";
@@ -276,6 +292,8 @@
 				A1C00000000000000000004B /* RevealInFinderTests.swift */,
 				A1C00000000000000000004C /* PlaybackQueueTests.swift */,
 				A1C00000000000000000004D /* TrackTableLayoutTests.swift */,
+				A1C00000000000000000004E /* LibraryAdditionCopyTests.swift */,
+				A1C00000000000000000004F /* PlaylistRecencyTests.swift */,
 			);
 			path = Tests/LyriaTests;
 			sourceTree = "<group>";
@@ -390,6 +408,8 @@
 				37DC3CD03F0B4DEB8E17DF0E /* TransportBar.swift in Sources */,
 				A1C100000000000000000109 /* ScanProgressBar.swift in Sources */,
 				A1C10000000000000000010A /* BatchActionBar.swift in Sources */,
+				A1C10000000000000000010C /* AddToPlaylistMenu.swift in Sources */,
+				A1C10000000000000000010D /* PlaylistNameDialog.swift in Sources */,
 				A1C100000000000000000101 /* AppSession.swift in Sources */,
 				A1C100000000000000000103 /* Schema.swift in Sources */,
 				A1C100000000000000000104 /* SupportPaths.swift in Sources */,
@@ -422,6 +442,8 @@
 				A1C00000000000000000002D /* RevealInFinder.swift in Sources */,
 				A1C00000000000000000002E /* PlaybackQueue.swift in Sources */,
 				A1C00000000000000000002F /* TrackTableLayout.swift in Sources */,
+				A1C000000000000000000030 /* LibraryAdditionCopy.swift in Sources */,
+				A1C000000000000000000090 /* PlaylistRecency.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -441,6 +463,8 @@
 				A1C00000000000000000005B /* RevealInFinderTests.swift in Sources */,
 				A1C00000000000000000005C /* PlaybackQueueTests.swift in Sources */,
 				A1C00000000000000000005D /* TrackTableLayoutTests.swift in Sources */,
+				A1C00000000000000000005E /* LibraryAdditionCopyTests.swift in Sources */,
+				A1C00000000000000000005F /* PlaylistRecencyTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
