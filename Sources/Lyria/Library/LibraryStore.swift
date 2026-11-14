@@ -1,6 +1,12 @@
 import AppKit
 import Foundation
 import LyriaCore
+import UniformTypeIdentifiers
+
+enum LibraryActivityKind: Equatable {
+    case scan
+    case add
+}
 
 /// Library database façade. Scanning never starts by itself.
 @MainActor
@@ -10,6 +16,16 @@ final class LibraryStore: ObservableObject {
     @Published private(set) var albums: [Album] = []
     @Published private(set) var playlists: [Playlist] = []
     @Published private(set) var scanSession = ScanSession.idle
+    @Published private(set) var activityKind: LibraryActivityKind = .scan
+
+    var progressTitle: String {
+        switch activityKind {
+        case .scan:
+            return "正在扫描曲库 · \(scanSession.percent)%"
+        case .add:
+            return "正在添加曲目 · \(scanSession.percent)%"
+        }
+    }
 
     var onToast: ((String) -> Void)?
 
@@ -44,7 +60,7 @@ final class LibraryStore: ObservableObject {
         }
     }
 
-    /// Empty-library entry. Every tap opens the folder picker, then an incremental scan.
+    /// Folder picker, then an incremental scan. Also used by the empty-library button.
     func scanTracks() {
         guard !scanSession.isRunning else { return }
         let panel = NSOpenPanel()
@@ -61,15 +77,43 @@ final class LibraryStore: ObservableObject {
         securityScope.replace(with: url)
         let path = PathUtil.standardize(url)
         let bookmark = BookmarkData.make(for: url)
+        guard let cancellation = beginActivity(.scan) else { return }
         Task {
             do {
                 try await database.setScanRoot(path: path, bookmark: bookmark)
                 rootPath = path
-                startScan(force: false)
+                if cancellation.isCancelled {
+                    scanSession = ScanSession(phase: .cancelled, percent: 0)
+                    onToast?("已取消扫描")
+                    return
+                }
+                launchScan(rootPath: path, force: false, cancellation: cancellation)
             } catch {
+                scanSession = ScanSession(phase: .failed, percent: 0)
                 onToast?("无法保存曲库路径")
             }
         }
+    }
+
+    /// Files only. Does not change the scan root and does not call `finishScan`.
+    func addAudioFiles() {
+        guard !scanSession.isRunning else { return }
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = true
+        panel.canCreateDirectories = false
+        panel.allowsOtherFileTypes = false
+        panel.prompt = "添加"
+        panel.message = "选择曲目"
+        panel.allowedContentTypes = MetadataReader.audioExtensions.compactMap { UTType(filenameExtension: $0) }
+        guard panel.runModal() == .OK else { return }
+        let urls = panel.urls.filter { url in
+            MetadataReader.audioExtensions.contains(url.pathExtension.lowercased())
+        }
+        guard !urls.isEmpty else { return }
+        guard let cancellation = beginActivity(.add) else { return }
+        launchImport(urls: urls, cancellation: cancellation)
     }
 
     func cancelScan() {
@@ -139,6 +183,16 @@ final class LibraryStore: ObservableObject {
         } catch {
             onToast?("清除指纹缓存失败")
         }
+    }
+
+    func stampPlaylistUsed(id: String) async {
+        do {
+            guard let stamp = try await database.stampPlaylistUsed(id: id) else { return }
+            guard let index = playlists.firstIndex(where: { $0.id == id }) else { return }
+            var next = playlists
+            next[index].lastUsedAt = stamp
+            playlists = next
+        } catch {}
     }
 
     func createPlaylist(id: String, name: String) async -> Bool {
@@ -217,12 +271,17 @@ final class LibraryStore: ObservableObject {
         }
     }
 
-    private func startScan(force: Bool) {
-        guard !scanSession.isRunning, let rootPath else { return }
+    private func beginActivity(_ kind: LibraryActivityKind) -> ScanCancellation? {
+        guard !scanSession.isRunning else { return nil }
         let cancellation = ScanCancellation()
         scanCancellation = cancellation
+        activityKind = kind
         scanSession = ScanSession(phase: .running, percent: 0)
         lastReloadAt = nil
+        return cancellation
+    }
+
+    private func launchScan(rootPath: String, force: Bool, cancellation: ScanCancellation) {
         let database = self.database
         Task.detached(priority: .utility) { [weak self] in
             do {
@@ -240,6 +299,27 @@ final class LibraryStore: ObservableObject {
             } catch {
                 guard let store = self else { return }
                 await store.failScan()
+            }
+        }
+    }
+
+    private func launchImport(urls: [URL], cancellation: ScanCancellation) {
+        let database = self.database
+        Task.detached(priority: .utility) { [weak self] in
+            do {
+                let outcome = try await LibraryScanner.importFiles(
+                    urls: urls,
+                    database: database,
+                    isCancelled: { cancellation.isCancelled }
+                ) { percent in
+                    guard let store = self else { return }
+                    await store.noteProgress(percent)
+                }
+                guard let store = self else { return }
+                await store.completeImport(outcome)
+            } catch {
+                guard let store = self else { return }
+                await store.failImport()
             }
         }
     }
@@ -279,6 +359,33 @@ final class LibraryStore: ObservableObject {
         try? await reload()
         scanSession = ScanSession(phase: .failed, percent: scanSession.percent)
         onToast?("扫描失败")
+    }
+
+    private func completeImport(_ outcome: ImportOutcome) async {
+        do {
+            try await reload()
+        } catch {
+            scanSession = ScanSession(phase: .failed, percent: scanSession.percent)
+            onToast?("添加失败")
+            return
+        }
+        if outcome.cancelled {
+            scanSession = ScanSession(phase: .cancelled, percent: scanSession.percent)
+            onToast?("已取消添加")
+            return
+        }
+        scanSession = ScanSession(phase: .completed, percent: 100)
+        onToast?(LibraryAdditionCopy.toast(
+            added: outcome.added,
+            already: outcome.already,
+            skipped: outcome.skipped
+        ))
+    }
+
+    private func failImport() async {
+        try? await reload()
+        scanSession = ScanSession(phase: .failed, percent: scanSession.percent)
+        onToast?("添加失败")
     }
 
     private func reload() async throws {

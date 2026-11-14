@@ -29,16 +29,7 @@ private struct TrackMenuItems: View {
         Button("下一首播放") { store.playNext(targets) }
         Button("加入队列") { store.enqueue(targets) }
         Menu("加入播放列表") {
-            if store.playlists.isEmpty {
-                Button("没有播放列表") {}
-                    .disabled(true)
-            } else {
-                ForEach(store.playlists) { playlist in
-                    Button(playlist.name) {
-                        store.addToPlaylist(targets, playlistID: playlist.id)
-                    }
-                }
-            }
+            AddToPlaylistMenuItems(trackIDs: targets)
         }
         Divider()
         Button("前往艺人") {

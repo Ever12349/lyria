@@ -69,4 +69,9 @@ enum Schema {
     CREATE INDEX idx_tracks_path ON tracks(path);
     CREATE INDEX idx_playlist_tracks_track ON playlist_tracks(track_id);
     """
+
+    /// v2. Existing rows keep `last_used_at` NULL until something uses the playlist.
+    static let v2 = """
+    ALTER TABLE playlists ADD COLUMN last_used_at INTEGER;
+    """
 }

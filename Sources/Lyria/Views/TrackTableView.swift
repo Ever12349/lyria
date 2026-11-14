@@ -650,20 +650,14 @@ enum TrackContextMenu {
         let playlists = NSMenuItem(title: "加入播放列表", action: nil, keyEquivalent: "")
         let submenu = NSMenu()
         submenu.autoenablesItems = false
-        if store.playlists.isEmpty {
-            let empty = NSMenuItem(title: "没有播放列表", action: nil, keyEquivalent: "")
-            empty.isEnabled = false
-            submenu.addItem(empty)
-        } else {
-            for playlist in store.playlists {
-                let item = NSMenuItem(title: playlist.name, action: nil, keyEquivalent: "")
-                let action = MenuAction { store.addToPlaylist(targets, playlistID: playlist.id) }
-                menu.actions.append(action)
-                item.target = action
-                item.action = #selector(MenuAction.fire)
-                item.isEnabled = true
-                submenu.addItem(item)
-            }
+        for entry in PlaylistAddMenu.actions(trackIDs: targets, store: store) {
+            let item = NSMenuItem(title: entry.title, action: nil, keyEquivalent: "")
+            let action = MenuAction(entry.run)
+            menu.actions.append(action)
+            item.target = action
+            item.action = #selector(MenuAction.fire)
+            item.isEnabled = true
+            submenu.addItem(item)
         }
         playlists.submenu = submenu
         menu.addItem(playlists)

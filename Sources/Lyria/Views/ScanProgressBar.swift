@@ -1,13 +1,14 @@
 import SwiftUI
 
 struct ScanProgressBar: View {
+    let title: String
     let percent: Int
     let onCancel: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("正在扫描曲库 · \(percent)%")
+                Text(title)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(LyriaTheme.foreground)
                     .lineLimit(1)
@@ -21,7 +22,7 @@ struct ScanProgressBar: View {
                     }
                 }
                 .frame(height: 4)
-                .accessibilityLabel("扫描进度")
+                .accessibilityLabel(title)
                 .accessibilityValue("\(percent)%")
             }
             Button("取消", action: onCancel)

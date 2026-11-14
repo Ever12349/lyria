@@ -373,8 +373,27 @@ actor LibraryDatabase {
     func createPlaylist(id: String, name: String) throws {
         let stamp = Self.now
         try connection.run(
-            "INSERT INTO playlists (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
-            [.text(id), .text(name), .int(stamp), .int(stamp)]
+            "INSERT INTO playlists (id, name, created_at, updated_at, last_used_at) VALUES (?, ?, ?, ?, ?)",
+            [.text(id), .text(name), .int(stamp), .int(stamp), .int(stamp)]
+        )
+    }
+
+    /// Use, not a rename. `updated_at` stays put. Nil when the playlist is already gone.
+    func stampPlaylistUsed(id: String) throws -> Int64? {
+        let exists = try count("SELECT COUNT(*) FROM playlists WHERE id = ?", [.text(id)]) > 0
+        guard exists else { return nil }
+        let stamp = Self.now
+        try connection.run(
+            "UPDATE playlists SET last_used_at = ? WHERE id = ?",
+            [.int(stamp), .text(id)]
+        )
+        return stamp
+    }
+
+    func fingerprintTrackID(_ fingerprint: String) throws -> String? {
+        try optionalText(
+            "SELECT track_id FROM fingerprints WHERE fingerprint = ?",
+            [.text(fingerprint)]
         )
     }
 
@@ -753,12 +772,19 @@ actor LibraryDatabase {
     private func loadPlaylists() throws -> [Playlist] {
         var playlists: [Playlist] = []
         try connection.run(
-            "SELECT id, name FROM playlists ORDER BY created_at DESC, id"
+            "SELECT id, name, last_used_at FROM playlists ORDER BY created_at DESC, id"
         ) { statement in
+            let lastUsed: Int64?
+            if sqlite3_column_type(statement, 2) == SQLITE_NULL {
+                lastUsed = nil
+            } else {
+                lastUsed = sqlite3_column_int64(statement, 2)
+            }
             playlists.append(Playlist(
                 id: SQLiteConnection.text(statement, 0),
                 name: SQLiteConnection.text(statement, 1),
-                trackIDs: []
+                trackIDs: [],
+                lastUsedAt: lastUsed
             ))
         }
         var links: [String: [(Int64, String)]] = [:]
@@ -851,10 +877,15 @@ final class SQLiteConnection: @unchecked Sendable {
     }
 
     func migrate() throws {
-        let version = try userVersion()
+        var version = try userVersion()
         if version < 1 {
             try exec(Schema.v1)
             try exec("PRAGMA user_version = 1")
+            version = 1
+        }
+        if version < 2 {
+            try exec(Schema.v2)
+            try exec("PRAGMA user_version = 2")
         }
     }
 

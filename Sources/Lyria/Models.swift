@@ -59,6 +59,8 @@ struct Playlist: Identifiable, Hashable {
     let id: String
     var name: String
     var trackIDs: [String]
+    /// Unix seconds. Nil until the playlist is opened, created, added to, or played from.
+    var lastUsedAt: Int64?
 }
 
 enum AppRoute: Hashable {
@@ -119,7 +121,7 @@ enum NavItem: String, CaseIterable, Identifiable {
     case library = "曲库"
     case artists = "艺人"
     case albums = "专辑"
-    case playlists = "播放列表"
+    case playlists = "全部播放列表"
     case settings = "设置"
 
     var id: String { rawValue }

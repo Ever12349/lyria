@@ -65,6 +65,10 @@ struct ContentView: View {
         } message: {
             Text(store.libraryRemovalPrompt?.message ?? "")
         }
+        .sheet(item: $store.playlistComposer) { composer in
+            PlaylistNameDialog(suggestedName: composer.suggestedName)
+                .environmentObject(store)
+        }
     }
 
     private var removalPresented: Binding<Bool> {
@@ -162,9 +166,13 @@ struct ContentView: View {
         VStack(spacing: 0) {
             titleBar
             if showsScanProgress {
-                ScanProgressBar(percent: store.scanSession.percent, onCancel: store.cancelScan)
-                    .padding(.trailing, 16)
-                    .background(LyriaTheme.background)
+                ScanProgressBar(
+                    title: store.progressTitle,
+                    percent: store.scanSession.percent,
+                    onCancel: store.cancelScan
+                )
+                .padding(.trailing, 16)
+                .background(LyriaTheme.background)
             }
             if showsPinnedColumnHeader {
                 TrackTableColumnHeader(
@@ -209,34 +217,33 @@ struct ContentView: View {
                 HStack(alignment: .center, spacing: 8) {
                     if showsBack {
                         Button { store.goBack() } label: {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundStyle(LyriaTheme.text3)
-                                .frame(width: 36, height: 36)
-                                .background(Capsule(style: .continuous).fill(LyriaTheme.searchFill))
-                                .overlay(Capsule(style: .continuous).strokeBorder(LyriaTheme.border, lineWidth: 1))
-                                .contentShape(Capsule())
+                            ChromeCapsuleIcon(systemName: "chevron.left")
                         }
                         .buttonStyle(.plain)
                         .contentShape(Capsule())
                         .accessibilityLabel("返回")
                     }
-                    VStack(alignment: .leading, spacing: 2) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(headerTitle)
                             .font(.system(size: 20, weight: .semibold))
                             .tracking(-0.4)
                             .foregroundStyle(LyriaTheme.foreground)
                             .lineLimit(1)
+                            .layoutPriority(0)
                             .allowsHitTesting(false)
-                        Text(headerMeta)
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(LyriaTheme.text3)
-                            .lineLimit(1)
-                            .frame(maxWidth: .infinity, minHeight: 16, alignment: .leading)
-                            .allowsHitTesting(false)
+                        if let headerMeta {
+                            Text(headerMeta)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(LyriaTheme.text3)
+                                .lineLimit(1)
+                                .fixedSize(horizontal: true, vertical: false)
+                                .layoutPriority(1)
+                                .allowsHitTesting(false)
+                        }
                     }
                     .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                 }
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                 .layoutPriority(0)
 
                 if store.showsBatchBar {
@@ -258,6 +265,9 @@ struct ContentView: View {
                 )
                 .frame(width: searchLayoutWidth(rowWidth: pageHeadWidth, resting: restingSearchWidth))
                 .layoutPriority(1)
+
+                addOrScanMenu
+                    .layoutPriority(2)
         }
         .onPreferenceChange(BatchCapsuleWidthKey.self) { width in
             guard width > 1, abs(width - batchCapsuleWidth) > 0.5 else { return }
@@ -281,14 +291,32 @@ struct ContentView: View {
         .padding(.bottom, 4)
     }
 
-    /// Resting search keeps the 46% / 360 cap. With the capsule, an empty field is 36pt; otherwise it uses leftover space up to 360.
+    /// Resting search keeps the 46% / 360 cap, minus the plus button and the gap before it.
+    /// With the batch capsule, an empty field is 36pt; otherwise it uses leftover space up to 360.
     private func searchLayoutWidth(rowWidth: CGFloat, resting: CGFloat) -> CGFloat {
-        if !store.showsBatchBar { return resting }
+        let plusReserve = ChromeCapsuleIcon.side + 16
+        if !store.showsBatchBar { return min(360, max(36, resting - plusReserve)) }
         if store.searchText.isEmpty && !searchFieldExpanded { return 36 }
         let gaps: CGFloat = 16 * 2
         let titleFloor: CGFloat = 88
-        let leftover = rowWidth - batchCapsuleWidth - titleFloor - gaps
+        let leftover = rowWidth - batchCapsuleWidth - titleFloor - gaps - plusReserve
         return min(360, max(36, leftover))
+    }
+
+    private var addOrScanMenu: some View {
+        Menu {
+            Button("扫描文件夹") { store.scanTracks() }
+                .disabled(store.scanSession.isRunning)
+            Button("添加曲目") { store.addAudioFiles() }
+                .disabled(store.scanSession.isRunning)
+        } label: {
+            ChromeCapsuleIcon(systemName: "plus")
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .frame(width: ChromeCapsuleIcon.side, height: ChromeCapsuleIcon.side)
+        .accessibilityLabel("添加或扫描曲目")
+        .help("添加或扫描曲目")
     }
 
     private var queryBinding: Binding<String> {
@@ -363,7 +391,7 @@ struct ContentView: View {
     }
 
     private var showsScanProgress: Bool {
-        store.route == .library && !store.isSearching && store.scanSession.isRunning
+        store.scanSession.isRunning
     }
 
     /// Playlist removal is only offered on that playlist's own table, not in search.
@@ -387,14 +415,30 @@ struct ContentView: View {
         }
     }
 
-    private var headerMeta: String {
+    private var headerMeta: String? {
         if store.isSearching {
             return store.hasSearchHits ? "\(store.searchTracks.count) 首" : "无结果"
         }
         if case .library = store.route, !store.visibleTracks.isEmpty {
             return "\(store.visibleTracks.count) 首"
         }
-        return " "
+        return nil
+    }
+}
+
+/// 36pt capsule shared by the back button and the add-or-scan menu.
+private struct ChromeCapsuleIcon: View {
+    static let side: CGFloat = 36
+    var systemName: String
+
+    var body: some View {
+        Image(systemName: systemName)
+            .font(.system(size: 13, weight: .medium))
+            .foregroundStyle(LyriaTheme.text3)
+            .frame(width: Self.side, height: Self.side)
+            .background(Capsule(style: .continuous).fill(LyriaTheme.searchFill))
+            .overlay(Capsule(style: .continuous).strokeBorder(LyriaTheme.border, lineWidth: 1))
+            .contentShape(Capsule())
     }
 }
 

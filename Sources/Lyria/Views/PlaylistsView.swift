@@ -102,7 +102,6 @@ struct PlaylistDetailView: View {
                         PillButton(title: "随机", systemImage: "shuffle") {
                             store.playShuffled(songs)
                         }
-                        AddSongsMenu(playlist: playlist)
                     }
                     PillButton(title: "编辑", systemImage: "pencil") {
                         nameDraft = playlist.name
@@ -113,8 +112,12 @@ struct PlaylistDetailView: View {
                 }
 
                 if songs.isEmpty {
-                    EmptyState(systemImage: "music.note.list", title: "播放列表是空的") {
-                        AddSongsMenu(playlist: playlist, prominent: true)
+                    EmptyState(
+                        systemImage: "music.note.list",
+                        title: "播放列表是空的",
+                        message: "可在曲库里把歌曲加进来"
+                    ) {
+                        EmptyView()
                     }
                     .frame(minHeight: 220)
                 } else {
@@ -151,49 +154,5 @@ struct PlaylistDetailView: View {
         renaming = false
         guard !trimmed.isEmpty, let playlist = store.playlist(playlistID), trimmed != playlist.name else { return }
         store.renamePlaylist(playlist.id, to: trimmed)
-    }
-}
-
-struct AddSongsMenu: View {
-    let playlist: Playlist
-    var prominent = false
-    @EnvironmentObject private var store: AppSession
-
-    private var remaining: [Track] {
-        store.tracks.filter { !$0.missing && !playlist.trackIDs.contains($0.id) }
-    }
-
-    var body: some View {
-        Menu {
-            if remaining.isEmpty {
-                Button("没有更多歌曲") {}
-                    .disabled(true)
-            } else {
-                ForEach(remaining) { track in
-                    Button("\(track.title) · \(track.artist)") { store.add(track.id, to: playlist.id) }
-                }
-            }
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "plus")
-                    .font(.system(size: 11, weight: .bold))
-                Text("添加歌曲")
-            }
-            .font(.system(size: 12, weight: .semibold))
-            .foregroundStyle(Color.white)
-            .padding(.horizontal, 14)
-            .frame(height: 32)
-            .background {
-                Capsule(style: .continuous)
-                    .fill(prominent ? AnyShapeStyle(LyriaTheme.accentGradient) : AnyShapeStyle(Color.white.opacity(0.06)))
-            }
-            .overlay {
-                Capsule(style: .continuous)
-                    .strokeBorder(prominent ? Color.clear : LyriaTheme.border, lineWidth: 1)
-            }
-        }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize()
     }
 }

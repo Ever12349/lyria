@@ -9,6 +9,13 @@ struct LibraryRemovalPrompt: Equatable {
     var message: String
 }
 
+struct PlaylistComposer: Identifiable, Equatable {
+    let id = UUID()
+    var suggestedName: String
+    var trackIDs: [String]
+    var openAfterCreate: Bool
+}
+
 /// Navigation, search, selection, and toasts. The database lives on `library`.
 @MainActor
 final class AppSession: ObservableObject {
@@ -22,6 +29,7 @@ final class AppSession: ObservableObject {
     /// True after a click or menu on the current track table. ⌘A is ignored unless this is set.
     var trackTableFocused = false
     @Published var libraryRemovalPrompt: LibraryRemovalPrompt?
+    @Published var playlistComposer: PlaylistComposer?
     /// Kept beside the prompt so confirm still runs if the dialog clears the prompt first.
     private var libraryRemovalIDs: [String] = []
     private var libraryRemovalRequest = 0
@@ -95,6 +103,12 @@ final class AppSession: ObservableObject {
     var albums: [Album] { library.albums }
     var playlists: [Playlist] { library.playlists }
     var scanSession: ScanSession { library.scanSession }
+    var progressTitle: String { library.progressTitle }
+
+    var recentPlaylists: [Playlist] {
+        let ids = PlaylistRecency.recentIDs(playlists.map { PlaylistUse(id: $0.id, lastUsedAt: $0.lastUsedAt) })
+        return ids.compactMap { id in playlists.first { $0.id == id } }
+    }
 
     var visibleTracks: [Track] { tracks }
 
@@ -260,10 +274,15 @@ final class AppSession: ObservableObject {
         dismissSelectionForNavigation()
         searchText = ""
         navigation.openPlaylist(id)
+        stampPlaylist(id)
     }
 
     func scanTracks() {
         library.scanTracks()
+    }
+
+    func addAudioFiles() {
+        library.addAudioFiles()
     }
 
     func cancelScan() {
@@ -328,8 +347,29 @@ final class AppSession: ObservableObject {
         Task { await library.clearFingerprints() }
     }
 
+    /// Dashed card. The name dialog opens the new playlist and does not add tracks.
     func createPlaylist() {
-        let name = Self.uniquePlaylistName(existing: playlists.map(\.name))
+        promptNewPlaylist(adding: [], openAfterCreate: true)
+    }
+
+    func promptNewPlaylist(adding trackIDs: [String], openAfterCreate: Bool = false) {
+        playlistComposer = PlaylistComposer(
+            suggestedName: Self.uniquePlaylistName(existing: playlists.map(\.name)),
+            trackIDs: trackIDs,
+            openAfterCreate: openAfterCreate
+        )
+    }
+
+    func cancelNewPlaylist() {
+        playlistComposer = nil
+    }
+
+    func commitNewPlaylist(named raw: String) {
+        let name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, let composer = playlistComposer else { return }
+        let trackIDs = composer.trackIDs
+        let openAfter = composer.openAfterCreate
+        playlistComposer = nil
         let id = EntityID.playlist()
         Task {
             let created = await library.createPlaylist(id: id, name: name)
@@ -337,8 +377,16 @@ final class AppSession: ObservableObject {
                 showToast("新建播放列表失败")
                 return
             }
-            openPlaylist(id)
-            showToast("已新建「\(name)」")
+            if trackIDs.isEmpty {
+                showToast("已新建「\(name)」")
+                if openAfter { openPlaylist(id) }
+                return
+            }
+            guard let result = await library.addTracks(trackIDs, to: id) else {
+                showToast("加入播放列表失败")
+                return
+            }
+            showToast("已新建「\(name)」并加入 \(result.added) 首")
         }
     }
 
@@ -369,13 +417,16 @@ final class AppSession: ObservableObject {
 
     func add(_ trackID: String, to playlistID: String) {
         guard let playlist = playlist(playlistID), track(trackID) != nil else { return }
-        if playlist.trackIDs.contains(trackID) {
-            showToast("已在「\(playlist.name)」中")
-            return
-        }
+        let already = playlist.trackIDs.contains(trackID)
+        let name = playlist.name
         Task {
+            await library.stampPlaylistUsed(id: playlistID)
+            if already {
+                showToast("已在「\(name)」中")
+                return
+            }
             let added = await library.addTrack(trackID, to: playlistID)
-            showToast(added ? "已加入「\(playlist.name)」" : "加入播放列表失败")
+            showToast(added ? "已加入「\(name)」" : "加入播放列表失败")
         }
     }
 
@@ -388,6 +439,7 @@ final class AppSession: ObservableObject {
         }
         let name = playlist.name
         Task {
+            await library.stampPlaylistUsed(id: playlistID)
             guard let result = await library.addTracks(ordered, to: playlistID) else {
                 showToast("加入播放列表失败")
                 return
@@ -429,26 +481,31 @@ final class AppSession: ObservableObject {
     }
 
     func menuPlay(_ track: Track, in list: [Track]) {
+        stampIfPlaylistPlaybackStarts(trackID: track.id, intent: .menuPlay)
         let snapshot = list.map(ResolvedTrack.init)
         Task { await engine.play(list: snapshot, startID: track.id, intent: .menuPlay) }
     }
 
     func coverPressed(_ track: Track, in list: [Track]) {
+        stampIfPlaylistPlaybackStarts(trackID: track.id, intent: .cover)
         let snapshot = list.map(ResolvedTrack.init)
         Task { await engine.play(list: snapshot, startID: track.id, intent: .cover) }
     }
 
     func doubleClicked(_ track: Track, in list: [Track]) {
+        stampIfPlaylistPlaybackStarts(trackID: track.id, intent: .doubleClick)
         let snapshot = list.map(ResolvedTrack.init)
         Task { await engine.play(list: snapshot, startID: track.id, intent: .doubleClick) }
     }
 
     func playAll(_ list: [Track]) {
+        stampIfPlaylistPlaybackStarts()
         let snapshot = list.map(ResolvedTrack.init)
         Task { await engine.playAll(snapshot) }
     }
 
     func playShuffled(_ list: [Track]) {
+        stampIfPlaylistPlaybackStarts()
         let snapshot = list.map(ResolvedTrack.init)
         Task { await engine.playShuffled(snapshot) }
     }
@@ -562,6 +619,19 @@ final class AppSession: ObservableObject {
         let placeholders = scope.subtracting(liveTrackIDs).subtracting(live)
         liveTrackIDs = live
         apply(TrackSelection.prune(selectionState, keeping: live.union(placeholders)))
+    }
+
+    private func stampPlaylist(_ id: String) {
+        Task { await library.stampPlaylistUsed(id: id) }
+    }
+
+    /// Playlist page only. Cover-on-current toggles and double-click-on-current restarts, so those do not count.
+    private func stampIfPlaylistPlaybackStarts(trackID: String? = nil, intent: RowPlayIntent? = nil) {
+        guard !isSearching, case .playlist(let playlistID) = route else { return }
+        if let trackID, let intent, trackID == transport.current?.id {
+            if intent == .cover || intent == .doubleClick { return }
+        }
+        stampPlaylist(playlistID)
     }
 
     private static func deduped(_ ids: [String]) -> [String] {

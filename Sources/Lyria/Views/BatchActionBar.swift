@@ -66,16 +66,7 @@ struct BatchActionBar: View {
 
     private var addMenu: some View {
         Menu {
-            if store.playlists.isEmpty {
-                Button("没有播放列表") {}
-                    .disabled(true)
-            } else {
-                ForEach(store.playlists) { playlist in
-                    Button(playlist.name) {
-                        store.addToPlaylist(store.orderedSelectionIDs(), playlistID: playlist.id)
-                    }
-                }
-            }
+            AddToPlaylistMenuItems(trackIDs: store.orderedSelectionIDs())
         } label: {
             Text("加入播放列表")
                 .font(.system(size: 12, weight: .semibold))
