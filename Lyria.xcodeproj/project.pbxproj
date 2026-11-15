@@ -49,6 +49,7 @@
 		A1C00000000000000000002F /* TrackTableLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C00000000000000000001F /* TrackTableLayout.swift */; };
 		A1C000000000000000000030 /* LibraryAdditionCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000020 /* LibraryAdditionCopy.swift */; };
 		A1C000000000000000000090 /* PlaylistRecency.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000080 /* PlaylistRecency.swift */; };
+		A1C0000000000000000000A2 /* AddTimeOrder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0000000000000000000A1 /* AddTimeOrder.swift */; };
 		A1C000000000000000000054 /* ScanSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000044 /* ScanSessionTests.swift */; };
 		A1C000000000000000000055 /* TrackSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000045 /* TrackSelectionTests.swift */; };
 		A1C000000000000000000057 /* LibraryRemovalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000047 /* LibraryRemovalTests.swift */; };
@@ -60,6 +61,7 @@
 		A1C00000000000000000005D /* TrackTableLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C00000000000000000004D /* TrackTableLayoutTests.swift */; };
 		A1C00000000000000000005E /* LibraryAdditionCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C00000000000000000004E /* LibraryAdditionCopyTests.swift */; };
 		A1C00000000000000000005F /* PlaylistRecencyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C00000000000000000004F /* PlaylistRecencyTests.swift */; };
+		A1C0000000000000000000A4 /* AddTimeOrderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0000000000000000000A3 /* AddTimeOrderTests.swift */; };
 		A1C100000000000000000109 /* ScanProgressBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C100000000000000000009 /* ScanProgressBar.swift */; };
 		A1C10000000000000000010A /* BatchActionBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C10000000000000000000A /* BatchActionBar.swift */; };
 		A1C10000000000000000010C /* AddToPlaylistMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C10000000000000000000C /* AddToPlaylistMenu.swift */; };
@@ -118,6 +120,7 @@
 		A1C00000000000000000001F /* TrackTableLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackTableLayout.swift; sourceTree = "<group>"; };
 		A1C000000000000000000020 /* LibraryAdditionCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryAdditionCopy.swift; sourceTree = "<group>"; };
 		A1C000000000000000000080 /* PlaylistRecency.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistRecency.swift; sourceTree = "<group>"; };
+		A1C0000000000000000000A1 /* AddTimeOrder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTimeOrder.swift; sourceTree = "<group>"; };
 		A1C000000000000000000044 /* ScanSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanSessionTests.swift; sourceTree = "<group>"; };
 		A1C000000000000000000045 /* TrackSelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackSelectionTests.swift; sourceTree = "<group>"; };
 		A1C000000000000000000047 /* LibraryRemovalTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryRemovalTests.swift; sourceTree = "<group>"; };
@@ -129,6 +132,7 @@
 		A1C00000000000000000004D /* TrackTableLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackTableLayoutTests.swift; sourceTree = "<group>"; };
 		A1C00000000000000000004E /* LibraryAdditionCopyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryAdditionCopyTests.swift; sourceTree = "<group>"; };
 		A1C00000000000000000004F /* PlaylistRecencyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistRecencyTests.swift; sourceTree = "<group>"; };
+		A1C0000000000000000000A3 /* AddTimeOrderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTimeOrderTests.swift; sourceTree = "<group>"; };
 		A1C100000000000000000009 /* ScanProgressBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanProgressBar.swift; sourceTree = "<group>"; };
 		A1C10000000000000000000A /* BatchActionBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchActionBar.swift; sourceTree = "<group>"; };
 		A1C10000000000000000000C /* AddToPlaylistMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddToPlaylistMenu.swift; sourceTree = "<group>"; };
@@ -273,6 +277,7 @@
 				A1C00000000000000000001F /* TrackTableLayout.swift */,
 				A1C000000000000000000020 /* LibraryAdditionCopy.swift */,
 				A1C000000000000000000080 /* PlaylistRecency.swift */,
+				A1C0000000000000000000A1 /* AddTimeOrder.swift */,
 			);
 			path = Sources/LyriaCore;
 			sourceTree = "<group>";
@@ -294,6 +299,7 @@
 				A1C00000000000000000004D /* TrackTableLayoutTests.swift */,
 				A1C00000000000000000004E /* LibraryAdditionCopyTests.swift */,
 				A1C00000000000000000004F /* PlaylistRecencyTests.swift */,
+				A1C0000000000000000000A3 /* AddTimeOrderTests.swift */,
 			);
 			path = Tests/LyriaTests;
 			sourceTree = "<group>";
@@ -444,6 +450,7 @@
 				A1C00000000000000000002F /* TrackTableLayout.swift in Sources */,
 				A1C000000000000000000030 /* LibraryAdditionCopy.swift in Sources */,
 				A1C000000000000000000090 /* PlaylistRecency.swift in Sources */,
+				A1C0000000000000000000A2 /* AddTimeOrder.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -465,6 +472,7 @@
 				A1C00000000000000000005D /* TrackTableLayoutTests.swift in Sources */,
 				A1C00000000000000000005E /* LibraryAdditionCopyTests.swift in Sources */,
 				A1C00000000000000000005F /* PlaylistRecencyTests.swift in Sources */,
+				A1C0000000000000000000A4 /* AddTimeOrderTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

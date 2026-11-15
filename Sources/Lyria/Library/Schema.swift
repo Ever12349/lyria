@@ -74,4 +74,18 @@ enum Schema {
     static let v2 = """
     ALTER TABLE playlists ADD COLUMN last_used_at INTEGER;
     """
+
+    /// v3. `added_at` is unix seconds, written on insert and left alone by later updates.
+    /// Playlist links copy `position` into `added_at` first: adds always append, and nothing rewrites positions.
+    /// Then the same wipe as `clearLibraryIndex`: fingerprints, tracks, artists, albums.
+    /// Playlists and `playlist_tracks` stay. Runs once, from `PRAGMA user_version`.
+    static let v3 = """
+    ALTER TABLE tracks ADD COLUMN added_at INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE playlist_tracks ADD COLUMN added_at INTEGER NOT NULL DEFAULT 0;
+    UPDATE playlist_tracks SET added_at = position;
+    DELETE FROM fingerprints;
+    DELETE FROM tracks;
+    DELETE FROM artists;
+    DELETE FROM albums;
+    """
 }

@@ -13,6 +13,8 @@ struct Track: Identifiable, Hashable {
     let encodingSuspect: Bool
     let path: String
     let artworkPath: String?
+    /// Unix seconds when this row was inserted. Rescans and metadata updates leave it alone.
+    let addedAt: Int64
 
     var durationLabel: String { TimeFormat.label(ms: durationMs) }
     var artistLabel: String { artist.isEmpty ? "未知艺人" : artist }
@@ -32,7 +34,8 @@ struct Track: Identifiable, Hashable {
             missing: true,
             encodingSuspect: false,
             path: "",
-            artworkPath: nil
+            artworkPath: nil,
+            addedAt: 0
         )
     }
 }

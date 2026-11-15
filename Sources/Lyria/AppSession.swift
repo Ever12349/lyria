@@ -110,12 +110,15 @@ final class AppSession: ObservableObject {
         return ids.compactMap { id in playlists.first { $0.id == id } }
     }
 
-    var visibleTracks: [Track] { tracks }
+    /// Library table. Newest `addedAt` first. The stored catalog stays title-ordered for search.
+    var visibleTracks: [Track] {
+        AddTimeOrder.newestFirst(tracks) { $0.addedAt }
+    }
 
     var searchTracks: [Track] {
         let query = trimmedQuery
         guard !query.isEmpty else { return [] }
-        return visibleTracks.filter { track in
+        return tracks.filter { track in
             track.title.localizedCaseInsensitiveContains(query)
                 || track.artistLabel.localizedCaseInsensitiveContains(query)
                 || track.albumLabel.localizedCaseInsensitiveContains(query)
@@ -134,11 +137,11 @@ final class AppSession: ObservableObject {
     func playlist(_ id: String) -> Playlist? { playlists.first { $0.id == id } }
 
     func tracks(artistID: String) -> [Track] {
-        tracks.filter { $0.artistId == artistID }
+        AddTimeOrder.newestFirst(tracks.filter { $0.artistId == artistID }) { $0.addedAt }
     }
 
     func tracks(albumID: String) -> [Track] {
-        tracks.filter { $0.albumId == albumID }
+        AddTimeOrder.newestFirst(tracks.filter { $0.albumId == albumID }) { $0.addedAt }
     }
 
     func albums(artistID: String) -> [Album] {

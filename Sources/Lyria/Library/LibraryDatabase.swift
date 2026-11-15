@@ -164,6 +164,7 @@ actor LibraryDatabase {
             )
             try stripAlias(record.path, except: trackID)
 
+            // Rescans update the row in place. added_at stays on the original insert.
             if let existing = try trackCore(id: trackID) {
                 var aliases = Self.decodeAliases(existing.aliasesJSON)
                 aliases.removeAll { $0 == record.path }
@@ -212,12 +213,14 @@ actor LibraryDatabase {
                     ]
                 )
             } else {
+                let stamp = Self.now
                 try connection.run(
                     """
                     INSERT INTO tracks (
                       id, path, aliases_json, title, artist_name, album_name, artist_id, album_id,
-                      duration_ms, year, size, mtime, missing, encoding_suspect, icloud_offline, updated_at
-                    ) VALUES (?, ?, '[]', ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
+                      duration_ms, year, size, mtime, missing, encoding_suspect, icloud_offline,
+                      updated_at, added_at
+                    ) VALUES (?, ?, '[]', ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)
                     """,
                     [
                         .text(trackID),
@@ -233,7 +236,8 @@ actor LibraryDatabase {
                         .int(record.mtime),
                         .int(record.encodingSuspect ? 1 : 0),
                         .int(record.icloudOffline ? 1 : 0),
-                        .int(Self.now),
+                        .int(stamp),
+                        .int(stamp),
                     ]
                 )
             }
@@ -360,7 +364,8 @@ actor LibraryDatabase {
         }
     }
 
-    /// Drops fingerprints and track index. Playlists remain; their track ids become missing.
+    /// Drops fingerprints and the track index. Playlists remain; their track ids become missing.
+    /// Schema v3 runs these same four deletes once. This method is the settings action, not a launch path.
     func clearLibraryIndex() throws {
         try connection.transaction {
             try connection.run("DELETE FROM fingerprints")
@@ -423,8 +428,8 @@ actor LibraryDatabase {
             [.text(playlistID)]
         )
         try connection.run(
-            "INSERT INTO playlist_tracks (playlist_id, track_id, position) VALUES (?, ?, ?)",
-            [.text(playlistID), .text(trackID), .int(position)]
+            "INSERT INTO playlist_tracks (playlist_id, track_id, position, added_at) VALUES (?, ?, ?, ?)",
+            [.text(playlistID), .text(trackID), .int(position), .int(Self.now)]
         )
         try connection.run(
             "UPDATE playlists SET updated_at = ? WHERE id = ?",
@@ -440,8 +445,9 @@ actor LibraryDatabase {
         )
     }
 
-    /// Inserts in `trackIDs` order (the current table, top to bottom). One transaction.
-    /// `skipped` counts tracks already in the playlist. Unknown track ids are ignored.
+    /// Inserts in `trackIDs` order, appending `position`. One transaction.
+    /// `skipped` counts tracks already in the playlist and does not rewrite `added_at`.
+    /// Unknown track ids are ignored. Display order is `added_at`, not this append order.
     func addTracks(_ trackIDs: [String], to playlistID: String) throws -> PlaylistBatchAdd {
         let unique = Self.uniquePreservingOrder(trackIDs)
         return try connection.transaction {
@@ -453,6 +459,7 @@ actor LibraryDatabase {
                 "SELECT COALESCE(MAX(position), -1) + 1 FROM playlist_tracks WHERE playlist_id = ?",
                 [.text(playlistID)]
             )
+            let stamp = Self.now
             var added = 0
             var skipped = 0
             for trackID in unique {
@@ -467,8 +474,8 @@ actor LibraryDatabase {
                     continue
                 }
                 try connection.run(
-                    "INSERT INTO playlist_tracks (playlist_id, track_id, position) VALUES (?, ?, ?)",
-                    [.text(playlistID), .text(trackID), .int(position)]
+                    "INSERT INTO playlist_tracks (playlist_id, track_id, position, added_at) VALUES (?, ?, ?, ?)",
+                    [.text(playlistID), .text(trackID), .int(position), .int(stamp)]
                 )
                 position += 1
                 added += 1
@@ -701,12 +708,13 @@ actor LibraryDatabase {
         try connection.run("DELETE FROM albums WHERE track_count = 0")
     }
 
+    /// Title order is the search catalog. Library, album, and artist tables sort by `addedAt` in memory.
     private func loadTracks() throws -> [Track] {
         var tracks: [Track] = []
         try connection.run(
             """
             SELECT id, path, title, artist_name, album_name, artist_id, album_id,
-                   duration_ms, missing, encoding_suspect
+                   duration_ms, missing, encoding_suspect, added_at
             FROM tracks
             ORDER BY title COLLATE NOCASE, id
             """
@@ -723,7 +731,8 @@ actor LibraryDatabase {
                 missing: sqlite3_column_int64(statement, 8) != 0,
                 encodingSuspect: sqlite3_column_int64(statement, 9) != 0,
                 path: SQLiteConnection.text(statement, 1),
-                artworkPath: SupportPaths.existingArtwork(trackID: id)
+                artworkPath: SupportPaths.existingArtwork(trackID: id),
+                addedAt: sqlite3_column_int64(statement, 10)
             ))
         }
         return tracks
@@ -787,18 +796,19 @@ actor LibraryDatabase {
                 lastUsedAt: lastUsed
             ))
         }
-        var links: [String: [(Int64, String)]] = [:]
+        var links: [String: [(trackID: String, addedAt: Int64)]] = [:]
         try connection.run(
-            "SELECT playlist_id, track_id, position FROM playlist_tracks ORDER BY playlist_id, position"
+            "SELECT playlist_id, track_id, added_at FROM playlist_tracks ORDER BY added_at DESC"
         ) { statement in
             let playlistID = SQLiteConnection.text(statement, 0)
-            let trackID = SQLiteConnection.text(statement, 1)
-            let position = sqlite3_column_int64(statement, 2)
-            links[playlistID, default: []].append((position, trackID))
+            links[playlistID, default: []].append((
+                trackID: SQLiteConnection.text(statement, 1),
+                addedAt: sqlite3_column_int64(statement, 2)
+            ))
         }
         for index in playlists.indices {
             let pairs = links[playlists[index].id] ?? []
-            playlists[index].trackIDs = pairs.sorted { $0.0 < $1.0 }.map(\.1)
+            playlists[index].trackIDs = AddTimeOrder.newestFirst(pairs) { $0.addedAt }.map(\.trackID)
         }
         return playlists
     }
@@ -886,6 +896,14 @@ final class SQLiteConnection: @unchecked Sendable {
         if version < 2 {
             try exec(Schema.v2)
             try exec("PRAGMA user_version = 2")
+            version = 2
+        }
+        if version < 3 {
+            // Once. A later launch sees user_version 3 and does not wipe again.
+            try transaction {
+                try exec(Schema.v3)
+                try exec("PRAGMA user_version = 3")
+            }
         }
     }
 
