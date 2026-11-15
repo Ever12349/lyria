@@ -10,7 +10,7 @@ public enum QueueItem: Hashable, Sendable {
     }
 }
 
-public enum RepeatMode: String, CaseIterable, Sendable {
+public enum RepeatMode: String, CaseIterable, Sendable, Codable {
     case off
     case all
     case one
@@ -181,8 +181,11 @@ public struct VolumeSession: Equatable, Sendable {
     /// Set only by the speaker button, never by dragging the slider to 0.
     public private(set) var speakerMemory: Double?
 
-    public init(level: Double = 1) {
+    public init(level: Double = 1, speakerMemory: Double? = nil) {
         self.level = Self.clamp(level)
+        if let speakerMemory, speakerMemory > 0 {
+            self.speakerMemory = Self.clamp(speakerMemory)
+        }
     }
 
     public mutating func setSlider(_ value: Double) {
@@ -200,6 +203,42 @@ public struct VolumeSession: Equatable, Sendable {
 
     private static func clamp(_ value: Double) -> Double {
         min(max(value, 0), 1)
+    }
+}
+
+
+/// Shuffle, repeat, and volume kept across launches. The queue and playhead are not.
+public struct PlaybackPreferences: Equatable, Sendable, Codable {
+    public var shuffle: Bool
+    public var repeatMode: RepeatMode
+    public var volume: Double
+    public var speakerMemory: Double?
+
+    public static let `default` = PlaybackPreferences()
+
+    public init(
+        shuffle: Bool = false,
+        repeatMode: RepeatMode = .off,
+        volume: Double = 1,
+        speakerMemory: Double? = nil
+    ) {
+        self.shuffle = shuffle
+        self.repeatMode = repeatMode
+        self.volume = min(max(volume, 0), 1)
+        if let speakerMemory, speakerMemory > 0 {
+            self.speakerMemory = min(max(speakerMemory, 0), 1)
+        } else {
+            self.speakerMemory = nil
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let shuffle = try container.decodeIfPresent(Bool.self, forKey: .shuffle) ?? false
+        let repeatMode = try container.decodeIfPresent(RepeatMode.self, forKey: .repeatMode) ?? .off
+        let volume = try container.decodeIfPresent(Double.self, forKey: .volume) ?? 1
+        let speakerMemory = try container.decodeIfPresent(Double.self, forKey: .speakerMemory)
+        self.init(shuffle: shuffle, repeatMode: repeatMode, volume: volume, speakerMemory: speakerMemory)
     }
 }
 

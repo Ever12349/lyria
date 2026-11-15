@@ -1,6 +1,5 @@
 # Lyria · Window Chrome（原生标题栏约定）
 
-项目路径：`/Users/qianxiao/worker/AIAgent/lyria`  
 视觉与窗口行为以 Deep Space 样例 + 系统「音乐」式原生标题栏为准。完整规格见 [`docs/dev-spec.md`](../../docs/dev-spec.md)「窗口与壳层逻辑」。
 
 ## 视觉锁定

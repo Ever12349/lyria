@@ -1,7 +1,5 @@
 # Lyria 文档索引
 
-Checkout：`/Users/qianxiao/worker/AIAgent/lyria`
-
 - 交互式全流程规格（Canvas）：[Lyria 全流程开发文档](https://cursor.com/canvas/store-669ca32f-ae0c-4bc0-be04-6e46150cff28/37c89944-4d8d-4256-b8f6-e516d782a9f4)
 - 仓库内 Markdown 规格：[`docs/dev-spec.md`](./dev-spec.md)
 - 每个按钮的操作和限制：[控件操作与限制](./dev-spec.md#控件操作与限制)

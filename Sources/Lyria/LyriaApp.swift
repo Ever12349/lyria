@@ -1,4 +1,5 @@
 import SwiftUI
+import LyriaCore
 
 @main
 struct LyriaApp: App {
@@ -33,11 +34,29 @@ final class PlaybackRoot {
     let session: AppSession
 
     init() {
+        let prefs = PlaybackPreferenceStore.load()
         let transport = TransportState()
+        transport.shuffle = prefs.shuffle
+        transport.repeatMode = prefs.repeatMode
+        transport.volume = prefs.volume
         let queue = PlaybackQueueState()
-        let engine = PlaybackEngine()
+        let engine = PlaybackEngine(preferences: prefs, persist: { PlaybackPreferenceStore.save($0) })
         self.transport = transport
         self.queue = queue
         session = AppSession(engine: engine, transport: transport, queueState: queue)
+    }
+}
+
+enum PlaybackPreferenceStore {
+    private static let key = "lyria.playbackPreferences"
+
+    static func load() -> PlaybackPreferences {
+        guard let data = UserDefaults.standard.data(forKey: key) else { return .default }
+        return (try? JSONDecoder().decode(PlaybackPreferences.self, from: data)) ?? .default
+    }
+
+    static func save(_ prefs: PlaybackPreferences) {
+        guard let data = try? JSONEncoder().encode(prefs) else { return }
+        UserDefaults.standard.set(data, forKey: key)
     }
 }

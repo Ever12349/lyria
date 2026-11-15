@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import LyriaCore
 
@@ -5,6 +6,7 @@ struct TransportBar: View {
     @EnvironmentObject private var store: AppSession
     @Environment(TransportState.self) private var transport
     @State private var scrub: Double?
+    @State private var volumeDrag: Double?
 
     var body: some View {
         GeometryReader { geo in
@@ -108,6 +110,7 @@ struct TransportBar: View {
         .controlSize(.mini)
         .tint(LyriaTheme.primary)
         .disabled(transport.current == nil)
+        .animation(nil, value: transport.positionMs)
         .accessibilityLabel("播放进度")
     }
 
@@ -151,11 +154,23 @@ struct TransportBar: View {
 
             Slider(
                 value: Binding(
-                    get: { transport.volume },
-                    set: { store.transportSetVolume($0) }
+                    get: { volumeDrag ?? transport.volume },
+                    set: { value in
+                        volumeDrag = value
+                        store.transportSetVolume(value)
+                    }
                 ),
                 in: 0...1
-            )
+            ) { editing in
+                if editing {
+                    volumeDrag = volumeDrag ?? transport.volume
+                } else {
+                    if let volumeDrag {
+                        store.transportSetVolume(volumeDrag)
+                    }
+                    volumeDrag = nil
+                }
+            }
             .controlSize(.mini)
             .tint(LyriaTheme.primary)
             .frame(width: 90)
@@ -180,5 +195,24 @@ struct TransportBar: View {
         .help(label)
         .disabled(!enabled)
         .accessibilityLabel(label)
+    }
+}
+
+
+/// Own SwiftUI graph so progress ticks cannot relayout the keep-alive pages.
+struct IsolatedTransportBar: NSViewRepresentable {
+    @EnvironmentObject private var store: AppSession
+
+    func makeNSView(context: Context) -> NSHostingView<AnyView> {
+        NSHostingView(rootView: AnyView(
+            TransportBar()
+                .environmentObject(store)
+                .environment(store.transport)
+        ))
+    }
+
+    func updateNSView(_ nsView: NSHostingView<AnyView>, context: Context) {
+        // The inner graph observes TransportState itself. Rebuilding here would
+        // dirty the window graph again on unrelated session updates.
     }
 }

@@ -68,6 +68,10 @@ final class AppSession: ObservableObject {
         }
     }
 
+    deinit {
+        engineMirror?.cancel()
+    }
+
     func bootstrap() async {
         guard !didBootstrap else { return }
         didBootstrap = true
@@ -277,7 +281,7 @@ final class AppSession: ObservableObject {
         dismissSelectionForNavigation()
         searchText = ""
         navigation.openPlaylist(id)
-        stampPlaylist(id)
+        // Opening is navigation only. Stamping here reorders the sidebar under the cursor.
     }
 
     func scanTracks() {
@@ -595,6 +599,10 @@ final class AppSession: ObservableObject {
         case .state(let snapshot):
             transport.apply(snapshot)
             queueState.apply(snapshot)
+        case .position(let ms):
+            transport.applyPosition(ms)
+        case .volume(let value):
+            transport.applyVolume(value)
         }
     }
 

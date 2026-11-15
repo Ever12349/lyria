@@ -149,7 +149,8 @@ struct ContentView: View {
             }
             .animation(.easeOut(duration: 0.18), value: store.toast)
             .ignoresSafeArea(edges: .top)
-            TransportBar()
+            IsolatedTransportBar()
+                .frame(height: 98)
         }
         .environment(\.lyriaChromeTopInset, chromeTop)
         .onPreferenceChange(TopChromeHeightKey.self) { height in
@@ -304,19 +305,11 @@ struct ContentView: View {
     }
 
     private var addOrScanMenu: some View {
-        Menu {
-            Button("扫描文件夹") { store.scanTracks() }
-                .disabled(store.scanSession.isRunning)
-            Button("添加曲目") { store.addAudioFiles() }
-                .disabled(store.scanSession.isRunning)
-        } label: {
-            ChromeCapsuleIcon(systemName: "plus")
-        }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .frame(width: ChromeCapsuleIcon.side, height: ChromeCapsuleIcon.side)
-        .accessibilityLabel("添加或扫描曲目")
-        .help("添加或扫描曲目")
+        AddOrScanButton(
+            running: store.scanSession.isRunning,
+            scan: { store.scanTracks() },
+            add: { store.addAudioFiles() }
+        )
     }
 
     private var queryBinding: Binding<String> {
@@ -424,6 +417,73 @@ struct ContentView: View {
         }
         return nil
     }
+}
+
+/// A plain 36pt capsule button, same as Back, that pops an AppKit menu.
+/// SwiftUI `Menu` + `borderlessButton` draws its own bezel and does not match the search/back capsules.
+private struct AddOrScanButton: View {
+    var running: Bool
+    var scan: () -> Void
+    var add: () -> Void
+    @State private var anchor = MenuAnchor()
+
+    var body: some View {
+        Button(action: present) {
+            ChromeCapsuleIcon(systemName: "plus")
+        }
+        .buttonStyle(.plain)
+        .contentShape(Capsule())
+        .background(MenuAnchorProbe(anchor: anchor).allowsHitTesting(false))
+        .accessibilityLabel("添加或扫描曲目")
+        .help("添加或扫描曲目")
+    }
+
+    private func present() {
+        guard let view = anchor.view else { return }
+        let menu = TitleBarCallbackMenu()
+        menu.add(title: "扫描文件夹", enabled: !running, run: scan)
+        menu.add(title: "添加曲目", enabled: !running, run: add)
+        let point = NSPoint(x: 0, y: view.isFlipped ? view.bounds.maxY : view.bounds.minY)
+        menu.popUp(positioning: nil, at: point, in: view)
+    }
+}
+
+@MainActor
+private final class MenuAnchor {
+    weak var view: NSView?
+}
+
+private struct MenuAnchorProbe: NSViewRepresentable {
+    var anchor: MenuAnchor
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        anchor.view = view
+        return view
+    }
+
+    func updateNSView(_ view: NSView, context: Context) {
+        anchor.view = view
+    }
+}
+
+private final class TitleBarCallbackMenu: NSMenu {
+    private var actions: [TitleBarMenuAction] = []
+
+    func add(title: String, enabled: Bool = true, run: @escaping () -> Void) {
+        let action = TitleBarMenuAction(run)
+        actions.append(action)
+        let item = NSMenuItem(title: title, action: #selector(TitleBarMenuAction.fire), keyEquivalent: "")
+        item.target = action
+        item.isEnabled = enabled
+        addItem(item)
+    }
+}
+
+private final class TitleBarMenuAction: NSObject {
+    let run: () -> Void
+    init(_ run: @escaping () -> Void) { self.run = run }
+    @objc func fire() { run() }
 }
 
 /// 36pt capsule shared by the back button and the add-or-scan menu.

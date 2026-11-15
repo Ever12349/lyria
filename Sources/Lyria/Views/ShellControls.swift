@@ -415,15 +415,35 @@ struct OffToggle: View {
 }
 
 /// Within-window frost plus a Deep Space wash. Does not use behind-window vibrancy.
+/// The wash is a vertical gradient: nearly solid at the top so the title reads
+/// against a calm surface, thinning toward the bottom edge so the frost and the
+/// page scrolling underneath glow through instead of hitting a hard slab.
 struct LyriaFrostBar: View {
-    var wash: CGFloat = 0.7
+    /// Deep Space opacity at the top edge of the bar.
+    var topWash: CGFloat = 0.92
+    /// Deep Space opacity at the bottom edge. Low enough to let frost light through.
+    var bottomWash: CGFloat = 0.38
 
     var body: some View {
         ZStack {
             WithinWindowFrost()
-            LyriaTheme.background.opacity(wash)
+            LinearGradient(
+                stops: [
+                    .init(color: LyriaTheme.background.opacity(topWash), location: 0),
+                    // Hold near-solid a little past the traffic-light band, then fall away.
+                    .init(color: LyriaTheme.background.opacity(midWash), location: 0.55),
+                    .init(color: LyriaTheme.background.opacity(bottomWash), location: 1)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
         }
         .allowsHitTesting(false)
+    }
+
+    /// Weighted toward the top so the fade eases in rather than ramping linearly.
+    private var midWash: CGFloat {
+        topWash - (topWash - bottomWash) * 0.45
     }
 }
 

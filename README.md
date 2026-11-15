@@ -4,7 +4,7 @@
 
 当前仓库状态：**主窗 UI 壳已落地，阶段 2 曲库导入已接上。** 选择一个文件夹后扫描真实音频并写入 SQLite。**还没有**播放引擎、MCP、HTTP、MenuBarExtra。传输条置灰，显示「—」。启动不会自动扫描，也不会预置 `~/Music`；没选文件夹时设置显示「未选择」。个人 MVP **关** App Sandbox，仍写 `scan_roots.bookmark`。Bundle id 仍是 `local.lyria.sample`。
 
-**Checkout 路径：** `/Users/qianxiao/worker/AIAgent/lyria`
+下文命令都在仓库根目录执行。
 
 ## 文档与设计
 
@@ -23,7 +23,7 @@
 **推荐（Xcode）**
 
 ```bash
-open /Users/qianxiao/worker/AIAgent/lyria/Lyria.xcodeproj
+open Lyria.xcodeproj
 ```
 
 选 scheme **Lyria**，本机 Mac，⌘R。曲库数据库在「应用程序支持 / Lyria / library.sqlite」（经 Application Support API 解析，不手写家目录字符串）。
@@ -31,7 +31,6 @@ open /Users/qianxiao/worker/AIAgent/lyria/Lyria.xcodeproj
 **命令行重编（macOS）**
 
 ```bash
-cd /Users/qianxiao/worker/AIAgent/lyria
 swift build -c debug
 cp .build/debug/Lyria Lyria.app/Contents/MacOS/Lyria
 open Lyria.app

@@ -52,6 +52,8 @@ struct QueueRowSnapshot: Sendable, Equatable {
 
 enum EngineEvent: Sendable {
     case state(TransportSnapshot)
+    case position(Int)
+    case volume(Double)
     case toast(String)
     case showQueue
 }
@@ -77,24 +79,31 @@ final class TransportState {
     }
 
     func apply(_ snapshot: TransportSnapshot) {
-        if snapshot.hasCurrent {
-            current = NowPlaying(
+        let nextCurrent: NowPlaying? = snapshot.hasCurrent
+            ? NowPlaying(
                 id: snapshot.currentID,
                 title: snapshot.title,
                 artist: snapshot.artist,
                 artworkPath: snapshot.artworkPath
             )
-        } else {
-            current = nil
-        }
-        playing = snapshot.playing
-        positionMs = snapshot.positionMs
-        durationMs = snapshot.durationMs
-        volume = snapshot.volume
-        queueCount = snapshot.queueCount
-        lastError = snapshot.lastError
-        shuffle = snapshot.shuffle
-        repeatMode = snapshot.repeatMode
+            : nil
+        if current != nextCurrent { current = nextCurrent }
+        if playing != snapshot.playing { playing = snapshot.playing }
+        if positionMs != snapshot.positionMs { positionMs = snapshot.positionMs }
+        if durationMs != snapshot.durationMs { durationMs = snapshot.durationMs }
+        if volume != snapshot.volume { volume = snapshot.volume }
+        if queueCount != snapshot.queueCount { queueCount = snapshot.queueCount }
+        if lastError != snapshot.lastError { lastError = snapshot.lastError }
+        if shuffle != snapshot.shuffle { shuffle = snapshot.shuffle }
+        if repeatMode != snapshot.repeatMode { repeatMode = snapshot.repeatMode }
+    }
+
+    func applyPosition(_ ms: Int) {
+        if positionMs != ms { positionMs = ms }
+    }
+
+    func applyVolume(_ value: Double) {
+        if volume != value { volume = value }
     }
 }
 
@@ -105,9 +114,10 @@ final class PlaybackQueueState {
     var currentIndex: Int?
 
     func apply(_ snapshot: TransportSnapshot) {
-        rows = snapshot.rows.map {
+        let next = snapshot.rows.map {
             QueueRowState(item: $0.item, title: $0.title, artist: $0.artist, missing: $0.missing)
         }
-        currentIndex = snapshot.currentIndex
+        if rows != next { rows = next }
+        if currentIndex != snapshot.currentIndex { currentIndex = snapshot.currentIndex }
     }
 }

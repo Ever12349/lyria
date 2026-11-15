@@ -39,7 +39,7 @@
 | --- | --- |
 | 产品 | Lyria — 个人本地音乐播放器；仅本机曲库，无云同步、无流媒体账号 |
 | 目标机 | Mac · Apple M1 Pro · my-notebook-2.local |
-| 仓库路径 | `/Users/qianxiao/worker/AIAgent/lyria`（正式项目目录；品牌与文件夹均为 Lyria / lyria） |
+| 仓库路径 | 本仓库根目录，文件夹名 `lyria`（品牌与文件夹均为 Lyria / lyria） |
 | GitHub remote | 私有仓 [Ever12349/lyria](https://github.com/Ever12349/lyria)；SSH `git@github.com:Ever12349/lyria.git` |
 | 技术栈 | macOS-native Swift · SwiftUI + 必要处 AppKit · 音频用 AVFoundation |
 | 人机面 | macOS 主窗口（标题 Lyria）+ 菜单栏 MenuBarExtra（不是设计参考里的移动双 Tab 壳） |
@@ -47,7 +47,7 @@
 | 证明完成 | 真机播放真实文件 + 至少一条 agent 调用路径（优先 MCP） |
 | 非目标 | 截图操控桌面、跨机分享曲库、云歌词、DRM 商店内容、第三方 FLAC 解码器、MVP 并行维护 XPC/Mach IPC |
 
-**同名品牌说明：** 另有设计参考工程亦名 Lyria，路径 `/Users/qianxiao/worker/reactactive/Lyria`（含 Figma Deep Space）。那是视觉/交互参考应用；本文档描述的是本仓库的 macOS 本地播放器产品，同样品牌名为 Lyria。二者同品牌、不同工程，勿混为同一仓库。
+**同名品牌说明：** 另有设计参考工程亦名 Lyria（含 Figma Deep Space）。那是视觉/交互参考应用；本文档描述的是本仓库的 macOS 本地播放器产品，同样品牌名为 Lyria。二者同品牌、不同工程，勿混为同一仓库。
 
 两个表面共用**同一份**引擎状态：人在窗口/菜单栏操作，agent 经 MCP（或可选 HTTP）改同一 `TransportState` / `Queue`。MCP 客户端拉起的是薄桥进程，不另起第二份引擎或曲库。关掉 HTTP 不得影响 MCP。Agent 接口是 MCP/HTTP 工具，不是截图或桌面驱动。
 
@@ -587,7 +587,7 @@ Figma：[Lyria macOS UI](https://www.figma.com/design/JJFaj1UysoberBKEr8G8Jc)
 
 ## 视觉 token 与还原底线
 
-视觉参考工程亦名 Lyria（`/Users/qianxiao/worker/reactactive/Lyria`）与其 Deep Space 设计；参考 Figma：https://www.figma.com/design/03wRSSJiiPqcdZI3hiEsmn/Lyria 。那是设计参考；本产品是同品牌的 macOS 本地播放器，形态仍是窗口 + 菜单栏，不套用参考工程的移动双 Tab。本仓库交付稿见 Figma `JJFaj1UysoberBKEr8G8Jc` 与 `.design/ui-mocks/`。
+视觉参考工程亦名 Lyria，及其 Deep Space 设计；参考 Figma：https://www.figma.com/design/03wRSSJiiPqcdZI3hiEsmn/Lyria 。那是设计参考；本产品是同品牌的 macOS 本地播放器，形态仍是窗口 + 菜单栏，不套用参考工程的移动双 Tab。本仓库交付稿见 Figma `JJFaj1UysoberBKEr8G8Jc` 与 `.design/ui-mocks/`。
 
 | Token | 值 |
 | --- | --- |
@@ -748,7 +748,7 @@ MVP HTTP = health + status + 传输六件套（play/pause/toggle/next/previous/s
 | 项 | 说明 | 状态 |
 | --- | --- | --- |
 | GitHub remote | [Ever12349/lyria](https://github.com/Ever12349/lyria) 已创建；CloudAgent 需 Cursor 对该仓的访问授权 | 仓已有 / 访问待授 |
-| 仓库文件夹名 | 磁盘路径已为 `/Users/qianxiao/worker/AIAgent/lyria`（由原 `vinyl` 更名） | 已落地 |
+| 仓库文件夹名 | 文件夹名已为 `lyria`（由原 `vinyl` 更名） | 已落地 |
 | 曲库根 | MVP **单根**，不预置 `~/Music`（未选显示「未选择」）；多根延后 | **2026-11-09 覆盖** |
 | 增量扫描 | path + size + mtime 快路径。UI 不暴露强制重扫；`force` 仅留在扫描器里 | **已锁** |
 | FLAC | 系统 AVFoundation 不能播则跳过 + 明确错误；**非目标：第三方 FLAC 解码器** | 接受的平台限制 |

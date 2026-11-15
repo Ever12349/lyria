@@ -20,13 +20,33 @@ actor PlaybackEngine {
     private var flacPlayable = false
     private var audioPrepared = false
     private var lastError: String?
+    private let persistPreferences: @Sendable (PlaybackPreferences) -> Void
 
-    init() {
+    init(
+        preferences: PlaybackPreferences = .default,
+        persist: @escaping @Sendable (PlaybackPreferences) -> Void = { _ in }
+    ) {
         var continuation: AsyncStream<EngineEvent>.Continuation!
-        let stream = AsyncStream<EngineEvent> { continuation = $0 }
+        let stream = AsyncStream<EngineEvent>(bufferingPolicy: .bufferingNewest(16)) { continuation = $0 }
         events = stream
         self.continuation = continuation
+        self.persistPreferences = persist
+        queue = PlaybackQueue(shuffle: preferences.shuffle, repeatMode: preferences.repeatMode)
+        volume = VolumeSession(level: preferences.volume, speakerMemory: preferences.speakerMemory)
+        let level = volume.level
         host.install(owner: self)
+        host.player.volume = Float(level)
+    }
+
+    private func writePreferences() {
+        persistPreferences(
+            PlaybackPreferences(
+                shuffle: queue.shuffle,
+                repeatMode: queue.repeatMode,
+                volume: volume.level,
+                speakerMemory: volume.speakerMemory
+            )
+        )
     }
 
     func play(list: [ResolvedTrack], startID: String, intent: RowPlayIntent) async {
@@ -141,11 +161,13 @@ actor PlaybackEngine {
 
     func toggleShuffle() {
         queue = PlaybackQueueRules.toggleShuffle(queue: queue, rng: &rng)
+        writePreferences()
         publish()
     }
 
     func toggleRepeat() {
         queue = PlaybackQueueRules.toggleRepeat(queue: queue)
+        writePreferences()
         publish()
     }
 
@@ -170,13 +192,15 @@ actor PlaybackEngine {
     func setVolume(_ value: Double) async {
         volume.setSlider(value)
         host.player.volume = Float(volume.level)
-        publish()
+        writePreferences()
+        continuation.yield(.volume(volume.level))
     }
 
     func toggleSpeaker() async {
         volume.toggleSpeaker()
         host.player.volume = Float(volume.level)
-        publish()
+        writePreferences()
+        continuation.yield(.volume(volume.level))
     }
 
     func removeFromQueue(_ ids: Set<String>) async {
@@ -242,7 +266,7 @@ actor PlaybackEngine {
     func noteClock(_ ms: Int) {
         guard playing, !ignoreClock else { return }
         positionMs = max(0, ms)
-        publish()
+        continuation.yield(.position(positionMs))
     }
 
     func noteEnded(token: Int) async {
@@ -533,14 +557,30 @@ private extension Array {
 }
 
 private final class PlayerHost: @unchecked Sendable {
-    let player = AVPlayer()
+    let player: AVPlayer = {
+        let player = AVPlayer()
+        player.preventsDisplaySleepDuringVideoPlayback = false
+        player.allowsExternalPlayback = false
+        return player
+    }()
     private var timeToken: Any?
     private var endToken: NSObjectProtocol?
     private var failToken: NSObjectProtocol?
 
+    deinit {
+        if let timeToken { player.removeTimeObserver(timeToken) }
+        if let endToken { NotificationCenter.default.removeObserver(endToken) }
+        if let failToken { NotificationCenter.default.removeObserver(failToken) }
+    }
+
     func install(owner: PlaybackEngine) {
+        if let timeToken {
+            player.removeTimeObserver(timeToken)
+            self.timeToken = nil
+        }
         let interval = CMTime(seconds: 0.3, preferredTimescale: 600)
-        timeToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { time in
+        timeToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak owner] time in
+            guard let owner else { return }
             let seconds = time.seconds
             guard seconds.isFinite else { return }
             let ms = Int((seconds * 1000).rounded())
@@ -555,14 +595,16 @@ private final class PlayerHost: @unchecked Sendable {
             forName: .AVPlayerItemDidPlayToEndTime,
             object: item,
             queue: .main
-        ) { _ in
+        ) { [weak owner] _ in
+            guard let owner else { return }
             Task { await owner.noteEnded(token: token) }
         }
         failToken = NotificationCenter.default.addObserver(
             forName: .AVPlayerItemFailedToPlayToEndTime,
             object: item,
             queue: .main
-        ) { _ in
+        ) { [weak owner] _ in
+            guard let owner else { return }
             Task { await owner.noteFailedMidPlay(token: token) }
         }
     }

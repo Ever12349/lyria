@@ -520,6 +520,24 @@ final class PlaybackQueueTests: XCTestCase {
         guard let id = item.trackID else { return true }
         return playable(id) == nil
     }
+
+    func testPlaybackPreferencesRoundTripAndClamp() throws {
+        let prefs = PlaybackPreferences(
+            shuffle: true,
+            repeatMode: .one,
+            volume: 1.8,
+            speakerMemory: -1
+        )
+        XCTAssertEqual(prefs.volume, 1)
+        XCTAssertNil(prefs.speakerMemory)
+        let data = try JSONEncoder().encode(prefs)
+        let loaded = try JSONDecoder().decode(PlaybackPreferences.self, from: data)
+        XCTAssertEqual(loaded.shuffle, true)
+        XCTAssertEqual(loaded.repeatMode, .one)
+        XCTAssertEqual(loaded.volume, 1)
+        let partial = try JSONDecoder().decode(PlaybackPreferences.self, from: Data("{}".utf8))
+        XCTAssertEqual(partial, .default)
+    }
 }
 
 private struct ScriptedRNG: RandomNumberGenerator {

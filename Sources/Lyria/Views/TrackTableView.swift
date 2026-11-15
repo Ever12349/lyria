@@ -71,6 +71,13 @@ final class Coordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate {
     ) {
         let ids = tracks.map(\.id)
         let structureChanged = ids != renderedIDs
+        let unchanged = !structureChanged
+            && playlistID == self.playlistID
+            && selectedIDs == self.selectedIDs
+            && currentID == self.currentID
+            && playing == self.playing
+            && tracks == self.tracks
+        if unchanged { return }
         self.tracks = tracks
         self.playlistID = playlistID
         self.selectedIDs = selectedIDs
@@ -227,8 +234,11 @@ final class TrackTableContainer: NSView {
             if !edgeInsetsEqual(scroll.contentInsets, insets) {
                 scroll.contentInsets = insets
             }
-            if !edgeInsetsEqual(scroll.scrollerInsets, insets) {
-                scroll.scrollerInsets = insets
+            // Keep the scroller flush with the top of the window; only the
+            // document is inset under the pinned title, search, and header.
+            let scrollerInsets = NSEdgeInsets()
+            if !edgeInsetsEqual(scroll.scrollerInsets, scrollerInsets) {
+                scroll.scrollerInsets = scrollerInsets
             }
             // The clip view is often still its previous width here. Widen the
             // document view to the container, which is the width the header used.
@@ -403,6 +413,7 @@ final class LyriaTrackCell: NSView {
     static let reuseID = NSUserInterfaceItemIdentifier("track-cell")
 
     private let fill = NSView()
+    private let accent = NSView()
     private let hairline = NSView()
     private let title = LyriaTrackCell.passThroughLabel(font: .systemFont(ofSize: 13, weight: .semibold), color: .white)
     private let artist = LyriaTrackCell.passThroughLabel(font: .systemFont(ofSize: 12, weight: .medium), color: TrackChrome.meta)
@@ -412,10 +423,13 @@ final class LyriaTrackCell: NSView {
     private let menuHost = NSHostingView(rootView: AnyView(EmptyView()))
     private var hovering = false
     private var snapshot: Snapshot?
+    private var lastHostChrome: HostChrome?
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         fill.wantsLayer = true
+        accent.wantsLayer = true
+        accent.layer?.backgroundColor = TrackChrome.primary.cgColor
         hairline.wantsLayer = true
         duration.alignment = .right
         cover.translatesAutoresizingMaskIntoConstraints = true
@@ -424,7 +438,7 @@ final class LyriaTrackCell: NSView {
             cover.sizingOptions = []
             menuHost.sizingOptions = []
         }
-        for view in [fill, title, artist, album, duration, cover, menuHost, hairline] {
+        for view in [fill, accent, title, artist, album, duration, cover, menuHost, hairline] {
             addSubview(view)
         }
         let area = NSTrackingArea(rect: .zero, options: [.activeInKeyWindow, .inVisibleRect, .mouseEnteredAndExited], owner: self)
@@ -480,6 +494,7 @@ final class LyriaTrackCell: NSView {
         let missing = snapshot?.track.missing ?? false
         let frames = TrackTableMetrics.frames(width: bounds.width, missing: missing)
         fill.frame = bounds
+        accent.frame = CGRect(x: 0, y: 0, width: 3, height: bounds.height)
         cover.frame = frames.cover
         title.frame = frames.title
         artist.frame = frames.artist
@@ -495,17 +510,29 @@ final class LyriaTrackCell: NSView {
     private func refreshChrome() {
         guard let snapshot else { return }
         let showCurrent = snapshot.isCurrent
-        fill.isHidden = !showCurrent && !snapshot.selected && !hovering
-        if showCurrent {
-            TrackChrome.apply(fill, colors: TrackChrome.currentColors)
-        } else if snapshot.selected {
+        accent.isHidden = !showCurrent
+        title.textColor = showCurrent ? TrackChrome.primary : .white
+        if snapshot.selected {
             TrackChrome.apply(fill, colors: TrackChrome.selectedColors)
-        } else if hovering {
+        } else if hovering && !showCurrent {
             TrackChrome.apply(fill, colors: [NSColor.white.withAlphaComponent(0.04)])
+        } else {
+            fill.isHidden = true
         }
-        hairline.isHidden = showCurrent
+        hairline.isHidden = false
         let bright = snapshot.selected || snapshot.nextSelected
         hairline.layer?.backgroundColor = NSColor.white.withAlphaComponent(bright ? 0.2 : 0.08).cgColor
+        let host = HostChrome(
+            trackID: snapshot.track.id,
+            artworkPath: snapshot.track.artworkPath,
+            albumId: snapshot.track.albumId,
+            playlistID: snapshot.playlistID,
+            isCurrent: snapshot.isCurrent,
+            playing: snapshot.playing,
+            hovering: hovering
+        )
+        guard host != lastHostChrome else { return }
+        lastHostChrome = host
         cover.rootView = AnyView(CoverChrome(
             track: snapshot.track,
             list: snapshot.list,
@@ -545,6 +572,16 @@ private struct Snapshot {
     var store: AppSession
 }
 
+private struct HostChrome: Equatable {
+    var trackID: String
+    var artworkPath: String?
+    var albumId: String?
+    var playlistID: String?
+    var isCurrent: Bool
+    var playing: Bool
+    var hovering: Bool
+}
+
 private final class PassThroughLabel: NSTextField {
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 }
@@ -564,16 +601,28 @@ private struct CoverChrome: View {
             CoverArt(seed: track.albumId ?? track.id, artworkPath: track.artworkPath, cornerRadius: 8)
                 .overlay {
                     if isCurrent {
-                        Image(systemName: hovering ? (playing ? "pause.fill" : "play.fill") : "waveform")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(.white)
-                            .shadow(color: .black.opacity(0.45), radius: 2, y: 1)
-                            .symbolEffect(.variableColor.iterative, isActive: playing && !hovering)
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(Color.black.opacity(0.55))
+                            if hovering {
+                                Image(systemName: playing ? "pause.fill" : "play.fill")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundStyle(.white)
+                            } else {
+                                EqualizerBars(animated: playing)
+                                    .frame(width: 22, height: 16)
+                            }
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                     } else if hovering {
-                        Image(systemName: "play.fill")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(.white)
-                            .shadow(color: .black.opacity(0.45), radius: 2, y: 1)
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(Color.black.opacity(0.45))
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                     }
                 }
         }
@@ -606,6 +655,100 @@ private struct RowMenuChrome: View {
     }
 }
 
+private struct EqualizerBars: NSViewRepresentable {
+    var animated: Bool
+
+    func makeNSView(context: Context) -> EqualizerBarsView {
+        let view = EqualizerBarsView()
+        view.setAnimated(animated)
+        return view
+    }
+
+    func updateNSView(_ view: EqualizerBarsView, context: Context) {
+        view.setAnimated(animated)
+    }
+}
+
+/// Core Animation bars; avoids a 16 fps SwiftUI TimelineView in the cover host.
+private final class EqualizerBarsView: NSView {
+    private static let barCount = 4
+    private static let barWidth: CGFloat = 3.5
+    private static let spacing: CGFloat = 2.5
+    private static let maxHeight: CGFloat = 16
+    private static let staticHeights: [CGFloat] = [7, 14, 9, 11]
+    private static let durations: [CFTimeInterval] = [0.38, 0.52, 0.44, 0.60]
+
+    private let barLayers: [CALayer] = (0..<4).map { _ in
+        let layer = CALayer()
+        layer.backgroundColor = NSColor.white.cgColor
+        layer.cornerRadius = 1.75
+        layer.anchorPoint = CGPoint(x: 0.5, y: 0)
+        return layer
+    }
+
+    private var isAnimated = false
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+        layer?.masksToBounds = true
+        barLayers.forEach { layer?.addSublayer($0) }
+        layoutBars(scale: nil)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { nil }
+
+    override var intrinsicContentSize: NSSize { NSSize(width: 22, height: 16) }
+
+    override func layout() {
+        super.layout()
+        layoutBars(scale: isAnimated ? nil : Self.staticHeights.map { $0 / Self.maxHeight })
+    }
+
+    func setAnimated(_ animated: Bool) {
+        guard isAnimated != animated else { return }
+        isAnimated = animated
+        if animated {
+            startAnimations()
+        } else {
+            barLayers.forEach { $0.removeAllAnimations() }
+            layoutBars(scale: Self.staticHeights.map { $0 / Self.maxHeight })
+        }
+    }
+
+    private func layoutBars(scale: [CGFloat]?) {
+        let total = CGFloat(Self.barCount) * Self.barWidth + CGFloat(Self.barCount - 1) * Self.spacing
+        let originX = (bounds.width - total) / 2
+        let originY = (bounds.height - Self.maxHeight) / 2
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        for (index, layer) in barLayers.enumerated() {
+            let x = originX + CGFloat(index) * (Self.barWidth + Self.spacing)
+            layer.position = CGPoint(x: x + Self.barWidth / 2, y: originY)
+            layer.bounds = CGRect(x: 0, y: 0, width: Self.barWidth, height: Self.maxHeight)
+            if let scale {
+                layer.transform = CATransform3DMakeScale(1, scale[index], 1)
+            }
+        }
+        CATransaction.commit()
+    }
+
+    private func startAnimations() {
+        layoutBars(scale: Self.staticHeights.map { $0 / Self.maxHeight })
+        for (index, layer) in barLayers.enumerated() {
+            let animation = CABasicAnimation(keyPath: "transform.scale.y")
+            animation.fromValue = 4.0 / Self.maxHeight
+            animation.toValue = 1
+            animation.duration = Self.durations[index]
+            animation.autoreverses = true
+            animation.repeatCount = .infinity
+            animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            layer.add(animation, forKey: "bounce")
+        }
+    }
+}
+
 private enum TrackChrome {
     static let background = NSColor(srgbRed: 10 / 255, green: 11 / 255, blue: 26 / 255, alpha: 1)
     static let header = NSColor(srgbRed: 107 / 255, green: 107 / 255, blue: 128 / 255, alpha: 1)
@@ -614,10 +757,6 @@ private enum TrackChrome {
     static let danger = NSColor(srgbRed: 1, green: 123 / 255, blue: 114 / 255, alpha: 1)
     static let primary = NSColor(srgbRed: 155 / 255, green: 135 / 255, blue: 245 / 255, alpha: 1)
     static let primaryDeep = NSColor(srgbRed: 124 / 255, green: 58 / 255, blue: 237 / 255, alpha: 1)
-
-    static var currentColors: [NSColor] {
-        [primary.withAlphaComponent(0.28), primaryDeep.withAlphaComponent(0.16)]
-    }
 
     static var selectedColors: [NSColor] {
         [primary.withAlphaComponent(0.23), primaryDeep.withAlphaComponent(0.13)]
