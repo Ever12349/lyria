@@ -76,7 +76,6 @@ struct PlaylistDetailView: View {
     @State private var confirmDelete = false
     @State private var renaming = false
     @State private var nameDraft = ""
-    @State private var cancelRename = false
 
     var body: some View {
         if let playlist = store.playlist(playlistID) {
@@ -93,7 +92,7 @@ struct PlaylistDetailView: View {
                         : "\(songs.count) 首 · \(TimeFormat.words(ms: store.durationMs(of: playlist.trackIDs)))",
                     renaming: renaming ? $nameDraft : nil,
                     onCommitRename: commitRename,
-                    onCancelRename: { cancelRename = true; renaming = false }
+                    onCancelRename: { renaming = false }
                 ) {
                     if !songs.isEmpty {
                         PillButton(title: "全部播放", systemImage: "play.fill", prominent: true) {
@@ -105,7 +104,6 @@ struct PlaylistDetailView: View {
                     }
                     PillButton(title: "编辑", systemImage: "pencil") {
                         nameDraft = playlist.name
-                        cancelRename = false
                         renaming = true
                     }
                     PillButton(title: "删除", danger: true) { confirmDelete = true }
@@ -145,11 +143,6 @@ struct PlaylistDetailView: View {
 
     private func commitRename() {
         guard renaming else { return }
-        if cancelRename {
-            cancelRename = false
-            renaming = false
-            return
-        }
         let trimmed = nameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         renaming = false
         guard !trimmed.isEmpty, let playlist = store.playlist(playlistID), trimmed != playlist.name else { return }

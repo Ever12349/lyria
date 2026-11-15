@@ -178,4 +178,77 @@ public struct SectionNavigation: Equatable, Sendable {
         stacks[section] = [section.root]
         rootGeneration[section, default: 0] += 1
     }
+
+    /// Drops pages whose records are gone. Does not clear search or change the current section.
+    public mutating func pruneInvalidPages(
+        artistIDs: Set<String>,
+        albumIDs: Set<String>,
+        playlistIDs: Set<String>
+    ) {
+        for item in LibrarySection.allCases {
+            var cleaned: [LibraryPage] = []
+            for page in stack(for: item) {
+                guard let kept = page.kept(
+                    artistIDs: artistIDs,
+                    albumIDs: albumIDs,
+                    playlistIDs: playlistIDs
+                ) else { continue }
+                if cleaned.last == kept { continue }
+                cleaned.append(kept)
+            }
+            if cleaned.first != item.root {
+                cleaned.insert(item.root, at: 0)
+            }
+            if cleaned.isEmpty {
+                cleaned = [item.root]
+            }
+            stacks[item] = cleaned
+        }
+        if let paused = pausedSearch {
+            let ids: Set<String> = {
+                switch paused.page {
+                case .artist(let id): return artistIDs.contains(id) ? [id] : []
+                case .album(let id): return albumIDs.contains(id) ? [id] : []
+                case .playlist(let id): return playlistIDs.contains(id) ? [id] : []
+                default: return [""]
+                }
+            }()
+            if case .artist = paused.page, ids.isEmpty { pausedSearch = nil }
+            if case .album = paused.page, ids.isEmpty { pausedSearch = nil }
+            if case .playlist = paused.page, ids.isEmpty { pausedSearch = nil }
+        }
+    }
+
+    /// Rebuilds stacks from a saved session. Search is not restored. Invalid pages are dropped.
+    public mutating func restore(
+        section rawSection: String,
+        stacks rawStacks: [String: [String]],
+        artistIDs: Set<String>,
+        albumIDs: Set<String>,
+        playlistIDs: Set<String>
+    ) {
+        isSearching = false
+        pausedSearch = nil
+        section = LibrarySection(rawValue: rawSection) ?? .library
+        for item in LibrarySection.allCases {
+            let parsed = (rawStacks[item.rawValue] ?? []).compactMap(LibraryPage.init(stackKey:))
+            var cleaned: [LibraryPage] = []
+            for page in parsed {
+                guard let kept = page.kept(
+                    artistIDs: artistIDs,
+                    albumIDs: albumIDs,
+                    playlistIDs: playlistIDs
+                ) else { continue }
+                if cleaned.last == kept { continue }
+                cleaned.append(kept)
+            }
+            if cleaned.first != item.root {
+                cleaned.insert(item.root, at: 0)
+            }
+            if cleaned.isEmpty {
+                cleaned = [item.root]
+            }
+            stacks[item] = cleaned
+        }
+    }
 }

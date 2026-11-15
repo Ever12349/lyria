@@ -3,6 +3,30 @@ import Foundation
 import LyriaCore
 import UniformTypeIdentifiers
 
+final class PlaybackSessionCache: @unchecked Sendable {
+    private let lock = NSLock()
+    private var session = PlaybackSession.empty
+    private let persist: @Sendable (PlaybackSession) -> Void
+
+    init(persist: @escaping @Sendable (PlaybackSession) -> Void) {
+        self.persist = persist
+    }
+
+    func update(_ session: PlaybackSession, write: Bool) {
+        lock.lock()
+        self.session = session
+        lock.unlock()
+        if write { persist(session) }
+    }
+
+    func flush() {
+        lock.lock()
+        let session = self.session
+        lock.unlock()
+        persist(session)
+    }
+}
+
 /// Serial playback writer. Views enqueue work here and only read `TransportState`.
 actor PlaybackEngine {
     nonisolated let events: AsyncStream<EngineEvent>
@@ -21,16 +45,20 @@ actor PlaybackEngine {
     private var audioPrepared = false
     private var lastError: String?
     private let persistPreferences: @Sendable (PlaybackPreferences) -> Void
+    nonisolated let sessionCache: PlaybackSessionCache
+    private var lastPositionPersist = Date.distantPast
 
     init(
         preferences: PlaybackPreferences = .default,
-        persist: @escaping @Sendable (PlaybackPreferences) -> Void = { _ in }
+        persist: @escaping @Sendable (PlaybackPreferences) -> Void = { _ in },
+        persistSession: @escaping @Sendable (PlaybackSession) -> Void = { _ in }
     ) {
         var continuation: AsyncStream<EngineEvent>.Continuation!
         let stream = AsyncStream<EngineEvent>(bufferingPolicy: .bufferingNewest(16)) { continuation = $0 }
         events = stream
         self.continuation = continuation
         self.persistPreferences = persist
+        self.sessionCache = PlaybackSessionCache(persist: persistSession)
         queue = PlaybackQueue(shuffle: preferences.shuffle, repeatMode: preferences.repeatMode)
         volume = VolumeSession(level: preferences.volume, speakerMemory: preferences.speakerMemory)
         let level = volume.level
@@ -47,6 +75,94 @@ actor PlaybackEngine {
                 speakerMemory: volume.speakerMemory
             )
         )
+    }
+
+    private func touchSession(write: Bool) {
+        sessionCache.update(PlaybackSession(queue: queue, positionMs: positionMs), write: write)
+        if write {
+            lastPositionPersist = Date()
+        }
+    }
+
+    /// Rebuild the queue without starting playback. Unplayable current stays put.
+    func restore(_ session: PlaybackSession, tracks: [ResolvedTrack], shuffle: Bool, repeatMode: RepeatMode) async {
+        remember(tracks)
+        prepareAudio()
+        let existing = Set(tracks.map(\.id))
+        let adopted = session.adopted(existingIDs: existing, isPlayable: { self.blocker(forID: $0) == nil })
+        queue = adopted.queue(shuffle: shuffle, repeatMode: repeatMode)
+        playing = false
+        lastError = nil
+        guard let track = currentTrack() else {
+            positionMs = 0
+            durationMs = 0
+            touchSession(write: true)
+            publish()
+            return
+        }
+        positionMs = adopted.positionMs
+        durationMs = max(0, track.durationMs)
+        if blocker(for: track) != nil {
+            if durationMs > 0 {
+                positionMs = min(positionMs, durationMs)
+            }
+            touchSession(write: true)
+            publish()
+            return
+        }
+        let token = nextGeneration()
+        let loaded = await loadPaused(track, token: token, positionMs: adopted.positionMs)
+        if !loaded {
+            durationMs = max(0, track.durationMs)
+            positionMs = durationMs > 0 ? min(adopted.positionMs, durationMs) : adopted.positionMs
+            playing = false
+        }
+        touchSession(write: true)
+        publish()
+    }
+
+    /// Shared play path: try the current item, then skip forward (wrapping) until something starts.
+    func beginPlayback() async {
+        prepareAudio()
+        var rejected: Set<QueueItem> = []
+        var skippedTotal = 0
+        func isCandidate(_ item: QueueItem) -> Bool {
+            if rejected.contains(item) { return false }
+            return itemPlayable(item)
+        }
+        while true {
+            switch PlaybackQueueRules.startPlayback(queue: queue, isPlayable: isCandidate) {
+            case .stop(let next):
+                queue = next
+                host.player.pause()
+                playing = false
+                touchSession(write: true)
+                publish()
+                return
+            case .play(let next, let skipped):
+                queue = next
+                skippedTotal += skipped
+                guard let track = currentTrack() else {
+                    host.player.pause()
+                    playing = false
+                    touchSession(write: true)
+                    publish()
+                    return
+                }
+                let token = nextGeneration()
+                if await start(track, token: token) {
+                    if skippedTotal > 0 {
+                        emit(.toast(PlaybackCopy.skipped(skippedTotal)))
+                    }
+                    touchSession(write: true)
+                    publish()
+                    return
+                }
+                if let current = queue.current {
+                    rejected.insert(current)
+                }
+            }
+        }
     }
 
     func play(list: [ResolvedTrack], startID: String, intent: RowPlayIntent) async {
@@ -114,6 +230,7 @@ actor PlaybackEngine {
     func playNext(_ list: [ResolvedTrack]) async {
         remember(list)
         queue = PlaybackQueueRules.playNext(ids: list.map(\.id), queue: queue)
+        touchSession(write: true)
         publish()
     }
 
@@ -125,26 +242,15 @@ actor PlaybackEngine {
             return
         }
         queue = result.queue
+        touchSession(write: true)
         publish()
         emit(.showQueue)
     }
 
     func playQueueIndex(_ index: Int) async {
-        prepareAudio()
-        guard let track = currentTrack(at: index) else { return }
-        if let block = blocker(for: track) {
-            refuse(block)
-            return
-        }
-        let previous = queue
+        guard queue.items.indices.contains(index) else { return }
         queue.currentIndex = index
-        let token = nextGeneration()
-        guard await start(track, token: token) else {
-            queue = previous
-            publish()
-            return
-        }
-        publish()
+        await beginPlayback()
     }
 
     func toggleTransport() async {
@@ -162,6 +268,7 @@ actor PlaybackEngine {
     func toggleShuffle() {
         queue = PlaybackQueueRules.toggleShuffle(queue: queue, rng: &rng)
         writePreferences()
+        touchSession(write: true)
         publish()
     }
 
@@ -186,6 +293,7 @@ actor PlaybackEngine {
         let time = CMTime(seconds: Double(clamped) / 1000, preferredTimescale: 600)
         await host.seek(to: time)
         ignoreClock = false
+        touchSession(write: true)
         publish()
     }
 
@@ -207,6 +315,7 @@ actor PlaybackEngine {
         switch PlaybackQueueRules.remove(ids: ids, from: queue, isPlayable: itemPlayable) {
         case .kept(let next):
             queue = next
+            touchSession(write: true)
             publish()
         case .stopped(let next):
             queue = next
@@ -214,20 +323,11 @@ actor PlaybackEngine {
             playing = false
             positionMs = 0
             durationMs = 0
+            touchSession(write: true)
             publish()
         case .play(let next, _):
             queue = next
-            guard let track = currentTrack() else {
-                publish()
-                return
-            }
-            let token = nextGeneration()
-            if await start(track, token: token) == false {
-                host.player.pause()
-                playing = false
-                queue.currentIndex = nil
-            }
-            publish()
+            await beginPlayback()
         }
     }
 
@@ -248,25 +348,25 @@ actor PlaybackEngine {
             return
         }
         catalog[track.id] = track
-        let previous = queue
         let proposed = PlaybackQueue(
             items: [.oneShot(uri.absoluteString)],
             currentIndex: 0,
-            shuffle: previous.shuffle,
-            repeatMode: previous.repeatMode
+            shuffle: queue.shuffle,
+            repeatMode: queue.repeatMode
         )
         queue = proposed
-        let token = nextGeneration()
-        if await start(track, token: token) == false {
-            queue = previous
-        }
-        publish()
+        await beginPlayback()
     }
 
     func noteClock(_ ms: Int) {
         guard playing, !ignoreClock else { return }
         positionMs = max(0, ms)
         continuation.yield(.position(positionMs))
+        if Date().timeIntervalSince(lastPositionPersist) >= 2 {
+            touchSession(write: true)
+        } else {
+            touchSession(write: false)
+        }
     }
 
     func noteEnded(token: Int) async {
@@ -279,6 +379,7 @@ actor PlaybackEngine {
         case .pauseAtEnd, .stay, .none:
             host.player.pause()
             if durationMs > 0 { positionMs = durationMs }
+            touchSession(write: true)
             publish()
         }
     }
@@ -293,23 +394,12 @@ actor PlaybackEngine {
         publish()
     }
 
-    /// Adopts `proposed` only after start succeeds, so a failure puts shuffle and repeat back too.
+    /// Adopts `proposed`, then starts playback through the shared skip path.
     private func commitAndPlay(_ proposed: PlaybackQueue, tracks: [ResolvedTrack]) async -> Bool {
-        guard let index = proposed.currentIndex,
-              let id = proposed.items[safe: index]?.trackID,
-              let track = tracks.first(where: { $0.id == id }) ?? catalog[id]
-        else { return false }
-        let token = nextGeneration()
-        let previous = queue
+        remember(tracks)
         queue = proposed
-        guard await start(track, token: token) else {
-            queue = previous
-            if host.player.currentItem == nil { playing = false }
-            publish()
-            return false
-        }
-        publish()
-        return true
+        await beginPlayback()
+        return playing
     }
 
     private func step(_ move: PlaybackMove) async {
@@ -325,6 +415,7 @@ actor PlaybackEngine {
             host.player.pause()
             playing = false
             if durationMs > 0 { positionMs = durationMs }
+            touchSession(write: true)
             publish()
         case .start(let nextQueue, let skipped):
             guard let index = nextQueue.currentIndex else { return }
@@ -342,20 +433,15 @@ actor PlaybackEngine {
                 publish()
                 return
             }
+            touchSession(write: true)
             publish()
             if skipped > 0 { emit(.toast(PlaybackCopy.skipped(skipped))) }
         }
     }
 
     private func restartCurrent() async {
-        guard let track = currentTrack() else { return }
-        if let block = blocker(for: track) {
-            refuse(block)
-            return
-        }
-        let token = nextGeneration()
-        _ = await start(track, token: token)
-        publish()
+        guard currentTrack() != nil else { return }
+        await beginPlayback()
     }
 
     private func applyPlayPause(restartAtEnd: Bool) async {
@@ -371,20 +457,36 @@ actor PlaybackEngine {
         case .pause:
             host.player.pause()
             playing = false
+            touchSession(write: true)
+            publish()
         case .resume:
-            host.player.play()
-            playing = true
-        case .restartFromEnd:
-            guard restartAtEnd else {
+            if canResumeCurrent {
                 host.player.play()
                 playing = true
-                break
+                touchSession(write: true)
+                publish()
+            } else {
+                await beginPlayback()
             }
-            await seek(to: 0)
-            host.player.play()
-            playing = true
+        case .restartFromEnd:
+            if canResumeCurrent {
+                if restartAtEnd {
+                    await seek(to: 0)
+                }
+                host.player.play()
+                playing = true
+                touchSession(write: true)
+                publish()
+            } else {
+                await beginPlayback()
+            }
         }
-        publish()
+    }
+
+    private var canResumeCurrent: Bool {
+        guard let track = currentTrack(), blocker(for: track) == nil else { return false }
+        guard let item = host.player.currentItem, item.status != .failed else { return false }
+        return true
     }
 
     private func start(_ track: ResolvedTrack, token: Int) async -> Bool {
@@ -414,6 +516,43 @@ actor PlaybackEngine {
         host.player.play()
         playing = true
         lastError = nil
+        return true
+    }
+
+    private func loadPaused(_ track: ResolvedTrack, token: Int, positionMs saved: Int) async -> Bool {
+        if let block = blocker(for: track) {
+            lastError = PlaybackErrorCode.code(for: block)
+            return false
+        }
+        let item = AVPlayerItem(url: URL(fileURLWithPath: track.path))
+        host.player.replaceCurrentItem(with: item)
+        let ready = await host.waitUntilReady(item)
+        let owns = token == generation
+        guard owns, ready else {
+            if host.player.currentItem === item {
+                host.player.replaceCurrentItem(with: nil)
+            }
+            if owns {
+                lastError = PlaybackErrorCode.code(
+                    for: item.status == .failed && Self.isUnsupportedFormat(item.error) ? .unsupportedFormat : .failed
+                )
+            }
+            return false
+        }
+        host.observeEnd(of: item, owner: self, token: token)
+        let seconds = item.duration.seconds
+        durationMs = seconds.isFinite && seconds > 0 ? Int((seconds * 1000).rounded()) : max(0, track.durationMs)
+        positionMs = durationMs > 0 ? min(max(0, saved), durationMs) : max(0, saved)
+        host.player.volume = Float(volume.level)
+        host.player.pause()
+        playing = false
+        lastError = nil
+        if durationMs > 0, positionMs > 0 {
+            ignoreClock = true
+            let time = CMTime(seconds: Double(positionMs) / 1000, preferredTimescale: 600)
+            await host.seek(to: time)
+            ignoreClock = false
+        }
         return true
     }
 

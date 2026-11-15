@@ -7,9 +7,10 @@ struct SidebarResizeHandle: NSViewRepresentable {
     @Binding var sidebarWidth: CGFloat
     var minWidth: CGFloat
     var maxWidth: CGFloat
+    var onDragEnded: () -> Void = {}
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(sidebarWidth: $sidebarWidth, minWidth: minWidth, maxWidth: maxWidth)
+        Coordinator(sidebarWidth: $sidebarWidth, minWidth: minWidth, maxWidth: maxWidth, onDragEnded: onDragEnded)
     }
 
     func makeNSView(context: Context) -> ResizeHandleView {
@@ -22,6 +23,7 @@ struct SidebarResizeHandle: NSViewRepresentable {
         context.coordinator.sidebarWidth = $sidebarWidth
         context.coordinator.minWidth = minWidth
         context.coordinator.maxWidth = maxWidth
+        context.coordinator.onDragEnded = onDragEnded
         nsView.coordinator = context.coordinator
     }
 
@@ -29,12 +31,14 @@ struct SidebarResizeHandle: NSViewRepresentable {
         var sidebarWidth: Binding<CGFloat>
         var minWidth: CGFloat
         var maxWidth: CGFloat
+        var onDragEnded: () -> Void
         var dragOrigin: CGFloat?
 
-        init(sidebarWidth: Binding<CGFloat>, minWidth: CGFloat, maxWidth: CGFloat) {
+        init(sidebarWidth: Binding<CGFloat>, minWidth: CGFloat, maxWidth: CGFloat, onDragEnded: @escaping () -> Void) {
             self.sidebarWidth = sidebarWidth
             self.minWidth = minWidth
             self.maxWidth = maxWidth
+            self.onDragEnded = onDragEnded
         }
 
         func beginDrag() {
@@ -49,6 +53,7 @@ struct SidebarResizeHandle: NSViewRepresentable {
 
         func endDrag() {
             dragOrigin = nil
+            onDragEnded()
         }
     }
 }

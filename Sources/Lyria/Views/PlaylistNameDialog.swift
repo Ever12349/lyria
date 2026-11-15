@@ -21,7 +21,7 @@ struct PlaylistNameDialog: View {
                 Button("取消") { store.cancelNewPlaylist() }
                     .keyboardShortcut(.cancelAction)
                 Button("创建", action: commit)
-                    .keyboardShortcut(.defaultAction)
+                    .buttonStyle(.borderedProminent)
             }
         }
         .padding(20)
@@ -51,8 +51,6 @@ private struct SelectingTextField: NSViewRepresentable {
         field.isSelectable = true
         field.isBezeled = true
         field.font = .systemFont(ofSize: 13)
-        field.target = context.coordinator
-        field.action = #selector(Coordinator.submit)
         DispatchQueue.main.async {
             field.window?.makeFirstResponder(field)
             field.currentEditor()?.selectAll(nil)
@@ -82,8 +80,10 @@ private struct SelectingTextField: NSViewRepresentable {
             text.wrappedValue = field.stringValue
         }
 
-        @objc func submit() {
+        func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+            guard commandSelector == #selector(NSResponder.insertNewline(_:)) else { return false }
             onSubmit()
+            return true
         }
     }
 }

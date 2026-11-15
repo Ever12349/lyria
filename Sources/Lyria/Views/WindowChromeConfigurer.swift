@@ -15,53 +15,35 @@ struct WindowChromeConfigurer: NSViewRepresentable {
     var detailMinX: CGFloat
     var titleRowHeight: CGFloat
 
-    func makeCoordinator() -> Coordinator { Coordinator() }
-
     func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        context.coordinator.detailMinX = detailMinX
-        context.coordinator.titleRowHeight = titleRowHeight
-        context.coordinator.schedule(from: view)
+        let view = ChromeAnchor()
+        view.detailMinX = detailMinX
+        view.titleRowHeight = titleRowHeight
         return view
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
-        context.coordinator.detailMinX = detailMinX
-        context.coordinator.titleRowHeight = titleRowHeight
-        if let window = nsView.window {
-            WindowChromeConfigurer.applyLayout(to: window, detailMinX: detailMinX, titleRowHeight: titleRowHeight)
-        }
-        context.coordinator.schedule(from: nsView)
+        guard let view = nsView as? ChromeAnchor else { return }
+        view.detailMinX = detailMinX
+        view.titleRowHeight = titleRowHeight
+        guard let window = view.window else { return }
+        WindowChromeConfigurer.apply(to: window, detailMinX: detailMinX, titleRowHeight: titleRowHeight)
     }
+}
 
-    final class Coordinator {
-        var detailMinX: CGFloat = 252
-        var titleRowHeight: CGFloat = 56
-        private var workItem: DispatchWorkItem?
-        private var delayed: [DispatchWorkItem] = []
+/// Applies chrome once the anchor is in a window. `makeNSView` often runs before `window` exists.
+private final class ChromeAnchor: NSView {
+    var detailMinX: CGFloat = 252
+    var titleRowHeight: CGFloat = 56
 
-        func schedule(from view: NSView) {
-            workItem?.cancel()
-            delayed.forEach { $0.cancel() }
-            delayed.removeAll()
-            let item = DispatchWorkItem { [weak view, weak self] in
-                guard let window = view?.window, let self else { return }
-                WindowChromeConfigurer.apply(to: window, detailMinX: self.detailMinX, titleRowHeight: self.titleRowHeight)
-                // SwiftUI sometimes resets contentView or button frames after the first pass.
-                for delay in [0.35, 1.0] {
-                    let followUp = DispatchWorkItem { [weak window, weak self] in
-                        guard let window, let self else { return }
-                        WindowChromeConfigurer.apply(to: window, detailMinX: self.detailMinX, titleRowHeight: self.titleRowHeight)
-                    }
-                    self.delayed.append(followUp)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: followUp)
-                }
-            }
-            workItem = item
-            DispatchQueue.main.async(execute: item)
-        }
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        guard let window else { return }
+        WindowChromeConfigurer.apply(to: window, detailMinX: detailMinX, titleRowHeight: titleRowHeight)
     }
+}
 
+extension WindowChromeConfigurer {
     static func applyLayout(to window: NSWindow, detailMinX: CGFloat, titleRowHeight: CGFloat) {
         if let passthrough = window.contentView as? TitlebarPassthroughContentView {
             passthrough.detailMinX = detailMinX

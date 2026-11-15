@@ -26,12 +26,36 @@ final class PlaybackQueueTests: XCTestCase {
         )
     }
 
-    func testUnplayableRowDoesNotReplaceTheQueue() {
+    func testUnplayableRowStillReplacesTheQueue() {
         XCTAssertEqual(
             PlaybackQueueRules.plan(intent: .menuPlay, trackID: "bad", list: ["bad", "a"], currentID: nil, block: .missingFile),
-            .refuse(.missingFile)
+            .replace(PlaybackQueue(items: [.track("bad"), .track("a")], currentIndex: 0))
         )
         XCTAssertNil(PlaybackQueueRules.playAll(ids: ["bad", "bad2"], isPlayable: { self.playable($0) == nil }))
+    }
+
+    func testStartPlaybackSkipsUnplayableAndWraps() {
+        let playable: (QueueItem) -> Bool = { item in
+            guard let id = item.trackID else { return false }
+            return !id.hasPrefix("bad")
+        }
+        let mid = PlaybackQueue(items: ["bad", "ok", "z"].map { .track($0) }, currentIndex: 0)
+        XCTAssertEqual(
+            PlaybackQueueRules.startPlayback(queue: mid, isPlayable: playable),
+            .play(PlaybackQueue(items: mid.items, currentIndex: 1), skipped: 1)
+        )
+        let tail = PlaybackQueue(items: ["ok", "bad1", "bad2"].map { .track($0) }, currentIndex: 1)
+        XCTAssertEqual(
+            PlaybackQueueRules.startPlayback(queue: tail, isPlayable: playable),
+            .play(PlaybackQueue(items: tail.items, currentIndex: 0), skipped: 2)
+        )
+        let none = PlaybackQueue(items: ["bad", "bad2"].map { .track($0) }, currentIndex: 0)
+        XCTAssertEqual(PlaybackQueueRules.startPlayback(queue: none, isPlayable: playable), .stop(none))
+        let ready = PlaybackQueue(items: ["a", "b"].map { .track($0) }, currentIndex: 1)
+        XCTAssertEqual(
+            PlaybackQueueRules.startPlayback(queue: ready, isPlayable: playable),
+            .play(ready, skipped: 0)
+        )
     }
 
     func testPlayAllSkipsLeadingUnplayableRows() {

@@ -7,7 +7,6 @@ struct ContentView: View {
     init(store: AppSession) {
         _store = StateObject(wrappedValue: store)
     }
-    @State private var sidebarWidth: CGFloat = 228
     @State private var keyMonitor: Any?
     @State private var searchFieldExpanded = false
     @State private var batchCapsuleWidth: CGFloat = 0
@@ -21,16 +20,17 @@ struct ContentView: View {
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
             SidebarView()
-                .frame(width: sidebarWidth)
+                .frame(width: store.sidebarWidth)
                 .padding(.leading, LyriaTheme.sidebarInset)
                 .padding(.top, LyriaTheme.sidebarInset)
                 .padding(.bottom, LyriaTheme.sidebarInset)
                 .ignoresSafeArea(edges: .top)
 
             SidebarResizeHandle(
-                sidebarWidth: $sidebarWidth,
+                sidebarWidth: $store.sidebarWidth,
                 minWidth: sidebarMin,
-                maxWidth: sidebarMax
+                maxWidth: sidebarMax,
+                onDragEnded: { store.commitSidebarWidth() }
             )
             .frame(width: 12)
             .frame(maxHeight: .infinity)
@@ -47,7 +47,7 @@ struct ContentView: View {
         .preferredColorScheme(.dark)
         .background(
             WindowChromeConfigurer(
-                detailMinX: sidebarWidth + LyriaTheme.sidebarInset + 12,
+                detailMinX: store.sidebarWidth + LyriaTheme.sidebarInset + 12,
                 titleRowHeight: titleRowHeight
             )
         )

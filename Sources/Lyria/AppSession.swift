@@ -33,10 +33,17 @@ final class AppSession: ObservableObject {
     /// Kept beside the prompt so confirm still runs if the dialog clears the prompt first.
     private var libraryRemovalIDs: [String] = []
     private var libraryRemovalRequest = 0
-    @Published var queueVisible = false
+    @Published var queueVisible = false {
+        didSet {
+            guard !isRestoringUI, oldValue != queueVisible else { return }
+            persistUINow()
+        }
+    }
+    @Published var sidebarWidth: CGFloat = CGFloat(UISession.sidebarDefault)
     @Published var toast: String?
     private var toastToken = 0
     private var didBootstrap = false
+    private var isRestoringUI = false
     private var liveTrackIDs: Set<String> = []
     private var cancellables = Set<AnyCancellable>()
     private let engine: PlaybackEngine
@@ -76,6 +83,56 @@ final class AppSession: ObservableObject {
         guard !didBootstrap else { return }
         didBootstrap = true
         await library.open()
+        restoreUISession()
+        await restorePlaybackSession()
+    }
+
+    func persistUINow() {
+        UISessionStore.save(
+            UISession(
+                sidebarWidth: Double(sidebarWidth),
+                queueVisible: queueVisible,
+                navigation: navigation
+            )
+        )
+    }
+
+    func commitSidebarWidth() {
+        let clamped = CGFloat(UISession.clampedWidth(Double(sidebarWidth)))
+        if sidebarWidth != clamped {
+            sidebarWidth = clamped
+        }
+        persistUINow()
+    }
+
+    private func restoreUISession() {
+        isRestoringUI = true
+        defer { isRestoringUI = false }
+        guard let saved = UISessionStore.load() else { return }
+        sidebarWidth = CGFloat(UISession.clampedWidth(saved.sidebarWidth))
+        queueVisible = saved.queueVisible
+        navigation.restore(
+            section: saved.section,
+            stacks: saved.stacks,
+            artistIDs: Set(artists.map(\.id)),
+            albumIDs: Set(albums.map(\.id)),
+            playlistIDs: Set(playlists.map(\.id))
+        )
+    }
+
+    private func restorePlaybackSession() async {
+        guard let saved = PlaybackSessionStore.load(), !saved.isEmpty else { return }
+        await engine.restore(
+            saved,
+            tracks: tracks.map(ResolvedTrack.init),
+            shuffle: transport.shuffle,
+            repeatMode: transport.repeatMode
+        )
+    }
+
+    private func persistNavigation() {
+        guard !isRestoringUI else { return }
+        persistUINow()
     }
 
     var route: AppRoute { AppRoute(navigation.page) }
@@ -226,6 +283,7 @@ final class AppSession: ObservableObject {
         dismissSelectionForNavigation()
         searchText = ""
         navigation.select(item.section)
+        persistNavigation()
     }
 
     /// Logo. Restores the library list from the top and leaves other sections alone.
@@ -233,6 +291,7 @@ final class AppSession: ObservableObject {
         dismissSelectionForNavigation()
         searchText = ""
         navigation.showLibraryHome()
+        persistNavigation()
     }
 
     func goBack() {
@@ -244,6 +303,7 @@ final class AppSession: ObservableObject {
         if let query = navigation.goBack() {
             searchText = query
         }
+        persistNavigation()
     }
 
     func openArtist(_ id: String) {
@@ -251,6 +311,7 @@ final class AppSession: ObservableObject {
         let query = navigation.isSearching ? trimmedQuery : nil
         navigation.openArtist(id, resumeQuery: query)
         searchText = ""
+        persistNavigation()
     }
 
     func openAlbum(_ id: String) {
@@ -258,6 +319,7 @@ final class AppSession: ObservableObject {
         let query = navigation.isSearching ? trimmedQuery : nil
         navigation.openAlbum(id, resumeQuery: query)
         searchText = ""
+        persistNavigation()
     }
 
     func revealInFinder(_ ids: [String]) {
@@ -281,6 +343,7 @@ final class AppSession: ObservableObject {
         dismissSelectionForNavigation()
         searchText = ""
         navigation.openPlaylist(id)
+        persistNavigation()
         // Opening is navigation only. Stamping here reorders the sidebar under the cursor.
     }
 
@@ -417,6 +480,7 @@ final class AppSession: ObservableObject {
                     dismissSelectionForNavigation()
                 }
                 navigation.deletedOpenPlaylist(id)
+                persistNavigation()
             }
             showToast("已删除「\(playlist.name)」")
         }
@@ -630,6 +694,16 @@ final class AppSession: ObservableObject {
         let placeholders = scope.subtracting(liveTrackIDs).subtracting(live)
         liveTrackIDs = live
         apply(TrackSelection.prune(selectionState, keeping: live.union(placeholders)))
+        var nav = navigation
+        nav.pruneInvalidPages(
+            artistIDs: Set(artists.map(\.id)),
+            albumIDs: Set(albums.map(\.id)),
+            playlistIDs: Set(playlists.map(\.id))
+        )
+        if nav != navigation {
+            navigation = nav
+            persistNavigation()
+        }
     }
 
     private func stampPlaylist(_ id: String) {

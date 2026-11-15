@@ -315,7 +315,6 @@ struct DetailHero<Actions: View>: View {
     var onCommitRename: () -> Void = {}
     var onCancelRename: () -> Void = {}
     @EnvironmentObject private var store: AppSession
-    @FocusState private var nameFieldFocused: Bool
     @ViewBuilder var actions: () -> Actions
 
     var body: some View {
@@ -327,9 +326,6 @@ struct DetailHero<Actions: View>: View {
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(LyriaTheme.text2)
                 titleView
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(LyriaTheme.foreground)
-                    .lineLimit(2)
                 Text(subtitle)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(LyriaTheme.text2)
@@ -344,19 +340,118 @@ struct DetailHero<Actions: View>: View {
     @ViewBuilder
     private var titleView: some View {
         if let renaming {
-            TextField("名称", text: renaming)
-                .textFieldStyle(.plain)
-                .focused($nameFieldFocused)
-                .onSubmit(onCommitRename)
-                .onExitCommand(perform: onCancelRename)
-                .onAppear { nameFieldFocused = true }
-                .onChange(of: nameFieldFocused) { _, focused in
-                    if focused { store.trackTableFocused = false }
-                    if !focused { onCommitRename() }
-                }
+            RenameTitleField(
+                text: renaming,
+                onCommit: onCommitRename,
+                onCancel: onCancelRename,
+                onFocus: { store.trackTableFocused = false }
+            )
         } else {
             Text(title)
+                .font(.system(size: 28, weight: .bold))
+                .foregroundStyle(LyriaTheme.foreground)
+                .lineLimit(2)
         }
+    }
+}
+
+/// Single-line title editor. Enter, Tab, and clicking away commit. Esc cancels.
+/// The movement code on the same end-editing notification decides which one.
+private struct RenameTitleField: NSViewRepresentable {
+    @Binding var text: String
+    var onCommit: () -> Void
+    var onCancel: () -> Void
+    var onFocus: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(text: $text, onCommit: onCommit, onCancel: onCancel, onFocus: onFocus)
+    }
+
+    func makeNSView(context: Context) -> RenameField {
+        let field = RenameField(string: text)
+        field.delegate = context.coordinator
+        field.isEditable = true
+        field.isSelectable = true
+        field.isBordered = false
+        field.isBezeled = false
+        field.drawsBackground = false
+        field.focusRingType = .none
+        field.font = .systemFont(ofSize: 28, weight: .bold)
+        field.textColor = .white
+        field.placeholderString = "名称"
+        field.maximumNumberOfLines = 1
+        field.onAttach = { [weak coordinator = context.coordinator] in
+            coordinator?.onFocus()
+        }
+        return field
+    }
+
+    func updateNSView(_ field: RenameField, context: Context) {
+        context.coordinator.text = $text
+        context.coordinator.onCommit = onCommit
+        context.coordinator.onCancel = onCancel
+        context.coordinator.onFocus = onFocus
+        field.onAttach = { [weak coordinator = context.coordinator] in
+            coordinator?.onFocus()
+        }
+        if field.currentEditor() == nil, field.stringValue != text {
+            field.stringValue = text
+        }
+    }
+
+    final class Coordinator: NSObject, NSTextFieldDelegate {
+        var text: Binding<String>
+        var onCommit: () -> Void
+        var onCancel: () -> Void
+        var onFocus: () -> Void
+        private var didEnd = false
+
+        init(text: Binding<String>, onCommit: @escaping () -> Void, onCancel: @escaping () -> Void, onFocus: @escaping () -> Void) {
+            self.text = text
+            self.onCommit = onCommit
+            self.onCancel = onCancel
+            self.onFocus = onFocus
+        }
+
+        func controlTextDidChange(_ notification: Notification) {
+            guard let field = notification.object as? NSTextField else { return }
+            text.wrappedValue = field.stringValue
+        }
+
+        func controlTextDidEndEditing(_ notification: Notification) {
+            guard !didEnd, let field = notification.object as? NSTextField else { return }
+            text.wrappedValue = field.stringValue
+            guard let raw = Self.movement(in: notification) else { return }
+            didEnd = true
+            switch NSTextMovement(rawValue: raw) {
+            case .cancel:
+                onCancel()
+            case .return, .tab, .backtab, .other, .left, .right, .up, .down:
+                onCommit()
+            default:
+                break
+            }
+        }
+
+        private static func movement(in notification: Notification) -> Int? {
+            let value = notification.userInfo?[NSText.movementUserInfoKey]
+            if let raw = value as? Int { return raw }
+            if let number = value as? NSNumber { return number.intValue }
+            return nil
+        }
+    }
+}
+
+private final class RenameField: NSTextField {
+    var onAttach: (() -> Void)?
+    private var didFocus = false
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        guard window != nil, !didFocus else { return }
+        didFocus = true
+        window?.makeFirstResponder(self)
+        onAttach?()
     }
 }
 

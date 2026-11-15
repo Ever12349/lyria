@@ -207,7 +207,7 @@ public struct VolumeSession: Equatable, Sendable {
 }
 
 
-/// Shuffle, repeat, and volume kept across launches. The queue and playhead are not.
+/// Shuffle, repeat, and volume kept across launches. The queue and playhead live in `PlaybackSession`.
 public struct PlaybackPreferences: Equatable, Sendable, Codable {
     public var shuffle: Bool
     public var repeatMode: RepeatMode
@@ -313,7 +313,8 @@ public enum PlaybackQueueRules {
         repeatMode: RepeatMode,
         rng: inout R
     ) -> RowPlayPlan {
-        if let block { return .refuse(block) }
+        // Unplayable rows still replace the queue; startPlayback skips them when play begins.
+        _ = block
         if intent == .cover, trackID == currentID { return .toggle }
         if intent == .doubleClick, trackID == currentID { return .restart }
         guard let index = list.firstIndex(of: trackID) else { return .refuse(.failed) }

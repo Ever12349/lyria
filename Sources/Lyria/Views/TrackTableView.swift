@@ -196,6 +196,7 @@ final class TrackTableContainer: NSView {
             scroll.hasVerticalScroller = true
             scroll.hasHorizontalScroller = false
             scroll.autohidesScrollers = true
+            scroll.scrollerStyle = .overlay
             scroll.autoresizingMask = [.width, .height]
             scroll.documentView = table
             scroll.contentView.drawsBackground = false
@@ -239,6 +240,9 @@ final class TrackTableContainer: NSView {
             let scrollerInsets = NSEdgeInsets()
             if !edgeInsetsEqual(scroll.scrollerInsets, scrollerInsets) {
                 scroll.scrollerInsets = scrollerInsets
+            }
+            if scroll.scrollerStyle != .overlay {
+                scroll.scrollerStyle = .overlay
             }
             // The clip view is often still its previous width here. Widen the
             // document view to the container, which is the width the header used.
@@ -789,7 +793,11 @@ enum TrackContextMenu {
         let playlists = NSMenuItem(title: "加入播放列表", action: nil, keyEquivalent: "")
         let submenu = NSMenu()
         submenu.autoenablesItems = false
-        for entry in PlaylistAddMenu.actions(trackIDs: targets, store: store) {
+        let entries = PlaylistAddMenu.actions(trackIDs: targets, store: store)
+        for (index, entry) in entries.enumerated() {
+            if index == 1 {
+                submenu.addItem(.separator())
+            }
             let item = NSMenuItem(title: entry.title, action: nil, keyEquivalent: "")
             let action = MenuAction(entry.run)
             menu.actions.append(action)

@@ -29,7 +29,14 @@ struct AddToPlaylistMenuItems: View {
     @EnvironmentObject private var store: AppSession
 
     var body: some View {
-        ForEach(PlaylistAddMenu.actions(trackIDs: trackIDs, store: store)) { action in
+        let actions = PlaylistAddMenu.actions(trackIDs: trackIDs, store: store)
+        if let create = actions.first {
+            Button(create.title, action: create.run)
+        }
+        if actions.count > 1 {
+            Divider()
+        }
+        ForEach(Array(actions.dropFirst())) { action in
             Button(action.title, action: action.run)
         }
     }
