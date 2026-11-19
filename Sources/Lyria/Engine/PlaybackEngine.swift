@@ -406,9 +406,10 @@ actor PlaybackEngine {
         return finishCommand()
     }
 
-    func agentPlay(track: ResolvedTrack) async -> AgentCommandResult {
+    /// Same as the row's Play command: the queue becomes the library table, starting at `startID`.
+    func agentPlay(list: [ResolvedTrack], startID: String) async -> AgentCommandResult {
         beginCommand()
-        await play(list: [track], startID: track.id, intent: .menuPlay)
+        await play(list: list, startID: startID, intent: .menuPlay)
         return finishCommand()
     }
 

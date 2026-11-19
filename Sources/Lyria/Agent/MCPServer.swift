@@ -444,19 +444,11 @@ final class MCPService {
         case .success(.resume):
             return await playback(engine.agentResume())
         case .success(.track(let trackID)):
-            guard let track = session?.track(trackID) else {
+            guard let session, session.track(trackID) != nil else {
                 return product(AgentFailure(error: PlaybackErrorCode.notFound, message: AgentCopy.notFound))
             }
-            let resolved = ResolvedTrack(
-                id: track.id,
-                path: track.path,
-                missing: track.missing,
-                title: track.title,
-                artist: track.artist,
-                artworkPath: track.artworkPath,
-                durationMs: track.durationMs
-            )
-            return await playback(engine.agentPlay(track: resolved))
+            let list = session.visibleTracks.map(ResolvedTrack.init)
+            return await playback(engine.agentPlay(list: list, startID: trackID))
         case .success(.file(let url)):
             return await playback(engine.agentPlay(uri: url))
         }
@@ -577,7 +569,7 @@ final class MCPService {
     private func toolDefinitions() -> [[String: Any]] {
         [
             tool("lyria_status", "当前曲、播放状态、进度、随机、重复、音量和队列长度", [:]),
-            tool("lyria_play", "id 播库内曲，uri 为 file:// 一次性点播，都空则继续播放。两者不能同时填。", [
+            tool("lyria_play", "id 按曲库表的「播放」处理：队列换成曲库顺序，并从这首开始。uri 为 file:// 一次性点播，都空则继续播放。两者不能同时填。", [
                 "id": ["type": "string"],
                 "uri": ["type": "string"],
             ]),
