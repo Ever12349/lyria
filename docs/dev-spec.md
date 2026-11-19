@@ -389,7 +389,7 @@ struct NowPlaying {
 | 色板 | Deep Space：bg `#0a0b1a` · accent `#9b87f5 → #7c3aed`；左右同一 Deep Space 底色；禁用 behindWindow vibrancy（会吸桌面壁纸色调） |
 | 曲目列表 | 跟导航标题同一列宽。行与行之间一条淡分割线；正在播放的行用强调色。封面占位按专辑区分，同一专辑同色 |
 
-**实现备注：** 当前静态样例用 `HStack` + `SidebarResizeHandle` 替代 `NavigationSplitView`，以实现「红绿灯落在侧栏内」与侧栏拖宽；文档锁定的是行为与布局，具体控件可演进。队列不是永久第三列，而是详情区内可选浮层/面板。
+**实现备注：** 当前静态样例用 `HStack` + `SidebarResizeHandle` 替代 `NavigationSplitView`，以实现「红绿灯落在侧栏内」与侧栏拖宽；文档锁定的是行为与布局，具体控件可演进。队列不是永久第三列，而是详情区内可选浮层/面板。右详情列在代码里读作「上钉顶 chrome、下页面、底传输条」，但钉顶 chrome 与页面是 `ZStack` 叠层（不是真·上下 `VStack`），以便曲库/搜索行滚进标题栏；`TitleRowHeightKey` 供标题栏穿透，`TopChromeHeightKey` 供表格 `chromeTop` inset。细节见 [`.design/docs/window-chrome.md`](../.design/docs/window-chrome.md)「实现备注」。
 
 ### 标题栏穿透与交互回归（已锁定策略）
 

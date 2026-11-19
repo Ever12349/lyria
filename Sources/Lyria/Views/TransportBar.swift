@@ -6,6 +6,9 @@ struct TransportBar: View {
     @EnvironmentObject private var store: AppSession
     @Environment(TransportState.self) private var transport
     @State private var scrub: Double?
+    /// Held after mouse-up until `transport.positionMs` matches, so the thumb
+    /// does not flash through the pre-seek position (and spring past the end).
+    @State private var pendingSeekMs: Int?
     @State private var volumeDrag: Double?
 
     var body: some View {
@@ -100,18 +103,46 @@ struct TransportBar: View {
             in: 0...1
         ) { editing in
             if editing {
-                scrub = displayedFraction
-            } else if let scrub {
-                let ms = Int((scrub * Double(max(transport.durationMs, 0))).rounded())
-                store.transportSeek(ms: ms)
-                self.scrub = nil
+                pendingSeekMs = nil
+                if scrub == nil {
+                    scrub = transport.fraction
+                }
+            } else {
+                commitScrub()
             }
         }
         .controlSize(.mini)
         .tint(LyriaTheme.primary)
         .disabled(transport.current == nil)
-        .animation(nil, value: transport.positionMs)
+        .transaction { $0.animation = nil }
+        .onChange(of: transport.positionMs) { _, ms in
+            clearScrubIfSeekLanded(ms)
+        }
+        .onChange(of: transport.current?.id) { _, _ in
+            // Track change or stop: drop any held scrub so the thumb cannot stick.
+            pendingSeekMs = nil
+            scrub = nil
+        }
         .accessibilityLabel("播放进度")
+    }
+
+    private func commitScrub() {
+        guard let scrub else { return }
+        let ms = Int((scrub * Double(max(transport.durationMs, 0))).rounded())
+        if abs(ms - transport.positionMs) <= 50 {
+            pendingSeekMs = nil
+            self.scrub = nil
+            return
+        }
+        pendingSeekMs = ms
+        store.transportSeek(ms: ms)
+    }
+
+    private func clearScrubIfSeekLanded(_ ms: Int) {
+        guard let pending = pendingSeekMs else { return }
+        guard abs(ms - pending) <= 50 else { return }
+        pendingSeekMs = nil
+        scrub = nil
     }
 
     private var playButton: some View {

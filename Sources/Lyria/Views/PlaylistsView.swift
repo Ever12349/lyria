@@ -43,7 +43,12 @@ private struct PlaylistCard: View {
     var body: some View {
         Button { store.openPlaylist(playlist.id) } label: {
             VStack(alignment: .leading, spacing: 0) {
-                CoverArt(seed: playlist.id, systemImage: "music.note.list", cornerRadius: 0)
+                CoverArt(
+                    seed: playlist.id,
+                    artworkPaths: store.artworkPaths(for: playlist),
+                    systemImage: "music.note.list",
+                    cornerRadius: 0
+                )
                     .aspectRatio(1, contentMode: .fit)
                     .opacity(playlist.trackIDs.isEmpty ? 0.35 : 1)
                 VStack(alignment: .leading, spacing: 3) {
@@ -84,6 +89,7 @@ struct PlaylistDetailView: View {
             VStack(alignment: .leading, spacing: 16) {
                 DetailHero(
                     seed: playlist.id,
+                    artworkPaths: store.artworkPaths(for: playlist),
                     systemImage: "music.note.list",
                     eyebrow: "播放列表",
                     title: playlist.name,

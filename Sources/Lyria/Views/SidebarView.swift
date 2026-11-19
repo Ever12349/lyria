@@ -55,9 +55,12 @@ struct SidebarView: View {
     private func navRow(_ item: NavItem) -> some View {
         sidebarButton(
             title: item.rawValue,
-            systemImage: item.systemImage,
             selected: sectionHighlighted(item)
         ) {
+            Image(systemName: item.systemImage)
+                .font(.system(size: 14, weight: .semibold))
+                .frame(width: 20, height: 18)
+        } action: {
             store.select(item)
         }
     }
@@ -65,9 +68,19 @@ struct SidebarView: View {
     private func shortcutRow(_ playlist: Playlist) -> some View {
         sidebarButton(
             title: playlist.name,
-            systemImage: nil,
-            selected: shortcutHighlighted(playlist.id)
+            selected: shortcutHighlighted(playlist.id),
+            leadingWidth: 24,
+            leadingHeight: 24
         ) {
+            CoverArt(
+                seed: playlist.id,
+                artworkPaths: store.artworkPaths(for: playlist),
+                systemImage: "music.note.list",
+                cornerRadius: 4
+            )
+            .frame(width: 24, height: 24)
+            .opacity(playlist.trackIDs.isEmpty ? 0.45 : 1)
+        } action: {
             store.openPlaylist(playlist.id)
         }
     }
@@ -85,23 +98,18 @@ struct SidebarView: View {
         return current == id
     }
 
-    private func sidebarButton(
+    private func sidebarButton<Leading: View>(
         title: String,
-        systemImage: String?,
         selected: Bool,
+        leadingWidth: CGFloat = 20,
+        leadingHeight: CGFloat = 18,
+        @ViewBuilder leading: () -> Leading,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
             HStack(spacing: 10) {
-                Group {
-                    if let systemImage {
-                        Image(systemName: systemImage)
-                    } else {
-                        Color.clear
-                    }
-                }
-                .font(.system(size: 14, weight: .semibold))
-                .frame(width: 20, height: 18)
+                leading()
+                    .frame(width: leadingWidth, height: leadingHeight)
                 Text(title)
                     .font(.system(size: 14, weight: selected ? .semibold : .medium))
                     .lineLimit(1)

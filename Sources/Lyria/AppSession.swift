@@ -219,6 +219,11 @@ final class AppSession: ObservableObject {
         }
     }
 
+    /// Distinct on-disk covers among playlist members, in list order (max 4).
+    func artworkPaths(for playlist: Playlist) -> [String] {
+        PlaylistArtwork.paths(from: playlist.trackIDs.map { track($0)?.artworkPath })
+    }
+
     func durationMs(of ids: [String]) -> Int {
         ids.reduce(0) { partial, id in
             partial + (track(id)?.durationMs ?? 0)

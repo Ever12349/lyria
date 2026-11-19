@@ -20,6 +20,12 @@
 5. SwiftUI 内容会盖住标题栏命中区。侧栏穿透仍是系统标题栏拖动带（约为 `frame` 与 `contentLayoutRect` 的高度差，落空时约 28pt）；详情列标题行（标题、搜索等）的空白处同样穿透，点在搜索、返回、批量按钮上则不穿透。勿把整窗顶 52pt 一律 `hitTest → nil`。列头和扫描条不在标题栏内、不穿透。
 6. 侧栏可拖宽 **168–320**（默认 ~228）
 
+## 实现备注（SwiftUI 壳）
+
+- 窗口壳是左导航整列顶满 + 右详情列；视觉上右列是「上标题 / 下内容」，标题栏不盖住侧栏。
+- 详情列顶栏（标题行、扫描条、曲库列头）与页面在 `ZStack` 中叠放，而不是 `VStack { 标题; 页面 }`：页面铺满顶栏背后，曲库/搜索表格用 `chromeTop` contentInset 让行滚进标题栏区域（见 `dev-spec`）。
+- `TitleRowHeightKey` 只量标题行，交给 `WindowChromeConfigurer` 做详情列拖拽穿透带；`TopChromeHeightKey` 量整块钉顶 chrome，交给表格 inset 与队列顶距。
+
 ## 设计交付
 
 - Figma: https://www.figma.com/design/JJFaj1UysoberBKEr8G8Jc

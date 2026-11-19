@@ -2,97 +2,6 @@ import AppKit
 import LyriaCore
 import SwiftUI
 
-struct CoverArt: View {
-    var seed: String
-    var artworkPath: String? = nil
-    var systemImage: String = "music.note"
-    var cornerRadius: CGFloat = 8
-    var circle = false
-    var elevated = false
-    @Environment(\.displayScale) private var displayScale
-
-    var body: some View {
-        let shape = circle
-            ? AnyShape(Circle())
-            : AnyShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-        shape
-            .fill(LyriaTheme.coverGradient(seed: seed))
-            .overlay {
-                GeometryReader { geo in
-                    CoverArtImage(
-                        artworkPath: artworkPath,
-                        systemImage: systemImage,
-                        width: geo.size.width,
-                        height: geo.size.height,
-                        displayScale: displayScale
-                    )
-                }
-            }
-            .clipShape(shape)
-            .shadow(color: elevated ? LyriaTheme.primaryDeep.opacity(0.35) : .clear, radius: elevated ? 18 : 0, y: elevated ? 8 : 0)
-    }
-}
-
-/// Measures itself and asks the thumbnail cache for that bucket. A memory hit is drawn in this body.
-private struct CoverArtImage: View {
-    var artworkPath: String?
-    var systemImage: String
-    var width: CGFloat
-    var height: CGFloat
-    var displayScale: CGFloat
-    @State private var artwork: NSImage?
-    @State private var artworkID = ""
-
-    var body: some View {
-        let request = ArtworkThumbnails.request(
-            sourcePath: artworkPath,
-            edgePoints: Double(max(width, height)),
-            displayScale: Double(displayScale)
-        )
-        let taskID = request?.key.token ?? ""
-        let shown = image(request: request, taskID: taskID)
-        ZStack {
-            if let shown {
-                Image(nsImage: shown)
-                    .resizable()
-                    .scaledToFill()
-            } else {
-                Image(systemName: systemImage)
-                    .font(.system(size: max(11, width * 0.28), weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.92))
-            }
-        }
-        .frame(width: width, height: height)
-        .task(id: taskID) {
-            await load(request, taskID: taskID)
-        }
-    }
-
-    private func image(request: ArtworkThumbRequest?, taskID: String) -> NSImage? {
-        guard let request else { return nil }
-        if artworkID == taskID { return artwork }
-        guard let data = SupportPaths.thumbnails.memoryData(for: request.key) else { return nil }
-        return NSImage(data: data)
-    }
-
-    private func load(_ request: ArtworkThumbRequest?, taskID: String) async {
-        guard let request else {
-            artwork = nil
-            artworkID = ""
-            return
-        }
-        if let data = SupportPaths.thumbnails.memoryData(for: request.key) {
-            artwork = NSImage(data: data)
-            artworkID = taskID
-            return
-        }
-        let data = await SupportPaths.thumbnails.thumbnailJPEG(key: request.key)
-        guard !Task.isCancelled else { return }
-        artwork = data.flatMap { NSImage(data: $0) }
-        artworkID = taskID
-    }
-}
-
 struct PillButton: View {
     let title: String
     var systemImage: String? = nil
@@ -175,8 +84,9 @@ struct SearchField: View {
     var allowsCompact = false
     @Binding var expanded: Bool
     @EnvironmentObject private var store: AppSession
-    @FocusState private var fieldFocused: Bool
     @State private var didFocus = false
+    /// Compact → expanded needs an explicit focus request; launch must not.
+    @State private var requestFocus = false
 
     private var showsCompact: Bool {
         allowsCompact && text.isEmpty && !expanded
@@ -187,6 +97,7 @@ struct SearchField: View {
             if showsCompact {
                 Button {
                     expanded = true
+                    requestFocus = true
                 } label: {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 13, weight: .medium))
@@ -199,9 +110,6 @@ struct SearchField: View {
                 .accessibilityLabel("搜索")
             } else {
                 field
-                    .onAppear {
-                        if expanded { fieldFocused = true }
-                    }
             }
         }
         .onChange(of: allowsCompact) { _, allowed in
@@ -214,20 +122,21 @@ struct SearchField: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(LyriaTheme.text3)
-            TextField("搜索音乐、艺人、专辑", text: $text)
-                .textFieldStyle(.plain)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(LyriaTheme.foreground)
-                .focused($fieldFocused)
-                .onChange(of: fieldFocused) { _, focused in
-                    if focused {
-                        didFocus = true
-                        store.trackTableFocused = false
-                    } else if didFocus && text.isEmpty {
+            SearchTextField(
+                text: $text,
+                requestFocus: $requestFocus,
+                onFocus: {
+                    didFocus = true
+                    store.trackTableFocused = false
+                },
+                onBlur: {
+                    if didFocus && text.isEmpty {
                         didFocus = false
                         expanded = false
                     }
                 }
+            )
+            .frame(maxWidth: .infinity)
             if !text.isEmpty {
                 Button { text = "" } label: {
                     Image(systemName: "xmark.circle.fill")
@@ -242,6 +151,122 @@ struct SearchField: View {
         .frame(maxWidth: .infinity)
         .background(Capsule(style: .continuous).fill(LyriaTheme.searchFill))
         .overlay(Capsule(style: .continuous).strokeBorder(LyriaTheme.border, lineWidth: 1))
+    }
+}
+
+/// AppKit field that refuses window-initial first responder. Click or an explicit
+/// `requestFocus` opens editing; launch Space therefore reaches KeyMonitor.
+private struct SearchTextField: NSViewRepresentable {
+    @Binding var text: String
+    @Binding var requestFocus: Bool
+    var onFocus: () -> Void
+    var onBlur: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(text: $text, requestFocus: $requestFocus, onFocus: onFocus, onBlur: onBlur)
+    }
+
+    func makeNSView(context: Context) -> LaunchQuietSearchField {
+        let field = LaunchQuietSearchField()
+        field.delegate = context.coordinator
+        field.isEditable = true
+        field.isSelectable = true
+        field.isBordered = false
+        field.isBezeled = false
+        field.drawsBackground = false
+        field.focusRingType = .none
+        field.font = .systemFont(ofSize: 13, weight: .medium)
+        field.textColor = .white
+        field.placeholderAttributedString = NSAttributedString(
+            string: "搜索音乐、艺人、专辑",
+            attributes: [
+                .foregroundColor: NSColor.white.withAlphaComponent(0.35),
+                .font: NSFont.systemFont(ofSize: 13, weight: .medium)
+            ]
+        )
+        field.stringValue = text
+        return field
+    }
+
+    func updateNSView(_ field: LaunchQuietSearchField, context: Context) {
+        context.coordinator.text = $text
+        context.coordinator.requestFocus = $requestFocus
+        context.coordinator.onFocus = onFocus
+        context.coordinator.onBlur = onBlur
+        if field.currentEditor() == nil, field.stringValue != text {
+            field.stringValue = text
+        }
+        if requestFocus, !context.coordinator.focusPending {
+            context.coordinator.focusPending = true
+            DispatchQueue.main.async {
+                context.coordinator.focusPending = false
+                context.coordinator.requestFocus.wrappedValue = false
+                field.beginEditingFromUserAction()
+            }
+        }
+    }
+
+    final class Coordinator: NSObject, NSTextFieldDelegate {
+        var text: Binding<String>
+        var requestFocus: Binding<Bool>
+        var onFocus: () -> Void
+        var onBlur: () -> Void
+        var focusPending = false
+
+        init(
+            text: Binding<String>,
+            requestFocus: Binding<Bool>,
+            onFocus: @escaping () -> Void,
+            onBlur: @escaping () -> Void
+        ) {
+            self.text = text
+            self.requestFocus = requestFocus
+            self.onFocus = onFocus
+            self.onBlur = onBlur
+        }
+
+        func controlTextDidChange(_ notification: Notification) {
+            guard let field = notification.object as? NSTextField else { return }
+            text.wrappedValue = field.stringValue
+        }
+
+        func controlTextDidBeginEditing(_ notification: Notification) {
+            onFocus()
+        }
+
+        func controlTextDidEndEditing(_ notification: Notification) {
+            guard let field = notification.object as? LaunchQuietSearchField else { return }
+            text.wrappedValue = field.stringValue
+            field.endEditingSession()
+            onBlur()
+        }
+    }
+}
+
+/// Skips AppKit's automatic initial first responder / key-loop claim until the user
+/// clicks or compact-mode expansion asks for focus.
+private final class LaunchQuietSearchField: NSTextField {
+    private var allowFocus = false
+
+    override var acceptsFirstResponder: Bool { allowFocus }
+
+    override func becomeFirstResponder() -> Bool {
+        guard allowFocus else { return false }
+        return super.becomeFirstResponder()
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        beginEditingFromUserAction()
+        super.mouseDown(with: event)
+    }
+
+    func beginEditingFromUserAction() {
+        allowFocus = true
+        window?.makeFirstResponder(self)
+    }
+
+    func endEditingSession() {
+        allowFocus = false
     }
 }
 
@@ -306,6 +331,7 @@ struct SectionLabel: View {
 struct DetailHero<Actions: View>: View {
     let seed: String
     var artworkPath: String? = nil
+    var artworkPaths: [String] = []
     var systemImage: String = "music.note"
     var circle = false
     let eyebrow: String
@@ -319,7 +345,15 @@ struct DetailHero<Actions: View>: View {
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 20) {
-            CoverArt(seed: seed, artworkPath: artworkPath, systemImage: systemImage, cornerRadius: 16, circle: circle, elevated: true)
+            CoverArt(
+                seed: seed,
+                artworkPath: artworkPath,
+                artworkPaths: artworkPaths,
+                systemImage: systemImage,
+                cornerRadius: 16,
+                circle: circle,
+                elevated: true
+            )
                 .frame(width: 160, height: 160)
             VStack(alignment: .leading, spacing: 6) {
                 Text(eyebrow)

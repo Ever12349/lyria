@@ -70,6 +70,9 @@
 		A1C10000000000000000010A /* BatchActionBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C10000000000000000000A /* BatchActionBar.swift */; };
 		A1C10000000000000000010C /* AddToPlaylistMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C10000000000000000000C /* AddToPlaylistMenu.swift */; };
 		A1C10000000000000000010D /* PlaylistNameDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C10000000000000000000D /* PlaylistNameDialog.swift */; };
+		A1C10000000000000000010E /* CoverArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C10000000000000000000E /* CoverArt.swift */; };
+		A1C0000000000000000000C2 /* PlaylistArtwork.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0000000000000000000C1 /* PlaylistArtwork.swift */; };
+		A1C0000000000000000000C4 /* PlaylistArtworkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0000000000000000000C3 /* PlaylistArtworkTests.swift */; };
 		E1E000000000000000000011 /* PlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E000000000000000000001 /* PlaybackEngine.swift */; };
 		E1E000000000000000000012 /* TransportState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E000000000000000000002 /* TransportState.swift */; };
 		E1E000000000000000000013 /* Queue.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E000000000000000000003 /* Queue.swift */; };
@@ -145,6 +148,9 @@
 		A1C10000000000000000000A /* BatchActionBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchActionBar.swift; sourceTree = "<group>"; };
 		A1C10000000000000000000C /* AddToPlaylistMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddToPlaylistMenu.swift; sourceTree = "<group>"; };
 		A1C10000000000000000000D /* PlaylistNameDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistNameDialog.swift; sourceTree = "<group>"; };
+		A1C10000000000000000000E /* CoverArt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverArt.swift; sourceTree = "<group>"; };
+		A1C0000000000000000000C1 /* PlaylistArtwork.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistArtwork.swift; sourceTree = "<group>"; };
+		A1C0000000000000000000C3 /* PlaylistArtworkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistArtworkTests.swift; sourceTree = "<group>"; };
 		E1E000000000000000000001 /* PlaybackEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackEngine.swift; sourceTree = "<group>"; };
 		E1E000000000000000000002 /* TransportState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransportState.swift; sourceTree = "<group>"; };
 		E1E000000000000000000003 /* Queue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Queue.swift; sourceTree = "<group>"; };
@@ -224,6 +230,7 @@
 				ABB1A05624834278B751409B /* SidebarResizeHandle.swift */,
 				75F41FD029144B698CEC20E5 /* SidebarView.swift */,
 				213A5EEDCC8E42338D9A1144 /* ShellControls.swift */,
+				A1C10000000000000000000E /* CoverArt.swift */,
 				560ABC61B9F440318D9E57B2 /* TrackTable.swift */,
 				A1C10000000000000000000B /* TrackTableView.swift */,
 				597CCA83E4DF462AB4AE0CCD /* LibraryView.swift */,
@@ -285,6 +292,7 @@
 				A1C00000000000000000001F /* TrackTableLayout.swift */,
 				A1C000000000000000000020 /* LibraryAdditionCopy.swift */,
 				A1C000000000000000000080 /* PlaylistRecency.swift */,
+				A1C0000000000000000000C1 /* PlaylistArtwork.swift */,
 				A1C0000000000000000000A1 /* AddTimeOrder.swift */,
 				A1C0000000000000000000B1 /* PlaybackSession.swift */,
 				A1C0000000000000000000B3 /* UISession.swift */,
@@ -309,6 +317,7 @@
 				A1C00000000000000000004D /* TrackTableLayoutTests.swift */,
 				A1C00000000000000000004E /* LibraryAdditionCopyTests.swift */,
 				A1C00000000000000000004F /* PlaylistRecencyTests.swift */,
+				A1C0000000000000000000C3 /* PlaylistArtworkTests.swift */,
 				A1C0000000000000000000A3 /* AddTimeOrderTests.swift */,
 				A1C0000000000000000000B5 /* PlaybackSessionTests.swift */,
 				A1C0000000000000000000B7 /* UISessionTests.swift */,
@@ -414,6 +423,7 @@
 				67653BB3189B4E81BE8A472F /* SidebarResizeHandle.swift in Sources */,
 				3FCCFAE05AEC4DD096BD0DC4 /* SidebarView.swift in Sources */,
 				174EEB68D25F451D9D6F5F9F /* ShellControls.swift in Sources */,
+				A1C10000000000000000010E /* CoverArt.swift in Sources */,
 				8B66152888F4490FAE28F53A /* TrackTable.swift in Sources */,
 				A1C10000000000000000010B /* TrackTableView.swift in Sources */,
 				D432588F094D4D038672857D /* LibraryView.swift in Sources */,
@@ -462,6 +472,7 @@
 				A1C00000000000000000002F /* TrackTableLayout.swift in Sources */,
 				A1C000000000000000000030 /* LibraryAdditionCopy.swift in Sources */,
 				A1C000000000000000000090 /* PlaylistRecency.swift in Sources */,
+				A1C0000000000000000000C2 /* PlaylistArtwork.swift in Sources */,
 				A1C0000000000000000000A2 /* AddTimeOrder.swift in Sources */,
 				A1C0000000000000000000B2 /* PlaybackSession.swift in Sources */,
 				A1C0000000000000000000B4 /* UISession.swift in Sources */,
@@ -486,6 +497,7 @@
 				A1C00000000000000000005D /* TrackTableLayoutTests.swift in Sources */,
 				A1C00000000000000000005E /* LibraryAdditionCopyTests.swift in Sources */,
 				A1C00000000000000000005F /* PlaylistRecencyTests.swift in Sources */,
+				A1C0000000000000000000C4 /* PlaylistArtworkTests.swift in Sources */,
 				A1C0000000000000000000A4 /* AddTimeOrderTests.swift in Sources */,
 				A1C0000000000000000000B6 /* PlaybackSessionTests.swift in Sources */,
 				A1C0000000000000000000B8 /* UISessionTests.swift in Sources */,

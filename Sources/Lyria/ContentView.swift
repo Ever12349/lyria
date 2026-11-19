@@ -119,26 +119,31 @@ struct ContentView: View {
         .allowsHitTesting(false)
     }
 
+    /// Right column: stacked chrome over page (not a true VStack of title-then-page).
+    /// Overlay geometry keeps TrackTable rows scrolling under the title bar via `chromeTop`.
     private var detailColumn: some View {
         VStack(spacing: 0) {
-            ZStack(alignment: .topTrailing) {
-                page
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(.leading, 4)
-                    .padding(.trailing, 20)
-                    .animation(nil, value: store.queueVisible)
-                if store.queueVisible {
-                    QueuePanel()
-                        .frame(width: 280)
-                        .padding(.trailing, 16)
-                        .padding(.top, chromeTop + 8)
-                        .padding(.bottom, 8)
-                        .transition(.move(edge: .trailing).combined(with: .opacity))
+            ZStack(alignment: .top) {
+                ZStack(alignment: .topTrailing) {
+                    page
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(.leading, 4)
+                        .padding(.trailing, 20)
+                        .animation(nil, value: store.queueVisible)
+                    if store.queueVisible {
+                        QueuePanel()
+                            .frame(width: 280)
+                            .padding(.trailing, 16)
+                            .padding(.top, chromeTop + 8)
+                            .padding(.bottom, 8)
+                            .transition(.move(edge: .trailing).combined(with: .opacity))
+                    }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .animation(.easeOut(duration: 0.18), value: store.queueVisible)
+
+                pinnedChrome
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .animation(.easeOut(duration: 0.18), value: store.queueVisible)
-            .overlay(alignment: .top) { pinnedChrome }
             .overlay(alignment: .bottom) {
                 if let toast = store.toast {
                     ToastPill(text: toast)
