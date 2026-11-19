@@ -6,6 +6,7 @@ struct NowPlaying: Equatable {
     var id: String?
     var title: String
     var artist: String
+    var album: String
     var artworkPath: String?
 
     var artistLabel: String { artist.isEmpty ? "未知艺人" : artist }
@@ -29,6 +30,7 @@ struct TransportSnapshot: Sendable {
     var currentID: String?
     var title: String
     var artist: String
+    var album: String
     var artworkPath: String?
     var hasCurrent: Bool
     var playing: Bool
@@ -84,6 +86,7 @@ final class TransportState {
                 id: snapshot.currentID,
                 title: snapshot.title,
                 artist: snapshot.artist,
+                album: snapshot.album,
                 artworkPath: snapshot.artworkPath
             )
             : nil

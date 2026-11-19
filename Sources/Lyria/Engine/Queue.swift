@@ -8,15 +8,26 @@ struct ResolvedTrack: Sendable, Equatable {
     var missing: Bool
     var title: String
     var artist: String
+    var album: String
     var artworkPath: String?
     var durationMs: Int
 
-    init(id: String, path: String, missing: Bool, title: String, artist: String, artworkPath: String?, durationMs: Int = 0) {
+    init(
+        id: String,
+        path: String,
+        missing: Bool,
+        title: String,
+        artist: String,
+        album: String = "",
+        artworkPath: String?,
+        durationMs: Int = 0
+    ) {
         self.id = id
         self.path = path
         self.missing = missing
         self.title = title
         self.artist = artist
+        self.album = album
         self.artworkPath = artworkPath
         self.durationMs = max(0, durationMs)
     }
@@ -28,6 +39,7 @@ struct ResolvedTrack: Sendable, Equatable {
             missing: track.missing,
             title: track.title,
             artist: track.artistLabel,
+            album: track.album,
             artworkPath: track.artworkPath,
             durationMs: track.durationMs
         )

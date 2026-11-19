@@ -11,6 +11,7 @@ struct LyriaApp: App {
             ContentView(store: playback.session)
                 .environment(playback.transport)
                 .environment(playback.queue)
+                .background(OpenWindowBinder(appDelegate: appDelegate))
                 .frame(
                     minWidth: LyriaTheme.windowMinimum.width,
                     maxWidth: .infinity,
@@ -25,15 +26,33 @@ struct LyriaApp: App {
             CommandGroup(replacing: .newItem) {}
         }
 
-        MenuBarExtra {
-            MenuBarPlayerView()
-                .environmentObject(playback.session)
-                .environment(playback.transport)
-                .environment(playback.queue)
-        } label: {
-            Image(systemName: "music.note")
-        }
-        .menuBarExtraStyle(.window)
+        // Hidden for the system Now Playing slice — keep MenuBarPlayerView sources; do not delete.
+        // MenuBarExtra {
+        //     MenuBarPlayerView()
+        //         .environmentObject(playback.session)
+        //         .environment(playback.transport)
+        //         .environment(playback.queue)
+        // } label: {
+        //     Image(systemName: "music.note")
+        // }
+        // .menuBarExtraStyle(.window)
+    }
+}
+
+/// Binds Dock-reopen to `openWindow` without depending on MenuBarExtra.
+private struct OpenWindowBinder: View {
+    let appDelegate: AppDelegate
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Color.clear
+            .frame(width: 0, height: 0)
+            .accessibilityHidden(true)
+            .onAppear {
+                appDelegate.openMainWindow = {
+                    openWindow(id: LyriaSceneID.main)
+                }
+            }
     }
 }
 
@@ -62,11 +81,13 @@ final class PlaybackRoot {
         let session = AppSession(engine: engine, transport: transport, queueState: queue)
         self.session = session
         let cache = engine.sessionCache
+        let systemNowPlaying = engine.systemNowPlaying
         terminateObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.willTerminateNotification,
             object: nil,
             queue: .main
         ) { _ in
+            systemNowPlaying.clear()
             cache.flush()
             MainActor.assumeIsolated {
                 session.persistUINow()

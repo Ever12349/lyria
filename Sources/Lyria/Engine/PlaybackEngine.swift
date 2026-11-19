@@ -37,6 +37,8 @@ final class PlaybackSessionCache: @unchecked Sendable {
 /// Serial playback writer. Views enqueue work here and only read `TransportState`.
 actor PlaybackEngine {
     nonisolated let events: AsyncStream<EngineEvent>
+    /// System Control Center / menu-bar Now Playing. Safe to `clear()` from terminate.
+    nonisolated let systemNowPlaying = NowPlayingRemote()
     private let continuation: AsyncStream<EngineEvent>.Continuation
     private let host = PlayerHost()
     private var queue = PlaybackQueue()
@@ -50,6 +52,7 @@ actor PlaybackEngine {
     private var ignoreClock = false
     private var flacPlayable = false
     private var audioPrepared = false
+    private var remoteInstalled = false
     private var lastError: String?
     private var commandFailed = false
     private var commandNotice: String?
@@ -266,6 +269,21 @@ actor PlaybackEngine {
         await applyPlayPause(restartAtEnd: true)
     }
 
+    /// System Now Playing / headset play. No-op when already playing or no current item.
+    func remotePlay() async {
+        guard queue.current != nil, !playing else { return }
+        await applyPlayPause(restartAtEnd: true)
+    }
+
+    /// System Now Playing / headset pause.
+    func remotePause() async {
+        guard playing else { return }
+        host.player.pause()
+        playing = false
+        touchSession(write: true)
+        publish()
+    }
+
     func next() async {
         await step(PlaybackQueueRules.next(queue: queue, isPlayable: itemPlayable, rng: &rng))
     }
@@ -350,6 +368,7 @@ actor PlaybackEngine {
             missing: false,
             title: uri.lastPathComponent,
             artist: "",
+            album: "",
             artworkPath: nil
         )
         if let block = blocker(for: track) {
@@ -465,6 +484,12 @@ actor PlaybackEngine {
         guard playing, !ignoreClock else { return }
         positionMs = max(0, ms)
         continuation.yield(.position(positionMs))
+        systemNowPlaying.tickElapsed(
+            hasCurrent: queue.current != nil,
+            playing: playing,
+            positionMs: positionMs,
+            durationMs: durationMs
+        )
         if Date().timeIntervalSince(lastPositionPersist) >= 2 {
             touchSession(write: true)
         } else {
@@ -660,6 +685,10 @@ actor PlaybackEngine {
     }
 
     private func prepareAudio() {
+        if !remoteInstalled {
+            remoteInstalled = true
+            systemNowPlaying.install(engine: self)
+        }
         guard !audioPrepared else { return }
         audioPrepared = true
         if let flac = UTType(filenameExtension: "flac") {
@@ -753,7 +782,9 @@ actor PlaybackEngine {
     }
 
     private func publish() {
-        continuation.yield(.state(makeSnapshot()))
+        let snapshot = makeSnapshot()
+        continuation.yield(.state(snapshot))
+        systemNowPlaying.apply(snapshot)
     }
 
     private func makeSnapshot() -> TransportSnapshot {
@@ -775,6 +806,7 @@ actor PlaybackEngine {
             currentID: currentID,
             title: current?.title ?? "",
             artist: current?.artist ?? "",
+            album: current?.album ?? "",
             artworkPath: current?.artworkPath,
             hasCurrent: current != nil && queue.current != nil,
             playing: playing,

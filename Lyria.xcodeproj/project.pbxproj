@@ -76,6 +76,7 @@
 		E1E000000000000000000011 /* PlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E000000000000000000001 /* PlaybackEngine.swift */; };
 		E1E000000000000000000012 /* TransportState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E000000000000000000002 /* TransportState.swift */; };
 		E1E000000000000000000013 /* Queue.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E000000000000000000003 /* Queue.swift */; };
+		E1E000000000000000000014 /* NowPlayingRemote.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E000000000000000000005 /* NowPlayingRemote.swift */; };
 		A1D000000000000000000011 /* LyriaMain.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D000000000000000000001 /* LyriaMain.swift */; };
 		A1D000000000000000000012 /* MCPBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D000000000000000000002 /* MCPBridge.swift */; };
 		A1D000000000000000000013 /* MCPServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D000000000000000000003 /* MCPServer.swift */; };
@@ -165,6 +166,7 @@
 		E1E000000000000000000001 /* PlaybackEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackEngine.swift; sourceTree = "<group>"; };
 		E1E000000000000000000002 /* TransportState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransportState.swift; sourceTree = "<group>"; };
 		E1E000000000000000000003 /* Queue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Queue.swift; sourceTree = "<group>"; };
+		E1E000000000000000000005 /* NowPlayingRemote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingRemote.swift; sourceTree = "<group>"; };
 		A1D000000000000000000001 /* LyriaMain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LyriaMain.swift; sourceTree = "<group>"; };
 		A1D000000000000000000002 /* MCPBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPBridge.swift; sourceTree = "<group>"; };
 		A1D000000000000000000003 /* MCPServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPServer.swift; sourceTree = "<group>"; };
@@ -293,6 +295,7 @@
 				E1E000000000000000000001 /* PlaybackEngine.swift */,
 				E1E000000000000000000002 /* TransportState.swift */,
 				E1E000000000000000000003 /* Queue.swift */,
+				E1E000000000000000000005 /* NowPlayingRemote.swift */,
 			);
 			path = Engine;
 			sourceTree = "<group>";
@@ -492,6 +495,7 @@
 				E1E000000000000000000011 /* PlaybackEngine.swift in Sources */,
 				E1E000000000000000000012 /* TransportState.swift in Sources */,
 				E1E000000000000000000013 /* Queue.swift in Sources */,
+				E1E000000000000000000014 /* NowPlayingRemote.swift in Sources */,
 				A1D000000000000000000011 /* LyriaMain.swift in Sources */,
 				A1D000000000000000000012 /* MCPBridge.swift in Sources */,
 				A1D000000000000000000013 /* MCPServer.swift in Sources */,
