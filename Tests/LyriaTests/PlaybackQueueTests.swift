@@ -230,6 +230,28 @@ final class PlaybackQueueTests: XCTestCase {
         )
     }
 
+    func testSetShuffleDoesNotReshuffleWhenAlreadySet() {
+        let original = PlaybackQueue(items: [.track("a"), .track("b"), .track("c")], currentIndex: 1)
+        var unused = ScriptedRNG(values: [0, 0, 0])
+        let same = PlaybackQueueRules.setShuffle(enabled: false, queue: original, rng: &unused)
+        XCTAssertEqual(same, original)
+        XCTAssertEqual(unused.index, 0)
+
+        var first = ScriptedRNG(values: [0, 0])
+        let on = PlaybackQueueRules.setShuffle(enabled: true, queue: original, rng: &first)
+        var second = ScriptedRNG(values: [9, 9, 9])
+        let again = PlaybackQueueRules.setShuffle(enabled: true, queue: on, rng: &second)
+        XCTAssertEqual(again.items, on.items)
+        XCTAssertEqual(second.index, 0)
+
+        let off = PlaybackQueueRules.setRepeat(mode: .off, queue: original)
+        XCTAssertEqual(off, original)
+        let all = PlaybackQueueRules.setRepeat(mode: .all, queue: original)
+        XCTAssertEqual(all.repeatMode, .all)
+        XCTAssertEqual(all.items, original.items)
+        XCTAssertEqual(PlaybackQueueRules.setRepeat(mode: .all, queue: all), all)
+    }
+
     func testShuffleToggleKeepsCurrentAndRestoresSource() {
         let original = PlaybackQueue(items: [.track("a"), .track("b"), .track("c"), .track("d")], currentIndex: 2)
         var zeros = ScriptedRNG(values: [0, 0, 0])

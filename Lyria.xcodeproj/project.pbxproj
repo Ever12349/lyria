@@ -76,6 +76,12 @@
 		E1E000000000000000000011 /* PlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E000000000000000000001 /* PlaybackEngine.swift */; };
 		E1E000000000000000000012 /* TransportState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E000000000000000000002 /* TransportState.swift */; };
 		E1E000000000000000000013 /* Queue.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E000000000000000000003 /* Queue.swift */; };
+		A1D000000000000000000011 /* LyriaMain.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D000000000000000000001 /* LyriaMain.swift */; };
+		A1D000000000000000000012 /* MCPBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D000000000000000000002 /* MCPBridge.swift */; };
+		A1D000000000000000000013 /* MCPServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D000000000000000000003 /* MCPServer.swift */; };
+		A1D000000000000000000014 /* InstanceLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D000000000000000000004 /* InstanceLock.swift */; };
+		A1D000000000000000000032 /* AgentContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D000000000000000000031 /* AgentContract.swift */; };
+		A1D000000000000000000042 /* AgentContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D000000000000000000041 /* AgentContractTests.swift */; };
 		A1C000000000000000000051 /* CrockfordTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000041 /* CrockfordTests.swift */; };
 		A1C000000000000000000052 /* NormalizeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000042 /* NormalizeTests.swift */; };
 		A1C000000000000000000053 /* FingerprintTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000043 /* FingerprintTests.swift */; };
@@ -154,6 +160,12 @@
 		E1E000000000000000000001 /* PlaybackEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackEngine.swift; sourceTree = "<group>"; };
 		E1E000000000000000000002 /* TransportState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransportState.swift; sourceTree = "<group>"; };
 		E1E000000000000000000003 /* Queue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Queue.swift; sourceTree = "<group>"; };
+		A1D000000000000000000001 /* LyriaMain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LyriaMain.swift; sourceTree = "<group>"; };
+		A1D000000000000000000002 /* MCPBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPBridge.swift; sourceTree = "<group>"; };
+		A1D000000000000000000003 /* MCPServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPServer.swift; sourceTree = "<group>"; };
+		A1D000000000000000000004 /* InstanceLock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstanceLock.swift; sourceTree = "<group>"; };
+		A1D000000000000000000031 /* AgentContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentContract.swift; sourceTree = "<group>"; };
+		A1D000000000000000000041 /* AgentContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentContractTests.swift; sourceTree = "<group>"; };
 		A1C000000000000000000041 /* CrockfordTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrockfordTests.swift; sourceTree = "<group>"; };
 		A1C000000000000000000042 /* NormalizeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NormalizeTests.swift; sourceTree = "<group>"; };
 		A1C000000000000000000043 /* FingerprintTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FingerprintTests.swift; sourceTree = "<group>"; };
@@ -219,8 +231,20 @@
 				0D8C0413CC2849248C9A3855 /* Models.swift */,
 				A1C100000000000000000002 /* Library */,
 				1D1673F8135B461384BB9050 /* Views */,
+				A1D000000000000000000020 /* Agent */,
 			);
 			path = Sources/Lyria;
+			sourceTree = "<group>";
+		};
+		A1D000000000000000000020 /* Agent */ = {
+			isa = PBXGroup;
+			children = (
+				A1D000000000000000000001 /* LyriaMain.swift */,
+				A1D000000000000000000002 /* MCPBridge.swift */,
+				A1D000000000000000000003 /* MCPServer.swift */,
+				A1D000000000000000000004 /* InstanceLock.swift */,
+			);
+			path = Agent;
 			sourceTree = "<group>";
 		};
 		1D1673F8135B461384BB9050 /* Views */ = {
@@ -296,6 +320,7 @@
 				A1C0000000000000000000A1 /* AddTimeOrder.swift */,
 				A1C0000000000000000000B1 /* PlaybackSession.swift */,
 				A1C0000000000000000000B3 /* UISession.swift */,
+				A1D000000000000000000031 /* AgentContract.swift */,
 			);
 			path = Sources/LyriaCore;
 			sourceTree = "<group>";
@@ -321,6 +346,7 @@
 				A1C0000000000000000000A3 /* AddTimeOrderTests.swift */,
 				A1C0000000000000000000B5 /* PlaybackSessionTests.swift */,
 				A1C0000000000000000000B7 /* UISessionTests.swift */,
+				A1D000000000000000000041 /* AgentContractTests.swift */,
 			);
 			path = Tests/LyriaTests;
 			sourceTree = "<group>";
@@ -448,6 +474,10 @@
 				E1E000000000000000000011 /* PlaybackEngine.swift in Sources */,
 				E1E000000000000000000012 /* TransportState.swift in Sources */,
 				E1E000000000000000000013 /* Queue.swift in Sources */,
+				A1D000000000000000000011 /* LyriaMain.swift in Sources */,
+				A1D000000000000000000012 /* MCPBridge.swift in Sources */,
+				A1D000000000000000000013 /* MCPServer.swift in Sources */,
+				A1D000000000000000000014 /* InstanceLock.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -476,6 +506,7 @@
 				A1C0000000000000000000A2 /* AddTimeOrder.swift in Sources */,
 				A1C0000000000000000000B2 /* PlaybackSession.swift in Sources */,
 				A1C0000000000000000000B4 /* UISession.swift in Sources */,
+				A1D000000000000000000032 /* AgentContract.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -501,6 +532,7 @@
 				A1C0000000000000000000A4 /* AddTimeOrderTests.swift in Sources */,
 				A1C0000000000000000000B6 /* PlaybackSessionTests.swift in Sources */,
 				A1C0000000000000000000B8 /* UISessionTests.swift in Sources */,
+				A1D000000000000000000042 /* AgentContractTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

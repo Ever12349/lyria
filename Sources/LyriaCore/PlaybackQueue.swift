@@ -448,6 +448,24 @@ public enum PlaybackQueueRules {
         return next
     }
 
+    /// Same permutation as `toggleShuffle` when the flag actually changes.
+    /// An equal flag returns the queue unchanged so a second set does not reshuffle.
+    public static func setShuffle<R: RandomNumberGenerator>(
+        enabled: Bool,
+        queue: PlaybackQueue,
+        rng: inout R
+    ) -> PlaybackQueue {
+        guard queue.shuffle != enabled else { return queue }
+        return toggleShuffle(queue: queue, rng: &rng)
+    }
+
+    public static func setRepeat(mode: RepeatMode, queue: PlaybackQueue) -> PlaybackQueue {
+        guard queue.repeatMode != mode else { return queue }
+        var next = queue
+        next.repeatMode = mode
+        return next
+    }
+
     public static func previous(
         queue: PlaybackQueue,
         positionMs: Int,

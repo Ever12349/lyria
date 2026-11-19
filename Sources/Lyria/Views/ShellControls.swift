@@ -543,6 +543,30 @@ struct OffToggle: View {
     }
 }
 
+struct SettingToggle: View {
+    @Binding var isOn: Bool
+    var label: String
+
+    var body: some View {
+        Button {
+            isOn.toggle()
+        } label: {
+            ZStack(alignment: isOn ? .trailing : .leading) {
+                Capsule(style: .continuous)
+                    .fill(isOn ? AnyShapeStyle(LyriaTheme.accentGradient) : AnyShapeStyle(Color.white.opacity(0.15)))
+                    .frame(width: 40, height: 22)
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: 18, height: 18)
+                    .padding(isOn ? .trailing : .leading, 2)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+        .accessibilityValue(isOn ? "开启" : "关闭")
+    }
+}
+
 /// Within-window frost plus a Deep Space wash. Does not use behind-window vibrancy.
 /// The wash is a vertical gradient: nearly solid at the top so the title reads
 /// against a calm surface, thinning toward the bottom edge so the frost and the

@@ -66,6 +66,20 @@ actor LibraryDatabase {
         isOpen = true
     }
 
+    func setting(_ key: String) throws -> String? {
+        try optionalText("SELECT value FROM settings WHERE key = ?", [.text(key)])
+    }
+
+    func setSetting(_ key: String, _ value: String) throws {
+        try connection.run(
+            """
+            INSERT INTO settings (key, value) VALUES (?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value
+            """,
+            [.text(key), .text(value)]
+        )
+    }
+
     func snapshot() throws -> LibrarySnapshot {
         let tracks = try loadTracks()
         let artists = try loadArtists()

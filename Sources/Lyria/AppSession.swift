@@ -40,6 +40,7 @@ final class AppSession: ObservableObject {
         }
     }
     @Published var sidebarWidth: CGFloat = CGFloat(UISession.sidebarDefault)
+    @Published var mcpEnabled = true
     @Published var toast: String?
     private var toastToken = 0
     private var didBootstrap = false
@@ -49,6 +50,7 @@ final class AppSession: ObservableObject {
     private let engine: PlaybackEngine
     let transport: TransportState
     let queueState: PlaybackQueueState
+    private let mcp: MCPService
     private var engineMirror: Task<Void, Never>?
 
     init(engine: PlaybackEngine, transport: TransportState, queueState: PlaybackQueueState) {
@@ -57,6 +59,8 @@ final class AppSession: ObservableObject {
         self.queueState = queueState
         let library = LibraryStore()
         self.library = library
+        let mcp = MCPService(engine: engine, library: library)
+        self.mcp = mcp
         let events = engine.events
         engineMirror = Task { [weak self] in
             for await event in events {
@@ -73,6 +77,7 @@ final class AppSession: ObservableObject {
         library.onToast = { [weak self] message in
             self?.showToast(message)
         }
+        mcp.bind(self)
     }
 
     deinit {
@@ -82,9 +87,28 @@ final class AppSession: ObservableObject {
     func bootstrap() async {
         guard !didBootstrap else { return }
         didBootstrap = true
+        library.onDatabaseReady = { [weak self] in
+            await self?.mcp.startIfEnabled()
+        }
+        library.onLibraryFailed = { [weak self] in
+            self?.mcp.failLibrary(AgentCopy.databaseFailed)
+        }
         await library.open()
         restoreUISession()
         await restorePlaybackSession()
+        mcp.libraryReady()
+    }
+
+    func setMCPEnabled(_ enabled: Bool) {
+        let previous = mcpEnabled
+        mcpEnabled = enabled
+        Task {
+            let saved = await mcp.apply(enabled)
+            if !saved {
+                mcpEnabled = previous
+                showToast(AgentCopy.databaseFailed)
+            }
+        }
     }
 
     func persistUINow() {
@@ -179,10 +203,13 @@ final class AppSession: ObservableObject {
     var searchTracks: [Track] {
         let query = trimmedQuery
         guard !query.isEmpty else { return [] }
-        return tracks.filter { track in
-            track.title.localizedCaseInsensitiveContains(query)
-                || track.artistLabel.localizedCaseInsensitiveContains(query)
-                || track.albumLabel.localizedCaseInsensitiveContains(query)
+        return tracks.filter {
+            LibrarySearch.matches(
+                query: query,
+                title: $0.title,
+                artist: $0.artistLabel,
+                album: $0.albumLabel
+            )
         }
     }
 

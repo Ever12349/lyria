@@ -113,26 +113,27 @@ MCP **不**经 HTTP 转发；两者并列挂在同一状态机上。HTTP 关闭�
 - MCP **不**默认、也 **不**要求经 HTTP；HTTP 可关且不得拖垮 MCP。
 - 设置里可提供「允许经 MCP 远程控制」开关（对标 Cog）；关闭时桥应明确报错（无法连接），不得假成功。
 
-### 客户端配置（示意，开工后写死路径）
+### 客户端配置
 
 ```json
 {
   "mcpServers": {
     "lyria": {
-      "command": "/Applications/Lyria.app/Contents/MacOS/lyria-mcp"
+      "command": "/绝对路径/lyria/Lyria.app/Contents/MacOS/Lyria",
+      "args": ["--mcp"]
     }
   }
 }
 ```
 
-或指向同包内主二进制加 `"args": ["--mcp"]`。具体 bundle 内路径在阶段 3 落地时写入 README。
+先 `cp .build/debug/Lyria Lyria.app/Contents/MacOS/Lyria`，再把 `command` 写成该副本的绝对路径。`.build/debug/Lyria --mcp` 是同一份程序。
 
 ### 实现落点（开工后）
 
 | 组件 | 说明 |
 | --- | --- |
 | `Agent/MCPServer.swift`（或改名 `MCPSession`） | **跑在 App 内**：接本机 IPC，注册 tools，调引擎 |
-| `Agent/MCPBridge` / 独立 `lyria-mcp` target | **薄桥可执行文件**：stdio ↔ socket；无业务依赖 |
+| `Agent/MCPBridge.swift` | **同一二进制** `--mcp`：stdio ↔ socket；无引擎、无 SQLite |
 | 单实例 / 端点发布 | socket 经 Application Support API → `Lyria/mcp.sock`；listen 前 unlink 死 sock；桥 ≤3s 退避；无实例**带窗**拉起；Dock 二次启动只激活 |
 
 阶段 1 写播放器之前，进程模型以本节为准；不要按「stdio 与引擎同进程且每个 MCP 客户端一份引擎」往下长。
@@ -367,7 +368,7 @@ struct NowPlaying {
 - **Amb-17 播完：** 阶段 1 曾锁 `ended` → **pause**。**2026-11-14 文首第 10 条替换：** 自然结束按 repeat（off 只往前，没有则停在结尾暂停；all 往前并绕回；one 从 0 重播）。停在结尾后再按播放，从 0 播同一首。
 - **Amb-18 进度单位：** 状态只存 `positionMs`/`durationMs`；View 派生 0…1。
 - **Amb-19 启动态（接引擎后）：** `playing=false`、`current=nil`；列表可留 FakeData，但**不**标假 nowPlaying 高亮。**例外：** UI 对齐阶段按 Amb-UI-12 **暂留**假 now-playing；接引擎时再切 idle。
-- **Amb-20：** MCP 远程开关与桥形态仍延后。曲库切片锁了 `sort_name = normalize(name)`、空艺人/专辑显示「未知艺人」「未知专辑」且不铸 id、`encoding_suspect` 仅 U+FFFD（含中文非 suspect 的测试）。
+- **Amb-20：** MCP 开关默认开，桥为同一二进制 `--mcp`（2026-11-19 落地）。曲库切片锁了 `sort_name = normalize(name)`、空艺人/专辑显示「未知艺人」「未知专辑」且不铸 id、`encoding_suspect` 仅 U+FFFD（含中文非 suspect 的测试）。
 
 > **Standing hold：** 引擎代码尚未写。**UI 对齐**与**引擎/MCP**分开门闩：改 UI Swift 须对 UI 说「开工」；真播放 / MCP 须另说开工。未授权前不改 Swift / `pbxproj` / `Package.swift`。
 ---
@@ -642,9 +643,9 @@ Figma：[Lyria macOS UI](https://www.figma.com/design/JJFaj1UysoberBKEr8G8Jc)
 | `lyria_queue_add` | `id?` **XOR** `uri?` · `position?: next\|end` | 入队；语义同 `lyria_play` 的 id/uri；缺一不可（须恰好一个） |
 | `lyria_queue_clear` | — | 清空队列 |
 
-响应 JSON 与 HTTP 同形。`lyria_status` 示例字段含 `ok`、`track`（**库内曲：** `id`/`title`/…；**oneShot：** `id: null` + 必填 `uri` + 展示字段）、`playing`、`positionMs`、`durationMs`、`shuffle`、`repeat`、`volume`、`queueLength`。`lyria_play` 失败示例：`error=not_found`，`message=track id not in library`。**一次性点播**只走 `uri: file://…`（无库 id / 无新 `trk_`；status 见上），与正文 `QueueItem.oneShot` 一致。客户端 stdio 配置指向 **薄桥**（`lyria-mcp` 或 `Lyria --mcp`），由桥附着到已运行的 App（socket 见上）；具体 bundle 路径在阶段 3 写入 README。
+响应 JSON 与 HTTP 同形。`lyria_status` 示例字段含 `ok`、`track`（**库内曲：** `id`/`path`/`uri`/`title`/`artist`/`album`/`durationMs`，缺文件才带 `missing: true`；**oneShot：** `id: null` + 必填 `uri` 与 `path`）、`playing`、`positionMs`、`durationMs`、`shuffle`、`repeat`、`volume`、`queueLength`。`lyria_play` 找不到曲目时 `error=not_found`，`message=曲库里没有这首`。**一次性点播**只走 `uri: file://…`（无库 id / 无新 `trk_`；status 见上），与正文 `QueueItem.oneShot` 一致。客户端 stdio 配置指向同一二进制加 `--mcp`（见上，路径写入 README）。
 
-> MCP 尚未开工：需另说「开工」后再实现；**进程模型已锁定为薄桥 + 单实例**，实现不得改回「每客户端一份引擎」。
+> 阶段 3 已落地（2026-11-19）：同一二进制 `--mcp` 做薄桥。socket 为 `Lyria/mcp.sock`（`chmod 0600`；文件在但连不上就 unlink 再 bind，已有监听则不抢）。单实例用 `Lyria/instance.lock`，不靠 socket 判断进程是否还在。设置项 `settings.mcp_enabled`，缺省为开，文案「允许经 MCP 控制」。本切片实现上表前 11 个工具；`lyria_queue_add`、`lyria_queue_clear` 和音量不在本切片。搜索默认 20 条、最多 100 条。曲目 JSON 同时给 `path` 和 `uri`。产品错误的 `message` 用中文。桥在读到任何请求之前失败时，stdout 写一条 JSON-RPC（`id` 为 null，`code` 为 -32000），stderr 写同一句。进程还在但没有 socket：「Lyria 正在运行，但 MCP 没有在监听」。拉不起来：「无法启动 Lyria」。库内队列随播放会话恢复；oneShot 不写入该会话。协议接受并回显 `2024-11-05`、`2025-03-26`、`2025-06-18`，其余协商为 `2025-06-18`。`capabilities` 只有 `tools: {}`。
 
 ---
 
@@ -710,7 +711,7 @@ MVP HTTP = health + status + 传输六件套（play/pause/toggle/next/previous/s
 | 0b | 静态壳视觉与窗口逻辑 | **已完成** | Music 式标题栏行为 + Deep Space；细节可继续抠 |
 | 2 | Library 扫描 + 指纹/id DB | **本切片** | 先于引擎。单根、不自动扫描、不预置 `~/Music`、硬删除曲目、保留指纹、播放控件置灰 |
 | 1 | Engine + 本地文件试播烟雾 | 待开工（决策已锁） | 另需「开工」· Amb-1…19 已锁；AVPlayer + 菜单「试播…」→ OpenPanel → oneShot；`Sources/Lyria/Engine/`；人工听有声 |
-| 3 | MCP 烟雾（薄桥 + `lyria_status` / `play` / `pause` / `search`） | 待开工 | 另需开工 · Application Support API socket · 死 sock unlink · 桥退避 · 无实例**带窗**拉起 · Dock 只激活 · server name `lyria` · **与主窗口**同状态（**不含**菜单栏） |
+| 3 | MCP 烟雾（薄桥 + `lyria_status` / `play` / `pause` / `search` 等 11 个工具） | **本切片** | 同二进制 `--mcp`；开关默认开；不含 `lyria_queue_add` / `lyria_queue_clear` / 音量 / HTTP / 菜单栏 |
 | 4 | Queue + shuffle/repeat | **本切片（PR #2）** | 自动下一首、重复三态、固定置换随机；不落盘。原阶段 4 就做在曲库播放这条 PR 里 |
 | 5 | 主窗 UI 对齐（艺人/专辑/歌单/设置/空态/队列等） | 待开工（Amb-UI 已锁） | **优先**· Amb-UI-1…16；假数据可点全主窗；真 MenuBarExtra 仍=阶段 8；须 UI「开工」 |
 | 6 | 空态/错误态 | 待开工 | 按锁定文案 |
@@ -775,7 +776,7 @@ MVP HTTP = health + status + 传输六件套（play/pause/toggle/next/previous/s
 | HTTP `POST /play` | 与 MCP 相同：`id?` XOR `uri?` | **已锁** |
 | 有声验收 | 阶段 1 门闩 = 本机人工听；TransportState/命令串行可单测；无 CI 音频回归 | **已锁** |
 | 阶段 1 决策 Amb-1…19 | 初始音量 1.0；`NowPlaying`；错误码六件套；`@Observable`；`Sources/Lyria/Engine/`；传输绑引擎/列表可暂 FakeData；2–4 Hz observer；失败 Alert+lastError；Queue 仅当前项；actor→MainActor；删 subtitle；无 LyriaCore；bundle 保持 sample；菜单试播；轻量标签；MVP UTType；阶段 1 的 ended→pause 已由文首第 10 条覆盖；状态存 ms；启动无假 nowPlaying | **已锁** |
-| Amb-20（阶段 2/3） | MCP 远程开关默认、桥 `--mcp` vs 独立 target、`sort_name`、空艺人展示、encoding fixture | **延后** · 不挡阶段 1 |
+| Amb-20（阶段 2/3） | MCP 开关默认开，文案「允许经 MCP 控制」；桥是同一二进制 `--mcp`。`sort_name`、空艺人展示和 encoding fixture 已在曲库切片落地 | **已落地** |
 | Amb-UI-1…16（主窗 UI） | 范围 B 全主窗假数据；Spec 空态文案；Dreamscape FakeData；假队列；三栏传输；封面/更多假动作；侧栏圆角卡；完整 page-head；设置六行 stub；repeat 三态；UI 阶段假 now-playing；搜索+returnTo；pill toast；HTTP stub 显示关；仅 SF Symbols；无真 MenuBarExtra | **已锁** · UI 另需「开工」 |
 
 **约束重申：** **UI 优先**（Amb-UI-1…16 已锁文档；改 UI Swift 须对 UI 说「开工」）；**引擎 / MCP 停放**（Amb-1…19 仅锁文档；另需开工）；阶段 1 试播走已锁 C1 + Amb 清单；MVP 沙盒已锁关闭（C2）且仍写 `scan_roots.bookmark`；MCP 实现必须遵守已锁的薄桥 + 单实例模型；CloudAgent 需 Cursor 已授权访问 `Ever12349/lyria`；agent 面是 MCP/HTTP，不是截图。设计资产以 `.design/` 为准；HTML 原型 = 壳层视觉真源。

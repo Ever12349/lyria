@@ -2,7 +2,6 @@ import AppKit
 import SwiftUI
 import LyriaCore
 
-@main
 struct LyriaApp: App {
     @State private var playback = PlaybackRoot()
 
@@ -62,6 +61,8 @@ final class PlaybackRoot {
                 session.persistUINow()
             }
         }
+        NSApplication.shared.setActivationPolicy(.regular)
+        NSApplication.shared.activate()
     }
 }
 

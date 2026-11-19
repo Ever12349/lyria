@@ -28,6 +28,9 @@ final class LibraryStore: ObservableObject {
     }
 
     var onToast: ((String) -> Void)?
+    /// Runs after the database is open and before the catalog snapshot, so MCP can listen within the bridge budget.
+    var onDatabaseReady: (() async -> Void)?
+    var onLibraryFailed: (() -> Void)?
 
     private let database = LibraryDatabase()
     private let securityScope = SecurityScope()
@@ -42,6 +45,7 @@ final class LibraryStore: ObservableObject {
         do {
             let url = try SupportPaths.databaseURL()
             try await database.open(path: url.path)
+            await onDatabaseReady?()
             try await reload()
             if let stored = try await database.scanRoot() {
                 let resolved = stored.bookmark.flatMap { BookmarkData.resolve($0) }
@@ -56,8 +60,18 @@ final class LibraryStore: ObservableObject {
                 rootPath = path
             }
         } catch {
-            onToast?("曲库数据库打开失败")
+            onToast?(AgentCopy.databaseFailed)
+            onLibraryFailed?()
         }
+    }
+
+    func isMCPEnabled() async -> Bool {
+        let value = try? await database.setting("mcp_enabled")
+        return value != "0"
+    }
+
+    func setMCPEnabled(_ enabled: Bool) async throws {
+        try await database.setSetting("mcp_enabled", enabled ? "1" : "0")
     }
 
     /// Folder picker, then an incremental scan. Also used by the empty-library button.

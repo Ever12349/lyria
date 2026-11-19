@@ -3,6 +3,13 @@ import Foundation
 import LyriaCore
 import UniformTypeIdentifiers
 
+struct AgentCommandResult: Sendable {
+    var snapshot: TransportSnapshot
+    var errorCode: String?
+    var message: String?
+    var notice: String?
+}
+
 final class PlaybackSessionCache: @unchecked Sendable {
     private let lock = NSLock()
     private var session = PlaybackSession.empty
@@ -44,6 +51,8 @@ actor PlaybackEngine {
     private var flacPlayable = false
     private var audioPrepared = false
     private var lastError: String?
+    private var commandFailed = false
+    private var commandNotice: String?
     private let persistPreferences: @Sendable (PlaybackPreferences) -> Void
     nonisolated let sessionCache: PlaybackSessionCache
     private var lastPositionPersist = Date.distantPast
@@ -152,7 +161,7 @@ actor PlaybackEngine {
                 let token = nextGeneration()
                 if await start(track, token: token) {
                     if skippedTotal > 0 {
-                        emit(.toast(PlaybackCopy.skipped(skippedTotal)))
+                        announce(PlaybackCopy.skipped(skippedTotal))
                     }
                     touchSession(write: true)
                     publish()
@@ -200,12 +209,12 @@ actor PlaybackEngine {
             repeatMode: queue.repeatMode,
             rng: &rng
         ) else {
-            emit(.toast(PlaybackCopy.nothingPlayable))
+            announce(PlaybackCopy.nothingPlayable)
             return
         }
         guard await commitAndPlay(result.queue, tracks: list) else { return }
         if result.skipped > 0 {
-            emit(.toast(PlaybackCopy.skipped(result.skipped)))
+            announce(PlaybackCopy.skipped(result.skipped))
         }
     }
 
@@ -218,12 +227,12 @@ actor PlaybackEngine {
             repeatMode: queue.repeatMode,
             rng: &rng
         ) else {
-            emit(.toast(PlaybackCopy.nothingPlayable))
+            announce(PlaybackCopy.nothingPlayable)
             return
         }
         guard await commitAndPlay(result.queue, tracks: list) else { return }
         if result.skipped > 0 {
-            emit(.toast(PlaybackCopy.skipped(result.skipped)))
+            announce(PlaybackCopy.skipped(result.skipped))
         }
     }
 
@@ -238,7 +247,7 @@ actor PlaybackEngine {
         remember(list)
         let result = PlaybackQueueRules.enqueue(ids: list.map(\.id), queue: queue)
         if result.alreadyAllPresent {
-            emit(.toast(PlaybackCopy.alreadyQueued))
+            announce(PlaybackCopy.alreadyQueued)
             return
         }
         queue = result.queue
@@ -358,6 +367,99 @@ actor PlaybackEngine {
         await beginPlayback()
     }
 
+    func agentSnapshot() -> TransportSnapshot {
+        makeSnapshot()
+    }
+
+    func agentResume() async -> AgentCommandResult {
+        switch AgentContract.resumePlan(
+            hasCurrent: queue.current != nil,
+            playing: playing,
+            positionMs: positionMs,
+            durationMs: durationMs
+        ) {
+        case .notReady:
+            return notReadyResult()
+        case .stay:
+            return AgentCommandResult(snapshot: makeSnapshot(), errorCode: nil, message: nil, notice: nil)
+        case .resume, .restartFromEnd:
+            beginCommand()
+            await applyPlayPause(restartAtEnd: true)
+            return finishCommand()
+        }
+    }
+
+    func agentPause() async -> AgentCommandResult {
+        if playing {
+            host.player.pause()
+            playing = false
+            touchSession(write: true)
+            publish()
+        }
+        return AgentCommandResult(snapshot: makeSnapshot(), errorCode: nil, message: nil, notice: nil)
+    }
+
+    func agentToggle() async -> AgentCommandResult {
+        guard queue.current != nil else { return notReadyResult() }
+        beginCommand()
+        await toggleTransport()
+        return finishCommand()
+    }
+
+    func agentPlay(track: ResolvedTrack) async -> AgentCommandResult {
+        beginCommand()
+        await play(list: [track], startID: track.id, intent: .menuPlay)
+        return finishCommand()
+    }
+
+    func agentPlay(uri: URL) async -> AgentCommandResult {
+        beginCommand()
+        await play(uri: uri)
+        return finishCommand()
+    }
+
+    func agentNext() async -> AgentCommandResult {
+        guard queue.current != nil else { return notReadyResult() }
+        beginCommand()
+        await next()
+        return finishCommand()
+    }
+
+    func agentPrevious() async -> AgentCommandResult {
+        guard queue.current != nil else { return notReadyResult() }
+        beginCommand()
+        await previous()
+        return finishCommand()
+    }
+
+    func agentSeek(ms: Int) async -> AgentCommandResult {
+        guard queue.current != nil else { return notReadyResult() }
+        beginCommand()
+        await seek(to: ms)
+        return finishCommand()
+    }
+
+    func agentSetShuffle(_ enabled: Bool) async -> AgentCommandResult {
+        let updated = PlaybackQueueRules.setShuffle(enabled: enabled, queue: queue, rng: &rng)
+        if updated != queue {
+            queue = updated
+            writePreferences()
+            touchSession(write: true)
+            publish()
+        }
+        return AgentCommandResult(snapshot: makeSnapshot(), errorCode: nil, message: nil, notice: nil)
+    }
+
+    func agentSetRepeat(_ mode: RepeatMode) async -> AgentCommandResult {
+        let updated = PlaybackQueueRules.setRepeat(mode: mode, queue: queue)
+        if updated != queue {
+            queue = updated
+            writePreferences()
+            publish()
+        }
+        return AgentCommandResult(snapshot: makeSnapshot(), errorCode: nil, message: nil, notice: nil)
+    }
+
     func noteClock(_ ms: Int) {
         guard playing, !ignoreClock else { return }
         positionMs = max(0, ms)
@@ -388,7 +490,7 @@ actor PlaybackEngine {
         guard token == generation else { return }
         host.player.pause()
         playing = false
-        emit(.toast(PlaybackCopy.failed))
+        announce(PlaybackCopy.failed)
         lastError = PlaybackErrorCode.failed
         await step(PlaybackQueueRules.advanceAfterFailure(queue: queue, isPlayable: itemPlayable))
         publish()
@@ -410,7 +512,7 @@ actor PlaybackEngine {
         case .restart:
             await restartCurrent()
         case .stay(let fullCircle):
-            if fullCircle { emit(.toast(PlaybackCopy.nothingMore)) }
+            if fullCircle { announce(PlaybackCopy.nothingMore) }
         case .pauseAtEnd:
             host.player.pause()
             playing = false
@@ -435,7 +537,7 @@ actor PlaybackEngine {
             }
             touchSession(write: true)
             publish()
-            if skipped > 0 { emit(.toast(PlaybackCopy.skipped(skipped))) }
+            if skipped > 0 { announce(PlaybackCopy.skipped(skipped)) }
         }
     }
 
@@ -612,11 +714,48 @@ actor PlaybackEngine {
 
     private func refuse(_ block: PlaybackBlock) {
         lastError = PlaybackErrorCode.code(for: block)
-        emit(.toast(PlaybackCopy.message(for: block)))
+        commandFailed = true
+        announce(PlaybackCopy.message(for: block))
         publish()
     }
 
+    private func announce(_ message: String) {
+        commandNotice = message
+        emit(.toast(message))
+    }
+
+    private func beginCommand() {
+        commandFailed = false
+        commandNotice = nil
+    }
+
+    private func notReadyResult() -> AgentCommandResult {
+        AgentCommandResult(
+            snapshot: makeSnapshot(),
+            errorCode: PlaybackErrorCode.notReady,
+            message: AgentCopy.notReady,
+            notice: nil
+        )
+    }
+
+    private func finishCommand() -> AgentCommandResult {
+        let snapshot = makeSnapshot()
+        if commandFailed {
+            return AgentCommandResult(
+                snapshot: snapshot,
+                errorCode: lastError ?? PlaybackErrorCode.failed,
+                message: commandNotice ?? PlaybackCopy.failed,
+                notice: nil
+            )
+        }
+        return AgentCommandResult(snapshot: snapshot, errorCode: nil, message: nil, notice: commandNotice)
+    }
+
     private func publish() {
+        continuation.yield(.state(makeSnapshot()))
+    }
+
+    private func makeSnapshot() -> TransportSnapshot {
         let current = currentTrack()
         let currentID: String? = {
             if case .track(let id) = queue.current { return id }
@@ -631,7 +770,7 @@ actor PlaybackEngine {
             }
             return QueueRowSnapshot(item: item, title: "文件缺失", artist: "", missing: true)
         }
-        continuation.yield(.state(TransportSnapshot(
+        return TransportSnapshot(
             currentID: currentID,
             title: current?.title ?? "",
             artist: current?.artist ?? "",
@@ -647,7 +786,7 @@ actor PlaybackEngine {
             shuffle: queue.shuffle,
             repeatMode: queue.repeatMode,
             lastError: lastError
-        )))
+        )
     }
 
     private func emit(_ event: EngineEvent) {

@@ -22,6 +22,14 @@ enum SupportPaths {
         try directory().appendingPathComponent("library.sqlite")
     }
 
+    static func mcpSocketURL() throws -> URL {
+        try directory().appendingPathComponent("mcp.sock")
+    }
+
+    static func instanceLockURL() throws -> URL {
+        try directory().appendingPathComponent("instance.lock")
+    }
+
     /// Display thumbnails. Originals stay in Application Support `Lyria/Artwork`.
     static func thumbnailCacheDirectory() -> URL {
         let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]

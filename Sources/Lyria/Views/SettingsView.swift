@@ -7,6 +7,15 @@ struct SettingsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
+                SettingRow(title: "允许经 MCP 控制", detail: "关闭后 Cursor 无法连接本机播放") {
+                    SettingToggle(
+                        isOn: Binding(
+                            get: { store.mcpEnabled },
+                            set: { store.setMCPEnabled($0) }
+                        ),
+                        label: "允许经 MCP 控制"
+                    )
+                }
                 SettingRow(title: "本地 HTTP API", detail: "可选，默认关闭 · 端口 17890") {
                     OffToggle(label: "本地 HTTP API") {
                         store.showToast("本地 HTTP API 保持关闭")
