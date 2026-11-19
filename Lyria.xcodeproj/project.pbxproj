@@ -82,6 +82,11 @@
 		A1D000000000000000000014 /* InstanceLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D000000000000000000004 /* InstanceLock.swift */; };
 		A1D000000000000000000032 /* AgentContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D000000000000000000031 /* AgentContract.swift */; };
 		A1D000000000000000000042 /* AgentContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D000000000000000000041 /* AgentContractTests.swift */; };
+		A1E000000000000000000011 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1E000000000000000000001 /* AppDelegate.swift */; };
+		A1E000000000000000000012 /* MenuBarPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1E000000000000000000002 /* MenuBarPlayerView.swift */; };
+		A1E000000000000000000013 /* PlaybackProgressSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1E000000000000000000003 /* PlaybackProgressSlider.swift */; };
+		A1E000000000000000000031 /* MenuBarUpNext.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1E000000000000000000021 /* MenuBarUpNext.swift */; };
+		A1E000000000000000000051 /* MenuBarUpNextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1E000000000000000000041 /* MenuBarUpNextTests.swift */; };
 		A1C000000000000000000051 /* CrockfordTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000041 /* CrockfordTests.swift */; };
 		A1C000000000000000000052 /* NormalizeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000042 /* NormalizeTests.swift */; };
 		A1C000000000000000000053 /* FingerprintTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000043 /* FingerprintTests.swift */; };
@@ -166,6 +171,11 @@
 		A1D000000000000000000004 /* InstanceLock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstanceLock.swift; sourceTree = "<group>"; };
 		A1D000000000000000000031 /* AgentContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentContract.swift; sourceTree = "<group>"; };
 		A1D000000000000000000041 /* AgentContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentContractTests.swift; sourceTree = "<group>"; };
+		A1E000000000000000000001 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		A1E000000000000000000002 /* MenuBarPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarPlayerView.swift; sourceTree = "<group>"; };
+		A1E000000000000000000003 /* PlaybackProgressSlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackProgressSlider.swift; sourceTree = "<group>"; };
+		A1E000000000000000000021 /* MenuBarUpNext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarUpNext.swift; sourceTree = "<group>"; };
+		A1E000000000000000000041 /* MenuBarUpNextTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarUpNextTests.swift; sourceTree = "<group>"; };
 		A1C000000000000000000041 /* CrockfordTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrockfordTests.swift; sourceTree = "<group>"; };
 		A1C000000000000000000042 /* NormalizeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NormalizeTests.swift; sourceTree = "<group>"; };
 		A1C000000000000000000043 /* FingerprintTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FingerprintTests.swift; sourceTree = "<group>"; };
@@ -224,6 +234,7 @@
 			isa = PBXGroup;
 			children = (
 				6BE1E5DAEF8B4284804BB7E1 /* LyriaApp.swift */,
+				A1E000000000000000000001 /* AppDelegate.swift */,
 				C877B0A580E645F6B4E0D2F0 /* ContentView.swift */,
 				A1C100000000000000000001 /* AppSession.swift */,
 				E1E000000000000000000004 /* Engine */,
@@ -265,6 +276,8 @@
 				BCA886B42B2045BA9AD56681 /* QueuePanel.swift */,
 				0AFBB66142764E56A0D83C1E /* SearchResultsView.swift */,
 				E5698C8C8CD948D283AE6A2A /* TransportBar.swift */,
+				A1E000000000000000000003 /* PlaybackProgressSlider.swift */,
+				A1E000000000000000000002 /* MenuBarPlayerView.swift */,
 				A1C100000000000000000009 /* ScanProgressBar.swift */,
 				A1C10000000000000000000A /* BatchActionBar.swift */,
 				A1C10000000000000000000C /* AddToPlaylistMenu.swift */,
@@ -320,6 +333,7 @@
 				A1C0000000000000000000A1 /* AddTimeOrder.swift */,
 				A1C0000000000000000000B1 /* PlaybackSession.swift */,
 				A1C0000000000000000000B3 /* UISession.swift */,
+				A1E000000000000000000021 /* MenuBarUpNext.swift */,
 				A1D000000000000000000031 /* AgentContract.swift */,
 			);
 			path = Sources/LyriaCore;
@@ -346,6 +360,7 @@
 				A1C0000000000000000000A3 /* AddTimeOrderTests.swift */,
 				A1C0000000000000000000B5 /* PlaybackSessionTests.swift */,
 				A1C0000000000000000000B7 /* UISessionTests.swift */,
+				A1E000000000000000000041 /* MenuBarUpNextTests.swift */,
 				A1D000000000000000000041 /* AgentContractTests.swift */,
 			);
 			path = Tests/LyriaTests;
@@ -442,6 +457,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				47400B9709324F9B8B1B1C2B /* LyriaApp.swift in Sources */,
+				A1E000000000000000000011 /* AppDelegate.swift in Sources */,
 				C046F0215E15483E98C17D30 /* ContentView.swift in Sources */,
 				94427E1BE5874C56AD3C4425 /* Theme.swift in Sources */,
 				93E278906CC0456491349C62 /* Models.swift in Sources */,
@@ -460,6 +476,8 @@
 				4C360CA6FEDE451EB5B44101 /* QueuePanel.swift in Sources */,
 				50EFA6210A254D81ABBE8DCF /* SearchResultsView.swift in Sources */,
 				37DC3CD03F0B4DEB8E17DF0E /* TransportBar.swift in Sources */,
+				A1E000000000000000000013 /* PlaybackProgressSlider.swift in Sources */,
+				A1E000000000000000000012 /* MenuBarPlayerView.swift in Sources */,
 				A1C100000000000000000109 /* ScanProgressBar.swift in Sources */,
 				A1C10000000000000000010A /* BatchActionBar.swift in Sources */,
 				A1C10000000000000000010C /* AddToPlaylistMenu.swift in Sources */,
@@ -506,6 +524,7 @@
 				A1C0000000000000000000A2 /* AddTimeOrder.swift in Sources */,
 				A1C0000000000000000000B2 /* PlaybackSession.swift in Sources */,
 				A1C0000000000000000000B4 /* UISession.swift in Sources */,
+				A1E000000000000000000031 /* MenuBarUpNext.swift in Sources */,
 				A1D000000000000000000032 /* AgentContract.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -532,6 +551,7 @@
 				A1C0000000000000000000A4 /* AddTimeOrderTests.swift in Sources */,
 				A1C0000000000000000000B6 /* PlaybackSessionTests.swift in Sources */,
 				A1C0000000000000000000B8 /* UISessionTests.swift in Sources */,
+				A1E000000000000000000051 /* MenuBarUpNextTests.swift in Sources */,
 				A1D000000000000000000042 /* AgentContractTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

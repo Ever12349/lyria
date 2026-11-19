@@ -3,10 +3,11 @@ import SwiftUI
 import LyriaCore
 
 struct LyriaApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var playback = PlaybackRoot()
 
     var body: some Scene {
-        WindowGroup {
+        WindowGroup(id: LyriaSceneID.main) {
             ContentView(store: playback.session)
                 .environment(playback.transport)
                 .environment(playback.queue)
@@ -23,6 +24,16 @@ struct LyriaApp: App {
         .commands {
             CommandGroup(replacing: .newItem) {}
         }
+
+        MenuBarExtra {
+            MenuBarPlayerView()
+                .environmentObject(playback.session)
+                .environment(playback.transport)
+                .environment(playback.queue)
+        } label: {
+            Image(systemName: "music.note")
+        }
+        .menuBarExtraStyle(.window)
     }
 }
 

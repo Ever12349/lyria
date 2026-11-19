@@ -5,10 +5,6 @@ import LyriaCore
 struct TransportBar: View {
     @EnvironmentObject private var store: AppSession
     @Environment(TransportState.self) private var transport
-    @State private var scrub: Double?
-    /// Held after mouse-up until `transport.positionMs` matches, so the thumb
-    /// does not flash through the pre-seek position (and spring past the end).
-    @State private var pendingSeekMs: Int?
     @State private var volumeDrag: Double?
 
     var body: some View {
@@ -60,15 +56,7 @@ struct TransportBar: View {
 
     private var controlsColumn: some View {
         VStack(spacing: 8) {
-            HStack(spacing: 8) {
-                Text(TimeFormat.label(ms: displayedMs))
-                    .frame(width: 36, alignment: .trailing)
-                progressBar
-                Text(TimeFormat.label(ms: transport.durationMs))
-                    .frame(width: 36, alignment: .leading)
-            }
-            .font(.system(size: 10, weight: .medium).monospacedDigit())
-            .foregroundStyle(LyriaTheme.text3)
+            PlaybackProgressSlider()
 
             HStack(spacing: 16) {
                 iconButton("shuffle", label: "随机播放", action: store.transportToggleShuffle, active: transport.shuffle)
@@ -84,65 +72,6 @@ struct TransportBar: View {
             }
         }
         .frame(maxWidth: 460)
-    }
-
-    private var displayedFraction: Double {
-        scrub ?? transport.fraction
-    }
-
-    private var displayedMs: Int {
-        Int((displayedFraction * Double(max(transport.durationMs, 0))).rounded())
-    }
-
-    private var progressBar: some View {
-        Slider(
-            value: Binding(
-                get: { displayedFraction },
-                set: { scrub = $0 }
-            ),
-            in: 0...1
-        ) { editing in
-            if editing {
-                pendingSeekMs = nil
-                if scrub == nil {
-                    scrub = transport.fraction
-                }
-            } else {
-                commitScrub()
-            }
-        }
-        .controlSize(.mini)
-        .tint(LyriaTheme.primary)
-        .disabled(transport.current == nil)
-        .transaction { $0.animation = nil }
-        .onChange(of: transport.positionMs) { _, ms in
-            clearScrubIfSeekLanded(ms)
-        }
-        .onChange(of: transport.current?.id) { _, _ in
-            // Track change or stop: drop any held scrub so the thumb cannot stick.
-            pendingSeekMs = nil
-            scrub = nil
-        }
-        .accessibilityLabel("播放进度")
-    }
-
-    private func commitScrub() {
-        guard let scrub else { return }
-        let ms = Int((scrub * Double(max(transport.durationMs, 0))).rounded())
-        if abs(ms - transport.positionMs) <= 50 {
-            pendingSeekMs = nil
-            self.scrub = nil
-            return
-        }
-        pendingSeekMs = ms
-        store.transportSeek(ms: ms)
-    }
-
-    private func clearScrubIfSeekLanded(_ ms: Int) {
-        guard let pending = pendingSeekMs else { return }
-        guard abs(ms - pending) <= 50 else { return }
-        pendingSeekMs = nil
-        scrub = nil
     }
 
     private var playButton: some View {
