@@ -54,14 +54,12 @@ extension WindowChromeConfigurer {
     static func apply(to window: NSWindow?, detailMinX: CGFloat, titleRowHeight: CGFloat) {
         guard let window else { return }
 
-        let chrome: NSWindow.StyleMask = [
-            .titled,
-            .closable,
-            .miniaturizable,
-            .resizable,
-            .fullSizeContentView
-        ]
-        if window.styleMask != chrome { window.styleMask = chrome }
+        // Insert only — never replace styleMask. AppKit toggles .fullScreen itself;
+        // assigning a fixed mask strips it and breaks traffic lights in fullscreen.
+        var mask = window.styleMask
+        mask.insert([.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView])
+        if window.styleMask != mask { window.styleMask = mask }
+
         if window.titleVisibility != .hidden { window.titleVisibility = .hidden }
         if !window.titlebarAppearsTransparent { window.titlebarAppearsTransparent = true }
         if window.titlebarSeparatorStyle != .none { window.titlebarSeparatorStyle = .none }
@@ -71,10 +69,13 @@ extension WindowChromeConfigurer {
         if window.isMovableByWindowBackground { window.isMovableByWindowBackground = false }
         enforceMinimumSize(on: window)
 
-        for type: NSWindow.ButtonType in [.closeButton, .miniaturizeButton, .zoomButton] {
-            if let button = window.standardWindowButton(type) {
-                button.isHidden = false
-                button.alphaValue = 1
+        let inFullScreen = mask.contains(.fullScreen)
+        if !inFullScreen {
+            for type: NSWindow.ButtonType in [.closeButton, .miniaturizeButton, .zoomButton] {
+                if let button = window.standardWindowButton(type) {
+                    button.isHidden = false
+                    button.alphaValue = 1
+                }
             }
         }
 
@@ -102,6 +103,9 @@ extension WindowChromeConfigurer {
     private static var trafficPitch: CGFloat = 20
 
     static func positionTrafficLights(on window: NSWindow) {
+        // Fullscreen: leave system titlebar buttons alone (also reached from layout).
+        guard !window.styleMask.contains(.fullScreen) else { return }
+
         let types: [NSWindow.ButtonType] = [.closeButton, .miniaturizeButton, .zoomButton]
         let buttons = types.compactMap { window.standardWindowButton($0) }
         guard buttons.count == 3, let content = window.contentView else { return }
