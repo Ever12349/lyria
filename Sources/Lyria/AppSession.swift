@@ -160,6 +160,8 @@ final class AppSession: ObservableObject {
     }
 
     var route: AppRoute { AppRoute(navigation.page) }
+    var canGoBack: Bool { navigation.canGoBack }
+    var playlistsSidebarPage: AppRoute { AppRoute(navigation.playlistsSidebarPage) }
     var currentSection: NavItem { NavItem(navigation.section) }
     /// Page-head title follows the top route. Sidebar highlight uses `currentSection`.
     var currentNav: NavItem { currentSection }
@@ -369,6 +371,14 @@ final class AppSession: ObservableObject {
         case .reveal(let path):
             NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
         }
+    }
+
+    func showPlaylist(_ id: String) {
+        dismissSelectionForNavigation()
+        searchText = ""
+        navigation.showPlaylist(id)
+        persistNavigation()
+        // Opening is navigation only. Stamping here reorders the sidebar under the cursor.
     }
 
     func openPlaylist(_ id: String) {

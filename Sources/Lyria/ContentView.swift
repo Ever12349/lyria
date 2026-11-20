@@ -399,7 +399,7 @@ struct ContentView: View {
     }
 
     private var showsBack: Bool {
-        store.isSearching || store.route.showsBack
+        store.canGoBack
     }
 
     private var headerTitle: String {

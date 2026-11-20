@@ -75,6 +75,18 @@ public struct SectionNavigation: Equatable, Sendable {
         stacks[section]?.last ?? section.root
     }
 
+    /// Search can close on a root page. Otherwise back needs a page under the current one.
+    public var canGoBack: Bool {
+        isSearching || stack(for: section).count > 1
+    }
+
+    /// Sidebar row for the playlists section. The grid stays selected when a playlist
+    /// was opened from it. A sidebar playlist selects that shortcut, even if a later
+    /// page was pushed on top.
+    public var playlistsSidebarPage: LibraryPage {
+        stack(for: .playlists).first ?? .playlists
+    }
+
     public func stack(for section: LibrarySection) -> [LibraryPage] {
         stacks[section] ?? [section.root]
     }
@@ -82,6 +94,16 @@ public struct SectionNavigation: Equatable, Sendable {
     public mutating func select(_ section: LibrarySection) {
         endSearch()
         discardPausedSearch()
+        // The playlists item is the grid, not whichever playlist was open. Coming from
+        // another section shows that grid without remounting it. Reselecting the current
+        // section still resets, which is what sends the list back to the top.
+        if section == .playlists, self.section != section {
+            if stack(for: .playlists) != [.playlists] {
+                stacks[.playlists] = [.playlists]
+            }
+            self.section = .playlists
+            return
+        }
         if self.section == section {
             resetRoot(section)
         } else {
@@ -139,11 +161,21 @@ public struct SectionNavigation: Equatable, Sendable {
         push(.album(id), resumeQuery: resumeQuery)
     }
 
+    /// Sidebar shortcut. The playlist is its own root, so nothing sits under it.
+    public mutating func showPlaylist(_ id: String) {
+        replacePlaylists([.playlist(id)])
+    }
+
+    /// Grid card or create-and-open. The grid remains underneath.
     public mutating func openPlaylist(_ id: String) {
+        replacePlaylists([.playlists, .playlist(id)])
+    }
+
+    private mutating func replacePlaylists(_ stack: [LibraryPage]) {
         endSearch()
         discardPausedSearch()
         section = .playlists
-        stacks[.playlists] = [.playlists, .playlist(id)]
+        stacks[.playlists] = stack
     }
 
     public mutating func discardPausedSearch() {
@@ -196,13 +228,7 @@ public struct SectionNavigation: Equatable, Sendable {
                 if cleaned.last == kept { continue }
                 cleaned.append(kept)
             }
-            if cleaned.first != item.root {
-                cleaned.insert(item.root, at: 0)
-            }
-            if cleaned.isEmpty {
-                cleaned = [item.root]
-            }
-            stacks[item] = cleaned
+            stacks[item] = anchored(cleaned, to: item)
         }
         if let paused = pausedSearch {
             let ids: Set<String> = {
@@ -242,13 +268,16 @@ public struct SectionNavigation: Equatable, Sendable {
                 if cleaned.last == kept { continue }
                 cleaned.append(kept)
             }
-            if cleaned.first != item.root {
-                cleaned.insert(item.root, at: 0)
-            }
-            if cleaned.isEmpty {
-                cleaned = [item.root]
-            }
-            stacks[item] = cleaned
+            stacks[item] = anchored(cleaned, to: item)
         }
+    }
+
+    /// Empty becomes the section root. Other sections also gain their root when a saved
+    /// or pruned stack lost it. A non-empty playlists stack is left alone: a sidebar
+    /// playlist is itself a root, and the grid must not reappear above it.
+    private func anchored(_ pages: [LibraryPage], to item: LibrarySection) -> [LibraryPage] {
+        if pages.isEmpty { return [item.root] }
+        if item == .playlists || pages.first == item.root { return pages }
+        return [item.root] + pages
     }
 }

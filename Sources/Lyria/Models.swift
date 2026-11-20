@@ -86,13 +86,6 @@ enum AppRoute: Hashable {
         }
     }
 
-    var showsBack: Bool {
-        switch self {
-        case .artist, .album, .playlist: return true
-        default: return false
-        }
-    }
-
     var stackKey: String {
         switch self {
         case .library: return "library"

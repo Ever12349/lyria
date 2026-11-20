@@ -81,21 +81,23 @@ struct SidebarView: View {
             .frame(width: 24, height: 24)
             .opacity(playlist.trackIDs.isEmpty ? 0.45 : 1)
         } action: {
-            store.openPlaylist(playlist.id)
+            store.showPlaylist(playlist.id)
         }
     }
 
-    /// On the playlists root, only 「全部播放列表」. On playlist X, only that shortcut.
+    /// 「全部播放列表」 stays selected while a playlist was opened from the grid.
+    /// A sidebar shortcut selects only that shortcut.
     private func sectionHighlighted(_ item: NavItem) -> Bool {
         guard store.currentSection == item else { return false }
         guard item == .playlists else { return true }
-        if case .playlists = store.route { return true }
+        if case .playlists = store.playlistsSidebarPage { return true }
         return false
     }
 
     private func shortcutHighlighted(_ id: String) -> Bool {
-        guard case .playlist(let current) = store.route else { return false }
-        return current == id
+        guard store.currentSection == .playlists else { return false }
+        if case .playlist(let current) = store.playlistsSidebarPage { return current == id }
+        return false
     }
 
     private func sidebarButton<Leading: View>(

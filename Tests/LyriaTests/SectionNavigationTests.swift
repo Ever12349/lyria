@@ -127,4 +127,188 @@ final class SectionNavigationTests: XCTestCase {
         XCTAssertEqual(nav.stack(for: .playlists), [.playlists])
         XCTAssertEqual(nav.stack(for: .artists), [.artists, .artist("ada")])
     }
+
+    func testSidebarPlaylistHasNoPageUnderIt() {
+        var nav = SectionNavigation()
+        nav.select(.artists)
+        nav.openArtist("ada")
+        nav.select(.library)
+        nav.showPlaylist("p1")
+        XCTAssertEqual(nav.section, .playlists)
+        XCTAssertEqual(nav.stack(for: .playlists), [.playlist("p1")])
+        XCTAssertEqual(nav.playlistsSidebarPage, .playlist("p1"))
+        XCTAssertEqual(nav.stack(for: .artists), [.artists, .artist("ada")])
+        XCTAssertFalse(nav.canGoBack)
+        nav.goBack()
+        XCTAssertEqual(nav.stack(for: .playlists), [.playlist("p1")])
+    }
+
+    func testSidebarPlaylistReplacesThePreviousShortcut() {
+        var nav = SectionNavigation()
+        nav.showPlaylist("p1")
+        nav.showPlaylist("p2")
+        XCTAssertEqual(nav.stack(for: .playlists), [.playlist("p2")])
+        XCTAssertFalse(nav.canGoBack)
+        nav.showPlaylist("p2")
+        XCTAssertEqual(nav.stack(for: .playlists), [.playlist("p2")])
+    }
+
+    func testShowingAPlaylistClearsSearch() {
+        var nav = SectionNavigation()
+        nav.beginSearch()
+        nav.showPlaylist("p1")
+        XCTAssertFalse(nav.isSearching)
+        XCTAssertFalse(nav.canGoBack)
+        XCTAssertNil(nav.pausedSearch)
+    }
+
+    func testSearchOnADirectPlaylistShowsBackUntilItEnds() {
+        var nav = SectionNavigation()
+        nav.showPlaylist("p1")
+        nav.beginSearch()
+        XCTAssertTrue(nav.canGoBack)
+        nav.goBack()
+        XCTAssertFalse(nav.isSearching)
+        XCTAssertEqual(nav.stack(for: .playlists), [.playlist("p1")])
+        XCTAssertFalse(nav.canGoBack)
+    }
+
+    func testGridPlaylistKeepsTheGridUnderneath() {
+        var nav = SectionNavigation()
+        nav.openPlaylist("p1")
+        XCTAssertEqual(nav.stack(for: .playlists), [.playlists, .playlist("p1")])
+        XCTAssertEqual(nav.playlistsSidebarPage, .playlists)
+        XCTAssertTrue(nav.canGoBack)
+        nav.goBack()
+        XCTAssertEqual(nav.page, .playlists)
+        XCTAssertFalse(nav.canGoBack)
+    }
+
+    func testSidebarPlaylistDropsTheGridParent() {
+        var nav = SectionNavigation()
+        nav.openPlaylist("p1")
+        nav.showPlaylist("p1")
+        XCTAssertEqual(nav.stack(for: .playlists), [.playlist("p1")])
+        nav.openPlaylist("p1")
+        nav.showPlaylist("p2")
+        XCTAssertEqual(nav.stack(for: .playlists), [.playlist("p2")])
+    }
+
+    func testAlbumFromADirectPlaylistReturnsToThatPlaylist() {
+        var nav = SectionNavigation()
+        nav.showPlaylist("p1")
+        nav.openAlbum("hits")
+        XCTAssertEqual(nav.stack(for: .playlists), [.playlist("p1"), .album("hits")])
+        XCTAssertEqual(nav.playlistsSidebarPage, .playlist("p1"))
+        XCTAssertTrue(nav.canGoBack)
+        nav.goBack()
+        XCTAssertEqual(nav.stack(for: .playlists), [.playlist("p1")])
+        XCTAssertEqual(nav.playlistsSidebarPage, .playlist("p1"))
+        XCTAssertFalse(nav.canGoBack)
+    }
+
+    func testAlbumFromAGridPlaylistReturnsThroughThePlaylistToTheGrid() {
+        var nav = SectionNavigation()
+        nav.openPlaylist("p1")
+        nav.openAlbum("hits")
+        XCTAssertEqual(nav.stack(for: .playlists), [.playlists, .playlist("p1"), .album("hits")])
+        XCTAssertEqual(nav.playlistsSidebarPage, .playlists)
+        nav.goBack()
+        XCTAssertEqual(nav.page, .playlist("p1"))
+        nav.goBack()
+        XCTAssertEqual(nav.page, .playlists)
+    }
+
+    func testSelectingPlaylistsFromAnotherSectionShowsTheGridWithoutRemounting() {
+        var nav = SectionNavigation()
+        nav.select(.artists)
+        nav.openArtist("ada")
+        nav.showPlaylist("p1")
+        let generation = nav.rootGeneration[.playlists]
+        nav.select(.library)
+        nav.select(.playlists)
+        XCTAssertEqual(nav.section, .playlists)
+        XCTAssertEqual(nav.page, .playlists)
+        XCTAssertEqual(nav.stack(for: .playlists), [.playlists])
+        XCTAssertEqual(nav.rootGeneration[.playlists], generation)
+        XCTAssertEqual(nav.stack(for: .artists), [.artists, .artist("ada")])
+    }
+
+    func testSelectingThePlaylistsGridFromElsewhereDoesNotRemountIt() {
+        var nav = SectionNavigation()
+        nav.select(.playlists)
+        let generation = nav.rootGeneration[.playlists]
+        nav.select(.library)
+        nav.select(.playlists)
+        XCTAssertEqual(nav.page, .playlists)
+        XCTAssertEqual(nav.rootGeneration[.playlists], generation)
+    }
+
+    func testReselectingPlaylistsWhileOnADetailRemountsTheGrid() {
+        var nav = SectionNavigation()
+        nav.showPlaylist("p1")
+        let generation = nav.rootGeneration[.playlists]
+        nav.select(.playlists)
+        XCTAssertEqual(nav.page, .playlists)
+        XCTAssertEqual(nav.stack(for: .playlists), [.playlists])
+        XCTAssertEqual(nav.rootGeneration[.playlists], (generation ?? 0) + 1)
+    }
+
+    func testLogoLeavesADirectPlaylistInPlace() {
+        var nav = SectionNavigation()
+        nav.showPlaylist("p1")
+        nav.showLibraryHome()
+        XCTAssertEqual(nav.section, .library)
+        XCTAssertEqual(nav.stack(for: .playlists), [.playlist("p1")])
+    }
+
+    func testPruneAndRestoreKeepADirectPlaylistAsTheRoot() {
+        var nav = SectionNavigation()
+        nav.showPlaylist("p1")
+        nav.openAlbum("hits")
+        nav.pruneInvalidPages(artistIDs: [], albumIDs: ["hits"], playlistIDs: ["p1"])
+        XCTAssertEqual(nav.stack(for: .playlists), [.playlist("p1"), .album("hits")])
+
+        nav.restore(
+            section: "playlists",
+            stacks: ["playlists": ["playlist:p1"]],
+            artistIDs: [],
+            albumIDs: ["hits"],
+            playlistIDs: ["p1"]
+        )
+        XCTAssertEqual(nav.stack(for: .playlists), [.playlist("p1")])
+
+        nav.restore(
+            section: "playlists",
+            stacks: ["playlists": ["playlist:p1", "album:hits"]],
+            artistIDs: [],
+            albumIDs: ["hits"],
+            playlistIDs: ["p1"]
+        )
+        XCTAssertEqual(nav.stack(for: .playlists), [.playlist("p1"), .album("hits")])
+    }
+
+    func testRestoreDropsAMissingDirectPlaylistBackToTheGrid() {
+        var nav = SectionNavigation()
+        nav.restore(
+            section: "playlists",
+            stacks: ["playlists": ["playlist:gone"]],
+            artistIDs: [],
+            albumIDs: [],
+            playlistIDs: []
+        )
+        XCTAssertEqual(nav.stack(for: .playlists), [.playlists])
+    }
+
+    func testRestoreKeepsASavedGridParent() {
+        var nav = SectionNavigation()
+        nav.restore(
+            section: "playlists",
+            stacks: ["playlists": ["playlists", "playlist:p1"]],
+            artistIDs: [],
+            albumIDs: [],
+            playlistIDs: ["p1"]
+        )
+        XCTAssertEqual(nav.stack(for: .playlists), [.playlists, .playlist("p1")])
+    }
 }
