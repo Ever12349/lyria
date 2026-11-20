@@ -74,6 +74,15 @@ final class LibraryStore: ObservableObject {
         try await database.setSetting("mcp_enabled", enabled ? "1" : "0")
     }
 
+    func isHTTPEnabled() async -> Bool {
+        let value = try? await database.setting("http_enabled")
+        return value == "1"
+    }
+
+    func setHTTPEnabled(_ enabled: Bool) async throws {
+        try await database.setSetting("http_enabled", enabled ? "1" : "0")
+    }
+
     /// Folder picker, then an incremental scan. Also used by the empty-library button.
     func scanTracks() {
         guard !scanSession.isRunning else { return }

@@ -304,6 +304,59 @@ public struct AgentStatusBody: Equatable, Sendable {
     }
 }
 
+/// JSON field readers shared by MCP and HTTP. Booleans are not numbers.
+public enum AgentJSONFields {
+    public static func bool(_ value: Any?) -> Bool? {
+        guard let value else { return nil }
+        #if canImport(Darwin)
+        guard CFGetTypeID(value as CFTypeRef) == CFBooleanGetTypeID() else { return nil }
+        return value as? Bool
+        #else
+        guard value is Bool else { return nil }
+        return value as? Bool
+        #endif
+    }
+
+    public static func number(_ value: Any) -> Double? {
+        #if canImport(Darwin)
+        guard let number = value as? NSNumber else { return nil }
+        if CFGetTypeID(number) == CFBooleanGetTypeID() { return nil }
+        return number.doubleValue
+        #else
+        if value is Bool { return nil }
+        if let number = value as? NSNumber { return number.doubleValue }
+        if let int = value as? Int { return Double(int) }
+        if let double = value as? Double { return double }
+        return nil
+        #endif
+    }
+
+    public static func int(_ number: Double) -> Int? {
+        guard number.isFinite else { return nil }
+        let truncated = number.rounded(.towardZero)
+        guard truncated <= Double(Int.max), truncated >= Double(Int.min) else { return nil }
+        return Int(truncated)
+    }
+
+    public static func playField(_ arguments: [String: Any], _ key: String) -> Result<PlayField, AgentFailure> {
+        guard let value = arguments[key] else { return .success(.absent) }
+        if value is NSNull { return .success(.absent) }
+        guard let text = value as? String else {
+            let message = key == "id" ? AgentCopy.idType : AgentCopy.uriType
+            return .failure(.badRequest(message))
+        }
+        return .success(.text(text))
+    }
+
+    public static func suppliedText(_ arguments: [String: Any], _ key: String) -> SuppliedText {
+        guard arguments.keys.contains(key) else { return .absent }
+        guard let value = arguments[key] else { return .invalid }
+        if value is NSNull { return .invalid }
+        guard let text = value as? String else { return .invalid }
+        return .text(text)
+    }
+}
+
 public enum AgentJSON {
     public static func text(_ object: [String: Any]) -> String {
         guard let data = try? JSONSerialization.data(withJSONObject: object),

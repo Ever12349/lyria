@@ -216,4 +216,13 @@ final class AgentContractTests: XCTestCase {
         XCTAssertNil(object["message"])
         XCTAssertEqual(object["repeat"] as? String, "off")
     }
+
+    func testJSONBoolIsNotANumber() throws {
+        let yes = try JSONSerialization.jsonObject(with: Data(#"{"enabled":true}"#.utf8)) as! [String: Any]
+        XCTAssertEqual(AgentJSONFields.bool(yes["enabled"]), true)
+        XCTAssertNil(AgentJSONFields.number(yes["enabled"] as Any))
+        let one = try JSONSerialization.jsonObject(with: Data(#"{"enabled":1}"#.utf8)) as! [String: Any]
+        XCTAssertNil(AgentJSONFields.bool(one["enabled"]))
+        XCTAssertEqual(AgentJSONFields.number(one["enabled"] as Any), 1)
+    }
 }

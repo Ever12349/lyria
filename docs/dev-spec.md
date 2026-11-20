@@ -689,7 +689,7 @@ Figma：[Lyria macOS UI](https://www.figma.com/design/JJFaj1UysoberBKEr8G8Jc)
 
 MVP HTTP = health + status + 传输六件套（play/pause/toggle/next/previous/seek）+ shuffle/repeat + search + queue 读写。浏览类列表进批次 2。`file://` uri 点播不创建库 id。端口 `17890` 不变。
 
-> HTTP 尚未开工；可关且不得拖垮 MCP。
+> HTTP 已落地（2026-11-20）：默认关，只听 `127.0.0.1:17890`。`settings.http_enabled` 只有 `"1"` 才开；听成功才写入。占用 toast「端口 17890 已被占用」，其他 bind 失败 toast「无法开启本地 HTTP」。启动时库里是 `"1"` 但没听上，改回 `"0"` 并 toast；这次改写失败则留下 `"1"`，下次再试。曲库打开失败只停听，不改开关。成功正文与 MCP 的 `structuredContent` 相同。`POST /volume`、`DELETE /queue/:index` 和浏览接口仍不做。关掉 HTTP 不影响 MCP。
 
 ---
 
@@ -717,7 +717,7 @@ MVP HTTP = health + status + 传输六件套（play/pause/toggle/next/previous/s
 | 4 | Queue + shuffle/repeat | **本切片（PR #2）** | 自动下一首、重复三态、固定置换随机；不落盘。原阶段 4 就做在曲库播放这条 PR 里 |
 | 5 | 主窗 UI 对齐（艺人/专辑/歌单/设置/空态/队列等） | 待开工（Amb-UI 已锁） | **优先**· Amb-UI-1…16；假数据可点全主窗；真 MenuBarExtra 仍=阶段 8；须 UI「开工」 |
 | 6 | 空态/错误态 | 待开工 | 按锁定文案 |
-| 7 | 可选 HTTP 层 | 待开工 | 可关且 MCP 仍好 |
+| 7 | 可选 HTTP 层 | **本切片** | 默认关，只听 `127.0.0.1:17890`。不含音量、按索引删除和浏览接口。关掉不影响 MCP |
 | 8 | 菜单栏 + 设置打磨 | 待开工 | popover 与主窗口传输状态一致；登录项策略见上 |
 | 9 | 真机证明清单 | 待开工 | 见验收 |
 

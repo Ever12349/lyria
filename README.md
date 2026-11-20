@@ -2,7 +2,7 @@
 
 个人本地音乐播放器（macOS / Apple Silicon）。仅本机曲库；人机面是原生窗口 + 菜单栏；agent 面以 MCP（server name `lyria`）为主——客户端经 **stdio 薄桥**附着到已运行的 App 内唯一引擎（Unix socket：Application Support API → `Lyria/mcp.sock`；见 `docs/dev-spec.md`「MCP 进程模型」）；可选 loopback HTTP。
 
-当前仓库状态：**主窗、曲库、播放引擎和阶段 3 MCP 已落地。** 选择一个文件夹后扫描真实音频并写入 SQLite。设置里「允许经 MCP 控制」默认开。HTTP 和菜单栏还没做。启动不会自动扫描，也不会预置 `~/Music`；没选文件夹时设置显示「未选择」。个人 MVP **关** App Sandbox，仍写 `scan_roots.bookmark`。Bundle id 仍是 `local.lyria.sample`。
+当前仓库状态：**主窗、曲库、播放引擎、阶段 3 MCP 和本地 HTTP 已落地。** 选择一个文件夹后扫描真实音频并写入 SQLite。设置里「允许经 MCP 控制」默认开，「本地 HTTP API」默认关，只听 `127.0.0.1:17890`。菜单栏还没做。启动不会自动扫描，也不会预置 `~/Music`；没选文件夹时设置显示「未选择」。个人 MVP **关** App Sandbox，仍写 `scan_roots.bookmark`。Bundle id 仍是 `local.lyria.sample`。
 
 下文命令都在仓库根目录执行。
 

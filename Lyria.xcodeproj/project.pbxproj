@@ -80,6 +80,10 @@
 		A1D000000000000000000011 /* LyriaMain.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D000000000000000000001 /* LyriaMain.swift */; };
 		A1D000000000000000000012 /* MCPBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D000000000000000000002 /* MCPBridge.swift */; };
 		A1D000000000000000000013 /* MCPServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D000000000000000000003 /* MCPServer.swift */; };
+		A1F000000000000000000011 /* HTTPContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F000000000000000000001 /* HTTPContract.swift */; };
+		A1F000000000000000000012 /* HTTPServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F000000000000000000002 /* HTTPServer.swift */; };
+		A1F000000000000000000013 /* AgentCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F000000000000000000003 /* AgentCommands.swift */; };
+		A1F000000000000000000014 /* HTTPContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F000000000000000000004 /* HTTPContractTests.swift */; };
 		A1D000000000000000000014 /* InstanceLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D000000000000000000004 /* InstanceLock.swift */; };
 		A1D000000000000000000032 /* AgentContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D000000000000000000031 /* AgentContract.swift */; };
 		A1D000000000000000000042 /* AgentContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D000000000000000000041 /* AgentContractTests.swift */; };
@@ -171,6 +175,10 @@
 		A1D000000000000000000001 /* LyriaMain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LyriaMain.swift; sourceTree = "<group>"; };
 		A1D000000000000000000002 /* MCPBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPBridge.swift; sourceTree = "<group>"; };
 		A1D000000000000000000003 /* MCPServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPServer.swift; sourceTree = "<group>"; };
+		A1F000000000000000000001 /* HTTPContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTPContract.swift; sourceTree = "<group>"; };
+		A1F000000000000000000002 /* HTTPServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTPServer.swift; sourceTree = "<group>"; };
+		A1F000000000000000000003 /* AgentCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentCommands.swift; sourceTree = "<group>"; };
+		A1F000000000000000000004 /* HTTPContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTPContractTests.swift; sourceTree = "<group>"; };
 		A1D000000000000000000004 /* InstanceLock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstanceLock.swift; sourceTree = "<group>"; };
 		A1D000000000000000000031 /* AgentContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentContract.swift; sourceTree = "<group>"; };
 		A1D000000000000000000041 /* AgentContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentContractTests.swift; sourceTree = "<group>"; };
@@ -258,6 +266,8 @@
 				A1D000000000000000000001 /* LyriaMain.swift */,
 				A1D000000000000000000002 /* MCPBridge.swift */,
 				A1D000000000000000000003 /* MCPServer.swift */,
+				A1F000000000000000000002 /* HTTPServer.swift */,
+				A1F000000000000000000003 /* AgentCommands.swift */,
 				A1D000000000000000000004 /* InstanceLock.swift */,
 			);
 			path = Agent;
@@ -341,6 +351,7 @@
 				A1C0000000000000000000B3 /* UISession.swift */,
 				A1E000000000000000000021 /* MenuBarUpNext.swift */,
 				A1D000000000000000000031 /* AgentContract.swift */,
+				A1F000000000000000000001 /* HTTPContract.swift */,
 			);
 			path = Sources/LyriaCore;
 			sourceTree = "<group>";
@@ -368,6 +379,7 @@
 				A1C0000000000000000000B7 /* UISessionTests.swift */,
 				A1E000000000000000000041 /* MenuBarUpNextTests.swift */,
 				A1D000000000000000000041 /* AgentContractTests.swift */,
+				A1F000000000000000000004 /* HTTPContractTests.swift */,
 			);
 			path = Tests/LyriaTests;
 			sourceTree = "<group>";
@@ -514,6 +526,8 @@
 				A1D000000000000000000011 /* LyriaMain.swift in Sources */,
 				A1D000000000000000000012 /* MCPBridge.swift in Sources */,
 				A1D000000000000000000013 /* MCPServer.swift in Sources */,
+				A1F000000000000000000012 /* HTTPServer.swift in Sources */,
+				A1F000000000000000000013 /* AgentCommands.swift in Sources */,
 				A1D000000000000000000014 /* InstanceLock.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -545,6 +559,7 @@
 				A1C0000000000000000000B4 /* UISession.swift in Sources */,
 				A1E000000000000000000031 /* MenuBarUpNext.swift in Sources */,
 				A1D000000000000000000032 /* AgentContract.swift in Sources */,
+				A1F000000000000000000011 /* HTTPContract.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -572,6 +587,7 @@
 				A1C0000000000000000000B8 /* UISessionTests.swift in Sources */,
 				A1E000000000000000000051 /* MenuBarUpNextTests.swift in Sources */,
 				A1D000000000000000000042 /* AgentContractTests.swift in Sources */,
+				A1F000000000000000000014 /* HTTPContractTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

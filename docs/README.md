@@ -13,5 +13,5 @@
 - **C2 App Sandbox（已锁：关）：** 个人 MVP 关闭沙盒；`scan_roots.bookmark` 仍从 day one 写 — [`dev-spec.md`](./dev-spec.md)#风险与未决
 - **阶段 1 Amb-1…19（已锁 · 文档 only）：** 音量 1.0、`NowPlaying`、错误码六件套、`@Observable`、`Sources/Lyria/Engine/`、传输绑引擎、2–4 Hz、Alert+lastError、Queue 仅当前项、actor→MainActor、删 subtitle、无 LyriaCore、bundle sample、菜单试播、轻量标签、MVP UTType、ended→pause、状态存 ms、启动无假 nowPlaying；Amb-20 延后 — [`dev-spec.md`](./dev-spec.md)#阶段-1-已锁决策amb-119--用户确认全部按照建议
 - **Amb-UI-1…16（已锁 · 文档 only）：** 主窗全分区假数据可点；Spec 空态文案；Dreamscape FakeData；假队列；三栏传输；封面/更多假动作；侧栏圆角卡；完整 page-head；设置六行 stub；repeat 三态；UI 阶段假 now-playing；搜索+returnTo；pill toast；HTTP stub 显示关；仅 SF Symbols；无真 MenuBarExtra — [`dev-spec.md`](./dev-spec.md)#ui-已锁决策amb-ui-116--用户确认全部按照建议
-- Standing hold：**引擎 / MCP / HTTP / MenuBarExtra** 仍须另说开工。**2026-11-09 曲库切片已开工，且阶段 2 先于阶段 1。**
+- Standing hold：**MenuBarExtra** 仍须另说开工。引擎、曲库、MCP 和本地 HTTP 已落地。**2026-11-09 曲库切片已开工，且阶段 2 先于阶段 1。**
 - **曲库切片覆盖：** 不预置 `~/Music`，启动不自动扫描；扫描入口是空曲库「扫描曲目」和标题行「扫描文件夹」，设置里没有路径/重扫行；标题行还可以添加音频文件；进度在扫描或添加时出现在任意页，可取消；取消扫描保留已入库行并 toast「已取消扫描」；取消 `user_hidden`，从曲库移除是硬删除 `tracks` 行并保留 `fingerprints`（确认可选「仅从曲库移除」或「移到废纸篓」）；`encoding_suspect` 只认 U+FFFD；扫描并发 4；清除指纹用 `NSAlert`

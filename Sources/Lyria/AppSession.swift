@@ -41,6 +41,7 @@ final class AppSession: ObservableObject {
     }
     @Published var sidebarWidth: CGFloat = CGFloat(UISession.sidebarDefault)
     @Published var mcpEnabled = true
+    @Published var httpEnabled = false
     @Published var toast: String?
     private var toastToken = 0
     private var didBootstrap = false
@@ -51,6 +52,7 @@ final class AppSession: ObservableObject {
     let transport: TransportState
     let queueState: PlaybackQueueState
     private let mcp: MCPService
+    private let http: HTTPService
     private var engineMirror: Task<Void, Never>?
 
     init(engine: PlaybackEngine, transport: TransportState, queueState: PlaybackQueueState) {
@@ -59,8 +61,12 @@ final class AppSession: ObservableObject {
         self.queueState = queueState
         let library = LibraryStore()
         self.library = library
-        let mcp = MCPService(engine: engine, library: library)
+        let gate = LibraryGate()
+        let commands = AgentCommands(engine: engine)
+        let mcp = MCPService(library: library, gate: gate, commands: commands)
         self.mcp = mcp
+        let http = HTTPService(library: library, gate: gate, commands: commands)
+        self.http = http
         let events = engine.events
         engineMirror = Task { [weak self] in
             for await event in events {
@@ -77,7 +83,9 @@ final class AppSession: ObservableObject {
         library.onToast = { [weak self] message in
             self?.showToast(message)
         }
+        commands.bind(self)
         mcp.bind(self)
+        http.bind(self)
     }
 
     deinit {
@@ -89,9 +97,11 @@ final class AppSession: ObservableObject {
         didBootstrap = true
         library.onDatabaseReady = { [weak self] in
             await self?.mcp.startIfEnabled()
+            await self?.http.startIfEnabled()
         }
         library.onLibraryFailed = { [weak self] in
             self?.mcp.failLibrary(AgentCopy.databaseFailed)
+            self?.http.failLibrary()
         }
         await library.open()
         restoreUISession()
@@ -108,6 +118,21 @@ final class AppSession: ObservableObject {
                 mcpEnabled = previous
                 showToast(AgentCopy.databaseFailed)
             }
+        }
+    }
+
+    func setHTTPEnabled(_ enabled: Bool) {
+        httpEnabled = enabled
+        http.setEnabled(enabled)
+    }
+
+    func copyHTTPBaseURL() {
+        let board = NSPasteboard.general
+        board.clearContents()
+        if board.setString(HTTPContract.baseURL, forType: .string) {
+            showToast(HTTPContract.copied)
+        } else {
+            showToast(HTTPContract.copyFailed)
         }
     }
 

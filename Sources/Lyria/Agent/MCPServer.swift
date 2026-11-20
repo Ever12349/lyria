@@ -242,18 +242,19 @@ enum MCPListenError: Error {
 
 @MainActor
 final class MCPService {
-    private let engine: PlaybackEngine
     private let library: LibraryStore
     private weak var session: AppSession?
-    private let gate = LibraryGate()
+    private let gate: LibraryGate
+    private let commands: AgentCommands
     private var server: MCPServer?
     private var listening = false
     private var libraryIsReady = false
     private var initialized: Set<Int32> = []
 
-    init(engine: PlaybackEngine, library: LibraryStore) {
-        self.engine = engine
+    init(library: LibraryStore, gate: LibraryGate, commands: AgentCommands) {
         self.library = library
+        self.gate = gate
+        self.commands = commands
     }
 
     func bind(_ session: AppSession) {
@@ -380,222 +381,19 @@ final class MCPService {
         if let blocked = await gate.wait() {
             return ToolCall(body: toolContent(AgentFailure(error: PlaybackErrorCode.notReady, message: blocked).jsonObject(), isError: true))
         }
-        switch name {
-        case "lyria_status":
-            return ToolCall(body: toolContent(await statusObject(), isError: false))
-        case "lyria_pause":
-            return await playback(engine.agentPause())
-        case "lyria_toggle":
-            return await playback(engine.agentToggle())
-        case "lyria_next":
-            return await playback(engine.agentNext())
-        case "lyria_previous":
-            return await playback(engine.agentPrevious())
-        case "lyria_seek":
-            guard let raw = arguments["positionMs"] else {
-                return product(.badRequest(AgentCopy.needPosition))
-            }
-            guard let number = MCPJSON.number(raw) else {
-                return product(.badRequest(AgentCopy.positionType))
-            }
-            guard let ms = MCPJSON.int(number) else {
-                return product(.badRequest(AgentCopy.positionType))
-            }
-            return await playback(engine.agentSeek(ms: ms))
-        case "lyria_shuffle":
-            guard let enabled = MCPJSON.bool(arguments["enabled"]) else {
-                return product(.badRequest(AgentCopy.needEnabled))
-            }
-            return await playback(engine.agentSetShuffle(enabled))
-        case "lyria_repeat":
-            guard let raw = arguments["mode"] as? String, let mode = RepeatMode(rawValue: raw) else {
-                return product(.badRequest(AgentCopy.badMode))
-            }
-            return await playback(engine.agentSetRepeat(mode))
-        case "lyria_play":
-            return await play(arguments)
-        case "lyria_search":
-            return search(arguments)
-        case "lyria_queue_list":
-            let snapshot = await engine.agentSnapshot()
-            let items = snapshot.rows.enumerated().map { index, row in
-                track(row, snapshot: snapshot, isCurrent: snapshot.currentIndex == index).jsonObject()
-            }
-            return ToolCall(body: toolContent(["ok": true, "items": items], isError: false))
-        case "lyria_queue_add":
-            return await queueAdd(arguments)
-        case "lyria_queue_clear":
-            return await playback(engine.agentQueueClear())
-        default:
+        guard let reply = await commands.executeTool(name: name, arguments: arguments) else {
             return ToolCall(error: ProtocolError(code: -32602, message: "Unknown tool: \(name)"))
         }
-    }
-
-    private func play(_ arguments: [String: Any]) async -> ToolCall {
-        let id: PlayField
-        let uri: PlayField
-        switch MCPJSON.playField(arguments, "id") {
-        case .failure(let failure): return product(failure)
-        case .success(let field): id = field
-        }
-        switch MCPJSON.playField(arguments, "uri") {
-        case .failure(let failure): return product(failure)
-        case .success(let field): uri = field
-        }
-        switch AgentContract.parsePlay(id: id, uri: uri) {
+        switch reply {
+        case .success(let body):
+            return ToolCall(body: toolContent(body, isError: false))
         case .failure(let failure):
             return product(failure)
-        case .success(.resume):
-            return await playback(engine.agentResume())
-        case .success(.track(let trackID)):
-            guard let session, session.track(trackID) != nil else {
-                return product(AgentFailure(error: PlaybackErrorCode.notFound, message: AgentCopy.notFound))
-            }
-            let list = session.visibleTracks.map(ResolvedTrack.init)
-            return await playback(engine.agentPlay(list: list, startID: trackID))
-        case .success(.file(let url)):
-            return await playback(engine.agentPlay(uri: url))
         }
-    }
-
-    private func queueAdd(_ arguments: [String: Any]) async -> ToolCall {
-        let id: PlayField
-        let uri: PlayField
-        switch MCPJSON.playField(arguments, "id") {
-        case .failure(let failure): return product(failure)
-        case .success(let field): id = field
-        }
-        switch MCPJSON.playField(arguments, "uri") {
-        case .failure(let failure): return product(failure)
-        case .success(let field): uri = field
-        }
-        let target: QueueAddTarget
-        switch AgentContract.parseQueueTarget(id: id, uri: uri) {
-        case .failure(let failure): return product(failure)
-        case .success(let value): target = value
-        }
-        let position: QueueAddPosition
-        switch AgentContract.parseQueuePosition(MCPJSON.suppliedText(arguments, "position")) {
-        case .failure(let failure): return product(failure)
-        case .success(let value): position = value
-        }
-        switch target {
-        case .track(let trackID):
-            guard let track = session?.track(trackID) else {
-                return product(AgentFailure(error: PlaybackErrorCode.notFound, message: AgentCopy.notFound))
-            }
-            return await playback(engine.agentQueueAdd(
-                track: ResolvedTrack(track: track),
-                item: .track(track.id),
-                position: position
-            ))
-        case .file(let url):
-            return await playback(engine.agentQueueAdd(uri: url, position: position))
-        }
-    }
-
-    private func search(_ arguments: [String: Any]) -> ToolCall {
-        guard let query = arguments["q"] as? String,
-              !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        else { return product(.badRequest(AgentCopy.needQ)) }
-        let limit: Int
-        if let raw = arguments["limit"] {
-            guard let number = MCPJSON.number(raw) else { return product(.badRequest(AgentCopy.limitType)) }
-            switch LibrarySearch.parseLimit(number) {
-            case .failure(let failure): return product(failure)
-            case .success(let value): limit = value
-            }
-        } else {
-            limit = LibrarySearch.defaultLimit
-        }
-        let tracks = session?.tracks ?? []
-        let hits = tracks.filter {
-            LibrarySearch.matches(query: query, title: $0.title, artist: $0.artistLabel, album: $0.albumLabel)
-        }.prefix(limit)
-        let objects = hits.map { libraryTrack($0).jsonObject() }
-        return ToolCall(body: toolContent(["ok": true, "tracks": objects], isError: false))
-    }
-
-    private func playback(_ result: AgentCommandResult) -> ToolCall {
-        if let code = result.errorCode {
-            let failure = AgentFailure(error: code, message: result.message ?? PlaybackCopy.failed)
-            return product(failure)
-        }
-        let body = status(result.snapshot, notice: result.notice)
-        return ToolCall(body: toolContent(body.jsonObject(), isError: false))
     }
 
     private func product(_ failure: AgentFailure) -> ToolCall {
         ToolCall(body: toolContent(failure.jsonObject(), isError: true))
-    }
-
-    private func statusObject() async -> [String: Any] {
-        let snapshot = await engine.agentSnapshot()
-        return status(snapshot, notice: nil).jsonObject()
-    }
-
-    private func status(_ snapshot: TransportSnapshot, notice: String?) -> AgentStatusBody {
-        let track: AgentTrack?
-        if snapshot.hasCurrent, let index = snapshot.currentIndex, snapshot.rows.indices.contains(index) {
-            track = self.track(snapshot.rows[index], snapshot: snapshot, isCurrent: true)
-        } else {
-            track = nil
-        }
-        return AgentStatusBody(
-            track: track,
-            playing: snapshot.playing,
-            positionMs: snapshot.positionMs,
-            durationMs: snapshot.durationMs,
-            shuffle: snapshot.shuffle,
-            repeatMode: snapshot.repeatMode.rawValue,
-            volume: snapshot.volume,
-            queueLength: snapshot.queueCount,
-            message: notice
-        )
-    }
-
-    private func track(_ row: QueueRowSnapshot, snapshot: TransportSnapshot, isCurrent: Bool) -> AgentTrack {
-        switch row.item {
-        case .track(let id):
-            if let track = session?.track(id) {
-                return libraryTrack(track, missing: track.missing || row.missing)
-            }
-            return AgentTrack(
-                id: id,
-                path: "",
-                uri: "",
-                title: row.title,
-                artist: row.artist,
-                album: "",
-                durationMs: 0,
-                missing: true
-            )
-        case .oneShot(let uri):
-            let url = URL(string: uri)
-            return AgentTrack(
-                id: nil,
-                path: url?.path ?? "",
-                uri: uri,
-                title: row.title,
-                artist: "",
-                album: "",
-                durationMs: isCurrent ? snapshot.durationMs : 0,
-                missing: row.missing
-            )
-        }
-    }
-
-    private func libraryTrack(_ track: Track, missing: Bool? = nil) -> AgentTrack {
-        AgentTrack(
-            id: track.id,
-            path: track.path,
-            uri: URL(fileURLWithPath: track.path).absoluteString,
-            title: track.title,
-            artist: track.artist,
-            album: track.album,
-            durationMs: track.durationMs,
-            missing: missing ?? track.missing
-        )
     }
 
     private func toolContent(_ body: [String: Any], isError: Bool) -> [String: Any] {
@@ -651,43 +449,5 @@ final class MCPService {
 
     private func rpcError(id: Any, code: Int, message: String) -> [String: Any] {
         ["jsonrpc": "2.0", "id": id, "error": ["code": code, "message": message]]
-    }
-}
-
-enum MCPJSON {
-    static func bool(_ value: Any?) -> Bool? {
-        guard let value, CFGetTypeID(value as CFTypeRef) == CFBooleanGetTypeID() else { return nil }
-        return value as? Bool
-    }
-
-    static func number(_ value: Any) -> Double? {
-        guard let number = value as? NSNumber else { return nil }
-        if CFGetTypeID(number) == CFBooleanGetTypeID() { return nil }
-        return number.doubleValue
-    }
-
-    static func int(_ number: Double) -> Int? {
-        guard number.isFinite else { return nil }
-        let truncated = number.rounded(.towardZero)
-        guard truncated <= Double(Int.max), truncated >= Double(Int.min) else { return nil }
-        return Int(truncated)
-    }
-
-    static func playField(_ arguments: [String: Any], _ key: String) -> Result<PlayField, AgentFailure> {
-        guard let value = arguments[key] else { return .success(.absent) }
-        if value is NSNull { return .success(.absent) }
-        guard let text = value as? String else {
-            let message = key == "id" ? AgentCopy.idType : AgentCopy.uriType
-            return .failure(.badRequest(message))
-        }
-        return .success(.text(text))
-    }
-
-    static func suppliedText(_ arguments: [String: Any], _ key: String) -> SuppliedText {
-        guard arguments.keys.contains(key) else { return .absent }
-        guard let value = arguments[key] else { return .invalid }
-        if value is NSNull { return .invalid }
-        guard let text = value as? String else { return .invalid }
-        return .text(text)
     }
 }

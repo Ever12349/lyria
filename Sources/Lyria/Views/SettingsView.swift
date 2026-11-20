@@ -17,8 +17,17 @@ struct SettingsView: View {
                     )
                 }
                 SettingRow(title: "本地 HTTP API", detail: "可选，默认关闭 · 端口 17890") {
-                    OffToggle(label: "本地 HTTP API") {
-                        store.showToast("本地 HTTP API 保持关闭")
+                    HStack(spacing: 8) {
+                        PillButton(title: "复制") {
+                            store.copyHTTPBaseURL()
+                        }
+                        SettingToggle(
+                            isOn: Binding(
+                                get: { store.httpEnabled },
+                                set: { store.setHTTPEnabled($0) }
+                            ),
+                            label: "本地 HTTP API"
+                        )
                     }
                 }
                 SettingRow(title: "登录时启动", detail: "开机后以菜单栏形态待命") {
