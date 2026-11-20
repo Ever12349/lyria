@@ -93,6 +93,7 @@
 		A1C000000000000000000053 /* FingerprintTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000043 /* FingerprintTests.swift */; };
 		A1C000000000000000000071 /* libLyriaCore.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000002 /* libLyriaCore.a */; };
 		A1C000000000000000000072 /* libLyriaCore.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A1C000000000000000000002 /* libLyriaCore.a */; };
+		A1C0000000000000000000D2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1C0000000000000000000D1 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -183,6 +184,7 @@
 		A1C000000000000000000043 /* FingerprintTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FingerprintTests.swift; sourceTree = "<group>"; };
 		A1C000000000000000000002 /* libLyriaCore.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libLyriaCore.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1C000000000000000000032 /* LyriaTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LyriaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1C0000000000000000000D1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -215,6 +217,7 @@
 		442C826CDE1845D1BF7D240D = {
 			isa = PBXGroup;
 			children = (
+				A1C0000000000000000000D1 /* Assets.xcassets */,
 				219785E656E54689A04B50B7 /* Lyria */,
 				A1C000000000000000000008 /* LyriaCore */,
 				A1C000000000000000000038 /* LyriaTests */,
@@ -378,6 +381,7 @@
 			buildPhases = (
 				25A483BFD688463DAF3606EC /* Sources */,
 				DE6EADDD960345D3A062EE06 /* Frameworks */,
+				A1C0000000000000000000D3 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -453,6 +457,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A1C0000000000000000000D3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1C0000000000000000000D2 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		25A483BFD688463DAF3606EC /* Sources */ = {
@@ -634,6 +649,8 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Lyria;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				INFOPLIST_KEY_CFBundleIconName = AppIcon;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -663,6 +680,8 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Lyria;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				INFOPLIST_KEY_CFBundleIconName = AppIcon;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = (
