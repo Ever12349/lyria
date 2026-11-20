@@ -379,11 +379,17 @@ public enum PlaybackQueueRules {
     }
 
     public static func playNext(ids: [String], queue: PlaybackQueue) -> PlaybackQueue {
-        let unique = uniqueIDs(ids)
+        playNext(items: ids.map { .track($0) }, queue: queue)
+    }
+
+    /// Removes each item already in either order, then inserts the unique list after the current item.
+    /// With no current item, the list goes at the front. Shuffle and repeat stay as they are.
+    public static func playNext(items additions: [QueueItem], queue: PlaybackQueue) -> PlaybackQueue {
+        let unique = uniqueItems(additions)
         guard !unique.isEmpty else { return queue }
         let current = queue.current
-        let items = insertingPlayNext(queue.items, current: current, ids: unique)
-        let source = insertingPlayNext(queue.source, current: current, ids: unique)
+        let items = insertingPlayNext(queue.items, current: current, additions: unique)
+        let source = insertingPlayNext(queue.source, current: current, additions: unique)
         return PlaybackQueue(
             items: items,
             source: source,
@@ -393,15 +399,19 @@ public enum PlaybackQueueRules {
         )
     }
 
-    /// `alreadyAllPresent` is true only when every requested id was already queued.
     public static func enqueue(ids: [String], queue: PlaybackQueue) -> (queue: PlaybackQueue, alreadyAllPresent: Bool) {
-        let unique = uniqueIDs(ids)
+        enqueue(items: ids.map { .track($0) }, queue: queue)
+    }
+
+    /// Appends items that are not already in `items`. `alreadyAllPresent` is true only when every
+    /// requested item was already there. An empty request reports false and leaves the queue.
+    public static func enqueue(items additions: [QueueItem], queue: PlaybackQueue) -> (queue: PlaybackQueue, alreadyAllPresent: Bool) {
+        let unique = uniqueItems(additions)
         guard !unique.isEmpty else { return (queue, false) }
         var items = queue.items
         var source = queue.source
         var added = 0
-        for id in unique {
-            let item = QueueItem.track(id)
+        for item in unique {
             if items.contains(item) { continue }
             items.append(item)
             source.append(item)
@@ -415,6 +425,17 @@ public enum PlaybackQueueRules {
             repeatMode: queue.repeatMode
         )
         return (next, added == 0)
+    }
+
+    /// Drops both orders and the current index. Shuffle and repeat stay.
+    public static func cleared(_ queue: PlaybackQueue) -> PlaybackQueue {
+        PlaybackQueue(
+            items: [],
+            source: [],
+            currentIndex: nil,
+            shuffle: queue.shuffle,
+            repeatMode: queue.repeatMode
+        )
     }
 
     public static func toggleShuffle<R: RandomNumberGenerator>(
@@ -710,18 +731,15 @@ public enum PlaybackQueueRules {
         return copy
     }
 
-    private static func insertingPlayNext(_ items: [QueueItem], current: QueueItem?, ids: [String]) -> [QueueItem] {
-        var items = items.filter { item in
-            guard let id = item.trackID else { return true }
-            return !ids.contains(id)
-        }
+    private static func insertingPlayNext(_ items: [QueueItem], current: QueueItem?, additions: [QueueItem]) -> [QueueItem] {
+        var items = items.filter { !additions.contains($0) }
         let insertAt: Int
         if let current, let index = items.firstIndex(of: current) {
             insertAt = index + 1
         } else {
             insertAt = 0
         }
-        items.insert(contentsOf: ids.map { QueueItem.track($0) }, at: insertAt)
+        items.insert(contentsOf: additions, at: insertAt)
         return items
     }
 
@@ -730,9 +748,9 @@ public enum PlaybackQueueRules {
         return isPlayable(id)
     }
 
-    private static func uniqueIDs(_ ids: [String]) -> [String] {
-        var seen = Set<String>()
-        return ids.filter { seen.insert($0).inserted }
+    private static func uniqueItems(_ items: [QueueItem]) -> [QueueItem] {
+        var seen = Set<QueueItem>()
+        return items.filter { seen.insert($0).inserted }
     }
 
     private static func hasOtherPlayable(queue: PlaybackQueue, isPlayable: (QueueItem) -> Bool) -> Bool {

@@ -259,6 +259,40 @@ actor PlaybackEngine {
         emit(.showQueue)
     }
 
+    /// Library id. Does not check whether the file can play; a missing row still joins the queue.
+    func agentQueueAdd(track: ResolvedTrack, item: QueueItem, position: QueueAddPosition) async -> AgentCommandResult {
+        beginCommand()
+        insert(track, item: item, position: position)
+        return finishCommand()
+    }
+
+    /// File URI. The same playability check as `play(uri:)` runs before the queue changes.
+    func agentQueueAdd(uri: URL, position: QueueAddPosition) async -> AgentCommandResult {
+        beginCommand()
+        prepareAudio()
+        let track = oneShotTrack(uri)
+        if let block = blocker(for: track) {
+            refuse(block)
+            return finishCommand()
+        }
+        insert(track, item: .oneShot(uri.absoluteString), position: position)
+        return finishCommand()
+    }
+
+    func agentQueueClear() async -> AgentCommandResult {
+        beginCommand()
+        playing = false
+        _ = nextGeneration()
+        host.unloadCurrentItem()
+        queue = PlaybackQueueRules.cleared(queue)
+        positionMs = 0
+        durationMs = 0
+        lastError = nil
+        touchSession(write: true)
+        publish()
+        return finishCommand()
+    }
+
     func playQueueIndex(_ index: Int) async {
         guard queue.items.indices.contains(index) else { return }
         queue.currentIndex = index
@@ -361,16 +395,7 @@ actor PlaybackEngine {
     /// Later MCP/one-shot entry. No Open Panel in this slice.
     func play(uri: URL) async {
         prepareAudio()
-        let path = uri.path
-        let track = ResolvedTrack(
-            id: uri.absoluteString,
-            path: path,
-            missing: false,
-            title: uri.lastPathComponent,
-            artist: "",
-            album: "",
-            artworkPath: nil
-        )
+        let track = oneShotTrack(uri)
         if let block = blocker(for: track) {
             refuse(block)
             return
@@ -702,6 +727,39 @@ actor PlaybackEngine {
         return generation
     }
 
+    private func oneShotTrack(_ uri: URL) -> ResolvedTrack {
+        ResolvedTrack(
+            id: uri.absoluteString,
+            path: uri.path,
+            missing: false,
+            title: uri.lastPathComponent,
+            artist: "",
+            album: "",
+            artworkPath: nil
+        )
+    }
+
+    /// `end` opens the queue only when something new was appended. An item already queued toasts and leaves the session alone.
+    private func insert(_ track: ResolvedTrack, item: QueueItem, position: QueueAddPosition) {
+        remember([track])
+        switch position {
+        case .next:
+            queue = PlaybackQueueRules.playNext(items: [item], queue: queue)
+            touchSession(write: true)
+            publish()
+        case .end:
+            let result = PlaybackQueueRules.enqueue(items: [item], queue: queue)
+            if result.alreadyAllPresent {
+                announce(PlaybackCopy.alreadyQueued)
+                return
+            }
+            queue = result.queue
+            touchSession(write: true)
+            publish()
+            emit(.showQueue)
+        }
+    }
+
     private func remember(_ tracks: [ResolvedTrack]) {
         for track in tracks {
             catalog[track.id] = track
@@ -882,6 +940,19 @@ private final class PlayerHost: @unchecked Sendable {
         if let timeToken { player.removeTimeObserver(timeToken) }
         if let endToken { NotificationCenter.default.removeObserver(endToken) }
         if let failToken { NotificationCenter.default.removeObserver(failToken) }
+    }
+
+    func unloadCurrentItem() {
+        player.pause()
+        player.replaceCurrentItem(with: nil)
+        if let endToken {
+            NotificationCenter.default.removeObserver(endToken)
+            self.endToken = nil
+        }
+        if let failToken {
+            NotificationCenter.default.removeObserver(failToken)
+            self.failToken = nil
+        }
     }
 
     func install(owner: PlaybackEngine) {

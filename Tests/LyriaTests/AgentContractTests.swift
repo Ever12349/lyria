@@ -2,7 +2,7 @@ import XCTest
 import LyriaCore
 
 final class AgentContractTests: XCTestCase {
-    func testToolNamesOmitQueueMutations() {
+    func testToolNamesIncludeQueueMutations() {
         XCTAssertEqual(AgentCopy.toolNames, [
             "lyria_status",
             "lyria_play",
@@ -15,9 +15,9 @@ final class AgentContractTests: XCTestCase {
             "lyria_repeat",
             "lyria_search",
             "lyria_queue_list",
+            "lyria_queue_add",
+            "lyria_queue_clear",
         ])
-        XCTAssertFalse(AgentCopy.toolNames.contains("lyria_queue_add"))
-        XCTAssertFalse(AgentCopy.toolNames.contains("lyria_queue_clear"))
         XCTAssertFalse(AgentCopy.toolNames.contains("lyria_volume"))
     }
 
@@ -55,6 +55,58 @@ final class AgentContractTests: XCTestCase {
         XCTAssertEqual(
             AgentContract.parsePlay(id: .absent, uri: .text("https://example.com/a.mp3")),
             .failure(.badRequest(AgentCopy.fileURI))
+        )
+    }
+
+    func testQueueAddRequiresOneTargetAndAKnownPosition() {
+        XCTAssertEqual(
+            AgentContract.parseQueueTarget(id: .absent, uri: .absent),
+            .failure(.badRequest(AgentCopy.needIDOrURI))
+        )
+        XCTAssertEqual(
+            AgentContract.parseQueueTarget(id: .text("trk_a"), uri: .text("file:///tmp/a.mp3")),
+            .failure(.badRequest(AgentCopy.idAndURI))
+        )
+        XCTAssertEqual(
+            AgentContract.parseQueueTarget(id: .text("  "), uri: .absent),
+            .failure(.badRequest(AgentCopy.emptyID))
+        )
+        XCTAssertEqual(
+            AgentContract.parseQueueTarget(id: .absent, uri: .text("")),
+            .failure(.badRequest(AgentCopy.emptyURI))
+        )
+        XCTAssertEqual(
+            AgentContract.parseQueueTarget(id: .absent, uri: .text("https://example.com/a.mp3")),
+            .failure(.badRequest(AgentCopy.fileURI))
+        )
+        XCTAssertEqual(
+            AgentContract.parseQueueTarget(id: .text(" trk_a "), uri: .absent),
+            .success(.track("trk_a"))
+        )
+        let file = AgentContract.parseQueueTarget(id: .absent, uri: .text("file:///tmp/a.mp3"))
+        guard case .success(.file(let url)) = file else {
+            return XCTFail("expected file url, got \(file)")
+        }
+        XCTAssertEqual(url.path, "/tmp/a.mp3")
+
+        XCTAssertEqual(AgentContract.parseQueuePosition(.absent), .success(.end))
+        XCTAssertEqual(AgentContract.parseQueuePosition(.text("next")), .success(.next))
+        XCTAssertEqual(AgentContract.parseQueuePosition(.text("end")), .success(.end))
+        XCTAssertEqual(
+            AgentContract.parseQueuePosition(.invalid),
+            .failure(.badRequest(AgentCopy.badQueuePosition))
+        )
+        XCTAssertEqual(
+            AgentContract.parseQueuePosition(.text("")),
+            .failure(.badRequest(AgentCopy.badQueuePosition))
+        )
+        XCTAssertEqual(
+            AgentContract.parseQueuePosition(.text(" end ")),
+            .failure(.badRequest(AgentCopy.badQueuePosition))
+        )
+        XCTAssertEqual(
+            AgentContract.parseQueuePosition(.text("End")),
+            .failure(.badRequest(AgentCopy.badQueuePosition))
         )
     }
 

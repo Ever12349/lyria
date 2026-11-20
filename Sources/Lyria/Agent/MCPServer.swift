@@ -422,6 +422,10 @@ final class MCPService {
                 track(row, snapshot: snapshot, isCurrent: snapshot.currentIndex == index).jsonObject()
             }
             return ToolCall(body: toolContent(["ok": true, "items": items], isError: false))
+        case "lyria_queue_add":
+            return await queueAdd(arguments)
+        case "lyria_queue_clear":
+            return await playback(engine.agentQueueClear())
         default:
             return ToolCall(error: ProtocolError(code: -32602, message: "Unknown tool: \(name)"))
         }
@@ -451,6 +455,42 @@ final class MCPService {
             return await playback(engine.agentPlay(list: list, startID: trackID))
         case .success(.file(let url)):
             return await playback(engine.agentPlay(uri: url))
+        }
+    }
+
+    private func queueAdd(_ arguments: [String: Any]) async -> ToolCall {
+        let id: PlayField
+        let uri: PlayField
+        switch MCPJSON.playField(arguments, "id") {
+        case .failure(let failure): return product(failure)
+        case .success(let field): id = field
+        }
+        switch MCPJSON.playField(arguments, "uri") {
+        case .failure(let failure): return product(failure)
+        case .success(let field): uri = field
+        }
+        let target: QueueAddTarget
+        switch AgentContract.parseQueueTarget(id: id, uri: uri) {
+        case .failure(let failure): return product(failure)
+        case .success(let value): target = value
+        }
+        let position: QueueAddPosition
+        switch AgentContract.parseQueuePosition(MCPJSON.suppliedText(arguments, "position")) {
+        case .failure(let failure): return product(failure)
+        case .success(let value): position = value
+        }
+        switch target {
+        case .track(let trackID):
+            guard let track = session?.track(trackID) else {
+                return product(AgentFailure(error: PlaybackErrorCode.notFound, message: AgentCopy.notFound))
+            }
+            return await playback(engine.agentQueueAdd(
+                track: ResolvedTrack(track: track),
+                item: .track(track.id),
+                position: position
+            ))
+        case .file(let url):
+            return await playback(engine.agentQueueAdd(uri: url, position: position))
         }
     }
 
@@ -585,6 +625,12 @@ final class MCPService {
                 "limit": ["type": "integer"],
             ], required: ["q"]),
             tool("lyria_queue_list", "当前播放队列。", [:]),
+            tool("lyria_queue_add", "加入队列。id 和 uri 恰好填一个。不传 position 时加到队尾；next 插到当前曲后面，不开始播放。", [
+                "id": ["type": "string"],
+                "uri": ["type": "string"],
+                "position": ["type": "string", "enum": ["next", "end"]],
+            ]),
+            tool("lyria_queue_clear", "清空队列并停止播放。", [:]),
         ]
     }
 
@@ -635,5 +681,13 @@ enum MCPJSON {
             return .failure(.badRequest(message))
         }
         return .success(.text(text))
+    }
+
+    static func suppliedText(_ arguments: [String: Any], _ key: String) -> SuppliedText {
+        guard arguments.keys.contains(key) else { return .absent }
+        guard let value = arguments[key] else { return .invalid }
+        if value is NSNull { return .invalid }
+        guard let text = value as? String else { return .invalid }
+        return .text(text)
     }
 }

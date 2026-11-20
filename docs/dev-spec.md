@@ -647,6 +647,8 @@ Figma：[Lyria macOS UI](https://www.figma.com/design/JJFaj1UysoberBKEr8G8Jc)
 
 > 阶段 3 已落地（2026-11-19）：同一二进制 `--mcp` 做薄桥。socket 为 `Lyria/mcp.sock`（`chmod 0600`；文件在但连不上就 unlink 再 bind，已有监听则不抢）。单实例用 `Lyria/instance.lock`，不靠 socket 判断进程是否还在。设置项 `settings.mcp_enabled`，缺省为开，文案「允许经 MCP 控制」。本切片实现上表前 11 个工具；`lyria_queue_add`、`lyria_queue_clear` 和音量不在本切片。搜索默认 20 条、最多 100 条。曲目 JSON 同时给 `path` 和 `uri`。产品错误的 `message` 用中文。桥在读到任何请求之前失败时，stdout 写一条 JSON-RPC（`id` 为 null，`code` 为 -32000），stderr 写同一句。进程还在但没有 socket：「Lyria 正在运行，但 MCP 没有在监听」。拉不起来：「无法启动 Lyria」。库内队列随播放会话恢复；oneShot 不写入该会话。协议接受并回显 `2024-11-05`、`2025-03-26`、`2025-06-18`，其余协商为 `2025-06-18`。`capabilities` 只有 `tools: {}`。
 
+> **队列写入（2026-11-20）：** `lyria_queue_add` 和 `lyria_queue_clear` 已补上。音量工具仍没有。`id` 与 `uri` 恰好一个；两个都没传是 `bad_request`，「需要 id 或 uri」。两个都传、空白和非 `file://` 沿用 `lyria_play` 的句子。不传 `position` 加到队尾；键存在但是 `null`、非字符串或其他文字（含空格、大小写不一致）是「position 必须是 next 或 end」。`end` 去重后加到两份顺序的队尾，有新条目才打开队列浮层；全部已在则 toast「已在队列中」，不改队列、不写会话、不打开浮层，响应带这句且 `isError` 为 false。`next` 先去掉相同条目再插到当前曲后面（没有当前曲则队首），不播放、不打开浮层、不 toast。库内缺失曲目照样加入。`uri` 先做和点播相同的文件检查，失败不改队列。一次性曲目是 `QueueItem.oneShot(absoluteString)`，不走 id 入队。清空把两份顺序和当前下标都清掉，随机、重复和音量不动；先停播放标记，再换 generation、卸掉当前播放项，进度和时长归零。不开关浮层，不 toast。空队列再清一次返回当前状态。两个工具成功时返回和暂停一样的状态体。
+
 ---
 
 ## HTTP API

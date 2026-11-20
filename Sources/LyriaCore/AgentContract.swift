@@ -19,6 +19,8 @@ public enum AgentCopy {
     public static let idType = "id 必须是字符串"
     public static let uriType = "uri 必须是字符串"
     public static let limitType = "limit 必须是数字"
+    public static let needIDOrURI = "需要 id 或 uri"
+    public static let badQueuePosition = "position 必须是 next 或 end"
 
     public static let toolNames = [
         "lyria_status",
@@ -32,6 +34,8 @@ public enum AgentCopy {
         "lyria_repeat",
         "lyria_search",
         "lyria_queue_list",
+        "lyria_queue_add",
+        "lyria_queue_clear",
     ]
 
     public static let supportedProtocolVersions = ["2024-11-05", "2025-03-26", "2025-06-18"]
@@ -63,6 +67,23 @@ public struct AgentFailure: Error, Equatable, Sendable {
 public enum PlayField: Equatable, Sendable {
     case absent
     case text(String)
+}
+
+/// A JSON field the caller may omit. `invalid` is an explicit null or a non-string.
+public enum SuppliedText: Equatable, Sendable {
+    case absent
+    case invalid
+    case text(String)
+}
+
+public enum QueueAddPosition: String, Equatable, Sendable {
+    case next
+    case end
+}
+
+public enum QueueAddTarget: Equatable, Sendable {
+    case track(String)
+    case file(URL)
 }
 
 public enum PlayRequest: Equatable, Sendable {
@@ -138,6 +159,35 @@ public enum AgentContract {
             return .success(.file(url))
         case (.text, .text):
             return .failure(.badRequest(AgentCopy.idAndURI))
+        }
+    }
+
+    /// Same id/uri rules as `parsePlay`, except both absent is an error. Does not resume.
+    public static func parseQueueTarget(id: PlayField, uri: PlayField) -> Result<QueueAddTarget, AgentFailure> {
+        switch parsePlay(id: id, uri: uri) {
+        case .failure(let failure):
+            return .failure(failure)
+        case .success(.resume):
+            return .failure(.badRequest(AgentCopy.needIDOrURI))
+        case .success(.track(let trackID)):
+            return .success(.track(trackID))
+        case .success(.file(let url)):
+            return .success(.file(url))
+        }
+    }
+
+    /// A missing key means append. An explicit null, non-string, or any other text is rejected.
+    public static func parseQueuePosition(_ supplied: SuppliedText) -> Result<QueueAddPosition, AgentFailure> {
+        switch supplied {
+        case .absent:
+            return .success(.end)
+        case .invalid:
+            return .failure(.badRequest(AgentCopy.badQueuePosition))
+        case .text(let raw):
+            guard let position = QueueAddPosition(rawValue: raw) else {
+                return .failure(.badRequest(AgentCopy.badQueuePosition))
+            }
+            return .success(position)
         }
     }
 

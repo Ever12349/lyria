@@ -328,6 +328,56 @@ final class PlaybackQueueTests: XCTestCase {
         XCTAssertTrue(restored.items.contains(.track("c")))
     }
 
+    func testOneShotInsertsIntoBothOrdersAndClearKeepsModes() {
+        let file = QueueItem.oneShot("file:///tmp/a.mp3")
+        let queue = PlaybackQueue(
+            items: [.track("b"), .oneShot("file:///tmp/old.mp3"), .track("a")],
+            source: [.track("a"), .track("b"), .oneShot("file:///tmp/old.mp3")],
+            currentIndex: 0,
+            shuffle: true,
+            repeatMode: .all
+        )
+        let added = PlaybackQueueRules.enqueue(items: [file, .track("a")], queue: queue)
+        XCTAssertFalse(added.alreadyAllPresent)
+        XCTAssertEqual(
+            added.queue.items,
+            [.track("b"), .oneShot("file:///tmp/old.mp3"), .track("a"), file]
+        )
+        XCTAssertEqual(
+            added.queue.source,
+            [.track("a"), .track("b"), .oneShot("file:///tmp/old.mp3"), file]
+        )
+        XCTAssertEqual(added.queue.current, .track("b"))
+        XCTAssertTrue(added.queue.shuffle)
+        XCTAssertEqual(added.queue.repeatMode, .all)
+
+        let again = PlaybackQueueRules.enqueue(items: [file], queue: added.queue)
+        XCTAssertTrue(again.alreadyAllPresent)
+        XCTAssertEqual(again.queue.items, added.queue.items)
+        XCTAssertEqual(again.queue.source, added.queue.source)
+
+        let moved = PlaybackQueueRules.playNext(items: [file], queue: queue)
+        XCTAssertEqual(
+            moved.items,
+            [.track("b"), file, .oneShot("file:///tmp/old.mp3"), .track("a")]
+        )
+        XCTAssertEqual(
+            moved.source,
+            [.track("a"), .track("b"), file, .oneShot("file:///tmp/old.mp3")]
+        )
+        XCTAssertEqual(moved.current, .track("b"))
+        XCTAssertTrue(moved.shuffle)
+        XCTAssertEqual(moved.repeatMode, .all)
+
+        let cleared = PlaybackQueueRules.cleared(moved)
+        XCTAssertEqual(cleared.items, [])
+        XCTAssertEqual(cleared.source, [])
+        XCTAssertNil(cleared.currentIndex)
+        XCTAssertTrue(cleared.shuffle)
+        XCTAssertEqual(cleared.repeatMode, .all)
+        XCTAssertEqual(PlaybackQueueRules.cleared(cleared), cleared)
+    }
+
     func testReplaceAndPlayAllKeepShuffleAndPutTheStartRowFirst() {
         var rng = ScriptedRNG(values: [0, 0, 0])
         let replaced = PlaybackQueueRules.plan(
